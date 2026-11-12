@@ -100,6 +100,11 @@ nav.tabs button.on{color:var(--acc);font-weight:700}
 .three{display:grid;grid-template-columns:2fr 1fr 1fr;gap:6px}
 .banner{border-radius:14px;padding:12px 14px;font-size:13px;margin-bottom:12px;background:var(--warn-soft);color:var(--warn)}
 .hidden{display:none!important}
+.chips.scroll{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;margin-left:-16px;margin-right:-16px;padding:0 16px 2px}
+.chips.scroll::-webkit-scrollbar{display:none}
+.chips.scroll .chip{flex:none}
+.sub{font-size:13px;font-weight:700;color:var(--sub);margin:14px 0 6px}
+.kv{display:flex;justify-content:space-between;align-items:center;background:#F7F2EC;border-radius:12px;padding:10px 12px;margin-top:10px;font-size:14px}
 .tag{display:inline-block;font-size:11px;font-weight:700;padding:2px 7px;border-radius:999px;margin-left:6px;vertical-align:1px;background:var(--blue-soft);color:var(--blue)}
 .tag.lbl{background:var(--ok-soft);color:var(--ok)}
 .sugg{border:1px solid var(--line);border-radius:12px;margin-top:6px;overflow:hidden;background:#FFFDFB}
@@ -446,16 +451,18 @@ function nameCard() {
 /* ----- today ----- */
 function vToday() {
   const p = S.pet;
-  if (!p && S.petLoaded) return `<div class="card"><h3>처음 오셨네요</h3><p class="muted">아이 이름과 체중만 넣으면 바로 시작할 수 있어요.</p><button class="btn acc full" data-act="go-set">아이 정보 넣기</button></div>` + quickCard() + recentCard();
+  if (!p && S.petLoaded) return `<div class="card"><h3>처음 오셨네요</h3><p class="muted">아이 이름과 체중만 넣으면 바로 시작할 수 있어요.</p><button class="btn acc full" data-act="go-set">아이 정보 넣기</button></div>` + writeCard() + recentCard();
   if (!p) return `<div class="card muted">불러오는 중…</div>`;
-  return nameCard() + startGuide() + writeCard() + kcalCard() + checklistCard() + quickCard() + recentCard() + installTip();
+  return nameCard() + startGuide() + kcalCard() + checklistCard() + writeCard() + recentCard();
 }
 function writeCard() {
   const P = S.parsed;
-  let h = `<div class="card"><h3>그냥 쭉 적어주세요</h3>
+  let h = `<div class="card"><h3>기록하기</h3>
+    <div class="grid4">${Object.entries(TYPES).map(([k, t]) => `<button class="qbtn" data-act="new" data-type="${k}"><span class="ic">${t.ic}</span>${t.name}</button>`).join('')}</div>
+    <div class="sub">또는 한 번에 쭉 적기</div>
     <textarea id="w-text" style="min-height:96px" placeholder="예: 아침 8시에 회복캔 30g 강급, 9시 반에 세미톨 1/4정 먹임. 저녁에 수액 100ml. 오후에 한 번 토했고 소변은 정상">${esc(S.draft || '')}</textarea>
     <div class="row" style="margin-top:8px"><button class="btn acc" style="flex:1" data-act="parse" ${S.parsing ? 'disabled' : ''}>${S.parsing ? '정리하는 중…' : '자동으로 정리하기'}</button></div>
-    <p class="muted" style="margin:6px 2px 0">${S.aiOff ? '지금은 기본 정리 방식으로 나눠요.' : '시간, 양, 약 이름을 알아서 찾아서 항목별로 나눠요. 저장 전에 한 번 확인할 수 있어요.'}</p>`;
+    <p class="muted" style="margin:6px 2px 0">시간·양·약 이름을 찾아 항목별로 나눠요. 저장 전에 확인할 수 있어요.</p>`;
   if (P && P.entries.length) {
     const urgent = P.entries.flatMap(e => e.type === 'symptom' ? (e.symptoms || []).filter(s => URGENT.includes(s)) : e.type === 'potty' && e.pee === '안 봄' ? ['소변 안 봄'] : []);
     h += `<div style="margin-top:12px;border-top:1px solid var(--line);padding-top:10px"><div class="row between"><b style="font-size:14px">이렇게 정리했어요 (${P.entries.length}건)</b><span class="muted">${P.ai ? 'Claude가 정리' : '기본 정리'}</span></div>
@@ -512,7 +519,7 @@ function quickCard() {
 }
 function checklistCard() {
   const tasks = S.pet?.tasks || [];
-  if (!tasks.length) return `<div class="card"><h3>오늘 할 일</h3><p class="muted">설정에서 매일 할 일을 추가하면 가족이 함께 체크할 수 있어요.</p></div>`;
+  if (!tasks.length) return '';
   const k = today();
   const done = tasks.filter(t => S.checks.some(c => c.id === k + '_' + t.id)).length;
   return `<div class="card"><div class="row between"><h3 style="margin:0">오늘 할 일</h3><span class="muted">${done}/${tasks.length}</span></div><div style="margin-top:6px">${tasks.map(t => {
@@ -521,9 +528,9 @@ function checklistCard() {
   }).join('')}</div></div>`;
 }
 function recentCard() {
-  const l = S.logs.slice(0, 5);
+  const l = S.logs.slice(0, 3);
   const row = x => logRow(x).replace('<button class="x" data-act="del"', `<button class="x" data-act="again" data-id="${esc(x.id)}" style="color:var(--ok);font-weight:700">지금 또</button><button class="x" data-act="del"`);
-  return `<div class="card"><div class="row between"><h3 style="margin:0">최근 기록</h3>${S.logs.length > 5 ? '<button class="btn ghost sm" data-act="tab" data-to="logs">전체 보기</button>' : ''}</div><div style="margin-top:6px">${l.length ? l.map(row).join('') + '<p class="muted" style="margin:6px 0 0">"지금 또"를 누르면 같은 내용을 지금 시각으로 한 번 더 기록해요.</p>' : '<p class="muted">아직 기록이 없어요.</p>'}</div></div>`;
+  return `<div class="card"><div class="row between"><h3 style="margin:0">최근 기록</h3>${S.logs.length > 3 ? '<button class="btn ghost sm" data-act="tab" data-to="logs">전체 보기</button>' : ''}</div><div style="margin-top:6px">${l.length ? l.map(row).join('') : '<p class="muted">아직 기록이 없어요.</p>'}</div></div>`;
 }
 function logText(l) {
   switch (l.type) {
@@ -545,13 +552,13 @@ function logRow(l) {
 
 /* ----- logs ----- */
 function vLogs() {
-  const seg = `<div class="chips" style="margin-bottom:10px"><button class="chip ${S.logView !== 'chart' ? 'on' : ''}" data-act="logview" data-v="list">📋 목록</button><button class="chip ${S.logView === 'chart' ? 'on' : ''}" data-act="logview" data-v="chart">📈 그래프</button></div>`;
+  const seg = `<div class="chips" style="margin-bottom:8px"><button class="chip ${S.logView !== 'chart' ? 'on' : ''}" data-act="logview" data-v="list">📋 목록</button><button class="chip ${S.logView === 'chart' ? 'on' : ''}" data-act="logview" data-v="chart">📈 그래프</button></div>`;
   if (S.logView === 'chart') return seg + vCharts();
   return seg + vList();
 }
 function vList() {
   const list = S.logs.filter(l => S.filter === 'all' || l.type === S.filter);
-  let h = `<div class="chips" style="margin-bottom:10px"><button class="chip ${S.filter === 'all' ? 'on' : ''}" data-act="filter" data-f="all">전체</button>${Object.entries(TYPES).map(([k, t]) => `<button class="chip ${S.filter === k ? 'on' : ''}" data-act="filter" data-f="${k}">${t.ic} ${t.name}</button>`).join('')}</div>`;
+  let h = `<div class="chips scroll" style="margin-bottom:10px"><button class="chip ${S.filter === 'all' ? 'on' : ''}" data-act="filter" data-f="all">전체</button>${Object.entries(TYPES).map(([k, t]) => `<button class="chip ${S.filter === k ? 'on' : ''}" data-act="filter" data-f="${k}">${t.ic} ${t.name}</button>`).join('')}</div>`;
   if (!list.length) return h + `<div class="card muted">기록이 없어요.</div>`;
   let cur = '';
   h += '<div class="card" style="padding-top:4px">';
@@ -629,8 +636,7 @@ function quickKcal() {
   const f = foods.find(x => x.id === Q.food), us = unitsOf(f); if (!us.includes(Q.unit)) Q.unit = us.includes('g') ? 'g' : us[0];
   return `<div class="card"><h3>몇 g 먹이면 몇 kcal?</h3>
     <select id="q-food">${foods.map(x => `<option value="${esc(x.id)}" ${x.id === Q.food ? 'selected' : ''}>${esc(x.name)}</option>`).join('')}</select>
-    <div class="two" style="margin-top:8px"><div><label class="f">먹인 양</label><div class="row" style="gap:6px"><input type="number" inputmode="decimal" id="q-amt" value="${esc(Q.amt)}" placeholder="예: 30" style="flex:1"><select id="q-unit" style="width:70px;padding:11px 6px">${us.map(u => `<option ${u === Q.unit ? 'selected' : ''}>${u}</option>`).join('')}</select></div></div>
-    <div><label class="f">또는 칼로리로</label><div class="row" style="gap:6px"><input type="number" inputmode="decimal" id="q-kcal" value="${esc(Q.kcal)}" placeholder="예: 50" style="flex:1"><span class="muted">kcal</span></div></div></div>
+    <div class="row" style="gap:6px;margin-top:8px"><input type="number" inputmode="decimal" id="q-amt" value="${esc(Q.amt)}" placeholder="양" style="flex:1;min-width:0"><select id="q-unit" style="width:72px;padding:11px 6px">${us.map(u => `<option ${u === Q.unit ? 'selected' : ''}>${u}</option>`).join('')}</select><span class="muted">=</span><input type="number" inputmode="decimal" id="q-kcal" value="${esc(Q.kcal)}" placeholder="kcal" style="flex:1;min-width:0"><span class="muted">kcal</span></div>
     <div id="q-out" class="res" style="margin-top:10px"></div></div>`;
 }
 function quickUpdate(src) {
@@ -651,16 +657,16 @@ function vCalc() {
   const foods = S.pet?.foods || [];
   const foodOpts = id => foods.map(f => `<option value="${esc(f.id)}" ${f.id === id ? 'selected' : ''}>${esc(f.name)}</option>`).join('');
   return quickKcal() + `<div class="card"><h3>강급 계산기</h3>
-    <p class="muted" style="margin:0">주치의가 정해준 양이 있으면 그 값을 먼저 따라주세요. 이 계산은 일반적인 기준(기초대사량 70×체중<sup>0.75</sup>)이에요.</p>
-    <div class="two"><div><label class="f">체중 (kg)</label><input type="number" step="0.01" inputmode="decimal" id="c-weight" value="${esc(C.weight)}" placeholder="예: 3.8"></div>
-    <div><label class="f">하루 급여 횟수</label><input type="number" inputmode="numeric" id="c-meals" value="${esc(C.meals)}"></div></div>
+    <p class="muted" style="margin:0">주치의가 정해준 양이 있으면 그 값을 먼저 따라주세요.</p>
+    <div class="kv"><span>체중 <b>${S.pet?.weightKg ? esc(S.pet.weightKg) + 'kg' : '미입력'}</b></span><button class="btn ghost sm" data-act="go-set">${S.pet?.weightKg ? '바꾸기' : '넣기'}</button></div>
+    <label class="f">하루 급여 횟수</label><input type="number" inputmode="numeric" id="c-meals" value="${esc(C.meals)}">
     <label class="f">아이 상태</label><select id="c-factor">${FACTORS.map(f => `<option value="${f.v}" ${num(C.factor) === f.v ? 'selected' : ''}>${f.t} ×${f.v}</option>`).join('')}</select>
     <label class="f">주치의가 정해준 하루 칼로리 (있으면 이 값을 우선 사용)</label><input type="number" inputmode="decimal" id="c-override" value="${esc(C.override)}" placeholder="비워두면 위 계산 사용">
     <label class="f" style="display:flex;gap:8px;align-items:center;color:var(--ink)"><input type="checkbox" id="c-ramp" ${C.ramp ? 'checked' : ''} style="width:20px;height:20px"> 3일에 걸쳐 늘리기 (1일차 1/3 → 2일차 2/3 → 3일차부터 전량)</label>
     <div id="c-startwrap" class="${C.ramp ? '' : 'hidden'}"><label class="f">늘리기 시작일</label><input type="date" id="c-start" value="${esc(C.start)}"></div>
   </div>
   <div class="card"><h3>먹이는 사료</h3>
-    ${foods.length ? `<p class="muted" style="margin:0 0 6px">두 가지 이상 섞으면 칼로리 비율(%)을 나눠 주세요.</p>
+    ${foods.length ? `<p class="muted" style="margin:0 0 6px">섞어 먹이면 칼로리 비율(%)을 나눠 주세요.</p>
     <div id="c-mix">${C.mix.map((m, i) => `<div class="edit-row"><select class="grow" data-mix="${i}" data-k="foodId">${foodOpts(m.foodId)}</select><input type="number" style="width:76px" data-mix="${i}" data-k="pct" value="${esc(m.pct)}"><span class="muted">%</span><button class="btn ghost sm" data-act="mix-del" data-i="${i}">✕</button></div>`).join('')}</div>
     <button class="btn ghost sm" data-act="mix-add" style="margin-top:8px">+ 사료 섞기</button>`
     : `<p class="muted">설정에서 사료와 라벨 칼로리를 먼저 등록해주세요.</p><button class="btn acc sm" data-act="go-food">🔍 사료 이름으로 칼로리 찾기</button>`}
@@ -668,12 +674,12 @@ function vCalc() {
     <div><label class="f">주사기 크기 (ml)</label><input type="number" inputmode="decimal" id="c-syringe" value="${esc(C.syringe)}"></div></div>
   </div>
   <div id="c-out"></div>
-  <button class="btn acc full" data-act="calc-save" style="margin-top:4px">이 설정 저장하기 (가족과 공유)</button>
-  <p class="muted" style="text-align:center;margin-top:8px">저장하면 '오늘' 화면의 목표 칼로리에 반영돼요.</p>`;
+  <button class="btn acc full" data-act="calc-save" style="margin-top:4px">저장하기</button>
+  <p class="muted" style="text-align:center;margin-top:8px">'오늘' 화면 목표 칼로리에 반영되고 가족과 공유돼요.</p>`;
 }
 function calcRead() {
-  if (!$('#c-weight')) return;
-  C.weight = $('#c-weight').value; C.meals = $('#c-meals').value; C.factor = $('#c-factor').value; C.override = $('#c-override').value;
+  if (!$('#c-meals')) return;
+  C.weight = S.pet?.weightKg ?? ''; C.meals = $('#c-meals').value; C.factor = $('#c-factor').value; C.override = $('#c-override').value;
   C.ramp = $('#c-ramp').checked; C.start = $('#c-start').value || today(); C.water = $('#c-water').value; C.syringe = $('#c-syringe').value;
   document.querySelectorAll('[data-mix]').forEach(el => { const m = C.mix[+el.dataset.mix]; if (m) m[el.dataset.k] = el.dataset.k === 'pct' ? el.value : el.value; });
   $('#c-startwrap').classList.toggle('hidden', !C.ramp);
@@ -681,7 +687,7 @@ function calcRead() {
 function calcUpdate() {
   const out = $('#c-out'); if (!out) return;
   const w = num(C.weight), meals = Math.max(1, Math.round(num(C.meals) || 1));
-  if (!w && !num(C.override)) { out.innerHTML = '<div class="card muted">체중을 넣으면 결과가 나와요.</div>'; return; }
+  if (!w && !num(C.override)) { out.innerHTML = '<div class="card muted">설정에서 체중을 넣으면 결과가 나와요.</div>'; return; }
   const base = w ? rer(w) : null;
   const full = num(C.override) || base * (num(C.factor) || 1);
   const pseudo = { plan: { ramp: C.ramp, start: C.start } };
@@ -932,15 +938,15 @@ function vSet() {
     <button class="btn acc full" data-act="save-pet" style="margin-top:14px">저장</button>
     ${(S.family?.pets || []).length > 1 ? (S.petRmArm ? `<div class="alertbox" style="margin-top:10px"><b>${esc(S.pet?.name || '이 아이')}를 목록에서 뺄까요?</b>기록은 지워지지 않고 보이지만 않아요.<div class="two" style="margin-top:10px"><button class="btn ghost sm" data-act="pet-remove-no">그만두기</button><button class="btn sm" style="background:var(--warn)" data-act="pet-remove-yes">빼기</button></div></div>` : `<button class="btn ghost sm" data-act="pet-remove" style="margin-top:8px">이 아이 목록에서 빼기</button>`) : ''}</div>
 
-  <div class="card" id="food-card"><h3>사료·처방식</h3><p class="muted" style="margin:0 0 6px">사료 이름을 치면 자주 쓰는 처방식·회복식은 칼로리와 성분이 바로 채워져요. 목록에 없으면 포장 라벨 값을 넣어주세요.</p>
-    ${foods.map(f => `<div class="edit-row"><div class="grow"><b>${esc(f.name)}</b>${f.nut ? `<span class="tag ${f.nut.src === 'label' ? 'lbl' : ''}">${f.nut.src === 'label' ? '라벨' : '참고값'}</span>` : ''}<div class="muted">${esc(f.kcal)}kcal / ${esc(f.per)}${esc(f.unit)}${num(f.gw) ? ` · 1${['g', 'ml'].includes(f.unit) ? '캔' : esc(f.unit)} ${esc(f.gw)}g` : ''} · 1g ≈ ${(() => { const k = kcalOf(f, 1, 'g'); return k != null ? r2(k) + 'kcal' : '?'; })()}</div>${f.nut && nutLine(f.nut) ? `<div class="muted">${nutLine(f.nut)}</div>` : ''}</div><button class="btn ghost sm" data-act="food-edit" data-id="${esc(f.id)}">고치기</button><button class="btn ghost sm" data-act="food-del" data-id="${esc(f.id)}">삭제</button></div>`).join('')}
+  <div class="card" id="food-card"><h3>사료·처방식</h3>
+    ${foods.map(f => `<div class="edit-row"><div class="grow"><b>${esc(f.name)}</b>${f.nut ? `<span class="tag ${f.nut.src === 'label' ? 'lbl' : ''}">${f.nut.src === 'label' ? '라벨' : '참고값'}</span>` : ''}<div class="muted">${esc(f.kcal)}kcal / ${esc(f.per)}${esc(f.unit)}${num(f.gw) ? ` (${esc(f.gw)}g)` : ''}</div>${f.nut && nutLine(f.nut) ? `<div class="muted">${nutLine(f.nut)}</div>` : ''}</div><button class="btn ghost sm" data-act="food-edit" data-id="${esc(f.id)}">고치기</button><button class="btn ghost sm" data-act="food-del" data-id="${esc(f.id)}">삭제</button></div>`).join('')}
     <div style="margin-top:10px"><label class="f" style="margin-top:0">사료 이름</label>
     <div class="row"><input type="text" id="f-name" autocomplete="off" placeholder="예: 리커버리, a/d, 레날, k/d" style="flex:1"><button class="btn acc sm" data-act="food-find" style="white-space:nowrap">🔍 찾기</button></div>
     <div id="f-sugg"></div><div id="f-nutbox"></div>
     <label class="f">칼로리 (라벨 기준)</label>
     <div class="three" style="margin-top:6px"><input type="number" inputmode="decimal" id="f-kcal" placeholder="kcal"><input type="number" inputmode="decimal" id="f-per" placeholder="양"><select id="f-unit"><option value="g">g</option><option value="ml">ml</option><option value="캔">캔</option><option value="포">포</option></select></div>
-    <input type="number" inputmode="decimal" id="f-gw" placeholder="1캔(1포) 무게 g — 캔·포 단위면 넣어주세요 (선택)" style="margin-top:6px">
-    <p class="muted" style="margin:6px 2px 0">예: 건사료 3800kcal/kg → 3800 / 1000 / g · 캔 175kcal(156g) → 175 / 1 / 캔, 무게 156</p>
+    <input type="number" inputmode="decimal" id="f-gw" placeholder="1캔·1포 무게 g (캔·포 단위일 때)" style="margin-top:6px">
+    <p class="muted" style="margin:6px 2px 0">건사료 3800kcal/kg → 3800 / 1000 / g · 캔 175kcal(156g) → 175 / 1 / 캔</p>
     <details class="more" id="f-more"><summary>성분 직접 넣기 (선택 · 라벨의 등록성분량 %)</summary>
       <div class="five">${NUTS.map(([k, t]) => `<input type="number" inputmode="decimal" step="0.01" id="fn-${k}" placeholder="${t} %">`).join('')}</div></details>
     <div class="row" style="margin-top:8px"><button class="btn ${S.foodEdit ? 'acc' : 'ghost'} sm" data-act="food-add">${S.foodEdit ? '고친 내용 저장' : '+ 사료 추가'}</button>${S.foodEdit ? '<button class="btn ghost sm" data-act="food-edit-no">그만두기</button>' : ''}</div></div></div>
