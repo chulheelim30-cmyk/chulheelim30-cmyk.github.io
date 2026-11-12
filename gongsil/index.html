@@ -56,11 +56,11 @@ ul.chk{padding-left:18px;margin:6px 0}
 .note{font-size:13px;color:var(--muted);margin-top:10px}
 #result{display:none}
 .plan{border:2px solid var(--gold)}
-.pstep{display:grid;grid-template-columns:28px 1fr auto;gap:8px;align-items:start;padding:10px 0;border-top:1px solid var(--stone)}
+.pstep{display:grid;grid-template-columns:28px minmax(0,1fr) 70px;text-align:left;gap:8px;align-items:start;padding:10px 0;border-top:1px solid var(--stone)}
 .pstep:first-of-type{border-top:0}
 .pstep .k{width:24px;height:24px;border-radius:50%;background:var(--navy);color:#fff;font-size:12px;display:flex;align-items:center;justify-content:center;font-weight:700}
 .pstep .who{font-size:12px;color:var(--gold);font-weight:700}
-.pstep .how{font-size:13px;color:var(--muted)}
+.pstep .phow{font-size:13px;color:var(--muted);text-align:left;padding:0;background:none}
 .pstep .pt{text-align:right;font-size:13px;white-space:nowrap}
 .pstep .pt b{display:block;font-size:15px;color:var(--navy)}
 .path{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin:4px 0 10px}
@@ -425,7 +425,7 @@ function planUp(x,rows,cur){
   const md={};const steps=[];let prev=cur,base=scoreV(v,md).t;
   const push=(nm,who,how)=>{const r=scoreV(v,md).t;const d=Math.round(r-base);base=r;if(d<=0)return;const t=Math.min(100,prev+d);steps.push({nm,who,how,d,t,g:grade(t)});prev=t;};
   if(x.duct!=="y"){v.duct="y";push("배기·급배수 선시공","임대인","음식 업종이 들어올 수 있게 덕트·급배수를 미리 깔아 둡니다. 비용은 현장 견적.");}
-  if(x.type!=="small"&&v.units/v.shops<10){const k=Math.max(1,Math.min(Math.round(v.vac*0.5),Math.ceil(v.shops-v.units/10)));md.conv=k;push(`상가 과잉 정리 (${k}실)`,"임대인·공실공",`공실 ${k}실을 업무·창고·공유오피스 등 비F&B로 돌리거나 2칸씩 통합 임대해, 남은 상가끼리 손님을 나눠 갖지 않게 합니다.`);}
+  if(x.type!=="small"&&v.units/v.shops<10){const k=Math.max(1,Math.min(Math.round(v.vac*0.5),Math.ceil(v.shops-v.units/10)));md.conv=k;push(`상가 과잉 정리 (${x.units===null||!x.shops?"약 ":""}${k}실${x.units===null||!x.shops?", 호실표 확인 후 확정":""})`,"임대인·공실공",`공실 ${k}실을 업무·창고·공유오피스 등 비F&B로 돌리거나 2칸씩 통합 임대해, 남은 상가끼리 손님을 나눠 갖지 않게 합니다.`);}
   if(v.vac>0){md.rent=1;push("적정 임대가 + 렌트프리","임대인","주변 시세 기준 임대가와 2~3개월 렌트프리로 첫 계약 속도를 올립니다. 비워 두는 것보다 첫해 수입이 큽니다.");}
   if(rows.some(r=>r.pos==="front")){md.anchor=4;push("1층 전면 앵커 먼저 유치","임대인·관계 중개법인","인지도 높은 업종 1곳을 먼저 계약하면 외부 손님이 들어오고, 나머지 칸 협상이 쉬워집니다.");}
   if(rows.some(r=>r.pos!=="front")||x.pos!=="front"){md.purpose=1;push("안쪽·2층에 목적형 업종 배치","공실공","의원·PT·학원·사무소처럼 일부러 찾아오는 업종을 노출이 약한 칸에 넣어 외부 손님을 끌어오고 위치 약점을 지웁니다.");}
@@ -600,9 +600,9 @@ $('f').addEventListener('submit',e=>{
   {const PL=planUp(x,rows,tot);
     const order=["D","C","B","A"];const g0=g,g1=PL.final.g;const seq=order.slice(order.indexOf(g0),order.indexOf(g1)+1);
     $('pPath').innerHTML=(seq.length>1?seq:[g0]).map((q,i,a)=>`<span class="${i===a.length-1?"on":""}">${q}</span>`).join("<i>→</i>")+`<i style="margin-left:6px">${tot}점 → ${PL.final.t}점</i>`;
-    $('pSteps').innerHTML=PL.steps.map((st,i)=>`<div class="pstep"><div class="k">${i+1}</div><div><b>${st.nm}</b><div class="who">${st.who}</div><div class="how">${st.how}</div></div><div class="pt"><b>${st.d>=0?"+":""}${st.d}</b>${st.t}점 · ${st.g}</div></div>`).join("");
+    $('pSteps').innerHTML=PL.steps.map((st,i)=>`<div class="pstep"><div class="k">${i+1}</div><div><b>${st.nm}</b><div class="who">${st.who}</div><div class="phow">${st.how}</div></div><div class="pt"><b>${st.d>=0?"+":""}${st.d}</b>${st.t}점 · ${st.g}</div></div>`).join("");
     const pot=Math.min(100,PL.final.t+Math.max(0,RG.hi-tot));
-    $('pNote').textContent=(nUnk&&pot>PL.final.t?`지금은 모르는 값을 가장 낮게 본 상태입니다. 현장 확인값이 좋게 나오면 최대 ${pot}점(${grade(pot)}등급)까지 갑니다. `:"")+(PL.final.g==="A"?"임대인이 바꿀 수 있는 것만으로 A등급까지 갈 수 있습니다. ":`기획으로 ${PL.final.g}등급까지 올릴 수 있습니다. 남은 한계: ${PL.lim.join("·")||"세부 조건"} — 팝업·단기 임대로 유동을 먼저 만들거나 업무시설 전환을 함께 검토합니다. `)+"점수는 같은 채점 모델로 계산한 추정치이며, 단계별 실행은 정식 리포트에서 현장 기준으로 다시 잡습니다.";
+    $('pNote').textContent=(nUnk&&pot>PL.final.t?`지금은 모르는 값을 가장 낮게 본 상태입니다. 현장 확인값이 좋게 나오면 최대 ${pot}점(${grade(pot)}등급)까지 갑니다. `:"")+(PL.final.g==="A"?"임대인이 바꿀 수 있는 것만으로 A등급까지 갈 수 있습니다. ":`기획으로 ${PL.final.g}등급까지 올릴 수 있습니다. ${PL.lim.length?"남은 한계: "+PL.lim.join("·")+" — 팝업·단기 임대로 유동을 먼저 만들거나 업무시설 전환을 함께 검토합니다. ":"A까지 남은 차이는 아직 확인 전인 값(입주율·호실표 등)에서 나옵니다. "}`)+"점수는 같은 채점 모델로 계산한 추정치이며, 단계별 실행은 정식 리포트에서 현장 기준으로 다시 잡습니다.";
     planText="\n\n[등급 올리기 기획 플랜] "+g+" "+tot+"점 → "+PL.final.g+" "+PL.final.t+"점\n"+PL.steps.map((st,i)=>`${i+1}. ${st.nm} (${st.who}) ${st.d>=0?"+":""}${st.d} → ${st.t}점 ${st.g}`).join("\n")+planText;}
   if(!renderIso3D(out,x))renderIso(out,x);renderLegend(out);renderTime(out);
   $('rDate').textContent=new Date().toLocaleDateString('ko-KR');
