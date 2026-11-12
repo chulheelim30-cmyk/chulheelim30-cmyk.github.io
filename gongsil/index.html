@@ -446,7 +446,7 @@ function rangeOf(x){
   const ts=res.map(r=>r.t);const lo=Math.min(...ts),hi=Math.max(...ts),w=hi-lo;
   const NM={m:"역까지 거리",units:"세대·실 수",occ:"입주율",ratio:"상가 호실 수",vf:"공실 수",duct:"배기 가능 여부"};
   const drv=keys.filter(k=>C[k].length>1).map(k=>{let sw=0;for(const val of C[k]){const t=res.filter(r=>r.c[k]===val).map(r=>r.t);sw+=Math.max(...t)-Math.min(...t);}
-    return {k:NM[k],cut:Math.round(w-sw/C[k].length)};}).sort((a,b)=>b.cut-a.cut);
+    return {k:NM[k],cut:Math.round(w-sw/C[k].length)};}).filter(d=>d.cut>0).sort((a,b)=>b.cut-a.cut);
   return {lo:Math.round(lo),hi:Math.round(hi),drv};
 }
 $('f').addEventListener('submit',e=>{
