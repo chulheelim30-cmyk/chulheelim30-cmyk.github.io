@@ -192,12 +192,14 @@ function labsIn(s) {
 }
 const SYMPTOMS = ['구토', '설사', '식욕 없음', '기운 없음', '물 안 마심', '물 많이 마심', '기침·재채기', '침 흘림', '숨이 가쁨', '입 벌리고 숨쉼', '발작', '소변 안 봄', '쓰러짐·의식 흐림', '잇몸 창백', '기타'];
 const URGENT = ['입 벌리고 숨쉼', '숨이 가쁨', '발작', '소변 안 봄', '쓰러짐·의식 흐림', '잇몸 창백'];
-const FACTORS = [
-  { v: 1.0, t: '아프거나 회복 중 (기초대사량 그대로)' },
-  { v: 1.2, t: '중성화한 성묘·성견 유지' },
-  { v: 1.4, t: '활동량 많음' },
-  { v: 0.8, t: '체중 감량 중' },
-];
+// 먹는 방식별 배수. 스스로 먹으면 유지 칼로리(종·중성화·활동량), 강급·튜브는 기초대사량부터 시작.
+const FACTORS_SELF = {
+  cat: [{ v: 1.2, t: '중성화한 성묘' }, { v: 1.4, t: '중성화 안 함·활동 많음' }, { v: 1.0, t: '노령·활동 적음·회복 중' }, { v: 0.8, t: '체중 감량 중' }],
+  dog: [{ v: 1.6, t: '중성화한 성견' }, { v: 1.8, t: '중성화 안 함·활동 많음' }, { v: 1.4, t: '노령·활동 적음' }, { v: 1.0, t: '체중 감량·회복 중' }],
+};
+const FACTORS_ASSIST = [{ v: 1.0, t: '기초대사량 그대로 (회복기 기본)' }, { v: 1.2, t: '회복 후반·체중을 늘려야 할 때' }];
+const factorList = mode => mode === 'assist' ? FACTORS_ASSIST : FACTORS_SELF[S.pet?.species === 'dog' ? 'dog' : 'cat'];
+const feedModeOf = p => p?.feedMode || (p?.plan?.ramp || num(p?.water) ? 'assist' : 'self');
 const DEFAULT_TASKS = ['아침 급여', '저녁 급여', '아침 약', '저녁 약', '피하수액', '소변·배변 확인'];
 const rer = kg => 70 * Math.pow(kg, 0.75);
 function dayIndex(pet, k) {
@@ -206,7 +208,7 @@ function dayIndex(pet, k) {
   return Math.floor((b - a) / 864e5) + 1;
 }
 function rampFrac(pet, k) {
-  if (!pet?.plan?.ramp || !pet.plan.start) return 1;
+  if (!pet?.plan?.ramp || !pet.plan.start || feedModeOf(pet) !== 'assist') return 1;
   const i = dayIndex(pet, k);
   if (i == null || i < 1) return 1;
   return i === 1 ? 1 / 3 : i === 2 ? 2 / 3 : 1;
@@ -215,7 +217,7 @@ function fullTarget(pet) {
   if (!pet) return null;
   if (num(pet.targetKcal)) return num(pet.targetKcal);
   const w = num(pet.weightKg); if (!w) return null;
-  return rer(w) * (num(pet.factor) || 1);
+  return rer(w) * (num(pet.factor) || (feedModeOf(pet) === 'assist' ? 1 : (pet.species === 'dog' ? 1.6 : 1.2)));
 }
 function targetFor(pet, k) { const f = fullTarget(pet); return f == null ? null : f * rampFrac(pet, k); }
 function kcalOf(food, amt, unit) {
@@ -623,7 +625,7 @@ let C = null;
 function calcInit() {
   const p = S.pet || {};
   C = {
-    weight: p.weightKg ?? '', factor: p.factor ?? 1, override: p.targetKcal ?? '', meals: p.meals ?? 4,
+    loaded: !!S.pet, mode: feedModeOf(p), weight: p.weightKg ?? '', factor: p.factor ?? null, override: p.targetKcal ?? '', meals: p.meals ?? 4,
     ramp: p.plan?.ramp ?? false, start: p.plan?.start || today(), water: p.water ?? '', syringe: p.syringe ?? 10,
     mix: (p.mix && p.mix.length ? p.mix : (p.foods || []).slice(0, 1).map(f => ({ foodId: f.id, pct: 100 }))).map(m => ({ ...m })),
   };
@@ -653,25 +655,28 @@ function quickUpdate(src) {
 $('#main').addEventListener('input', e => { if (e.target.id === 'q-amt') quickUpdate('amt'); else if (e.target.id === 'q-kcal') quickUpdate('kcal'); });
 $('#main').addEventListener('change', e => { if (e.target.id === 'q-food' || e.target.id === 'q-unit') { if (e.target.id === 'q-food') { S.q.food = e.target.value; render(true); } quickUpdate(S.q.kcal && !S.q.amt ? 'kcal' : 'amt'); } });
 function vCalc() {
-  if (!C) calcInit();
+  if (!C || (!C.loaded && S.pet)) calcInit();
   const foods = S.pet?.foods || [];
   const foodOpts = id => foods.map(f => `<option value="${esc(f.id)}" ${f.id === id ? 'selected' : ''}>${esc(f.name)}</option>`).join('');
-  return quickKcal() + `<div class="card"><h3>강급 계산기</h3>
-    <p class="muted" style="margin:0">주치의가 정해준 양이 있으면 그 값을 먼저 따라주세요.</p>
+  const fl = factorList(C.mode); if (!fl.some(f => f.v === num(C.factor))) C.factor = fl[0].v;
+  const A = C.mode === 'assist';
+  return quickKcal() + `<div class="card"><h3>하루 필요 칼로리</h3>
+    <div class="two"><button class="chip ${A ? '' : 'on'}" data-act="cmode" data-v="self" style="padding:10px">🍽️ 스스로 먹어요</button><button class="chip ${A ? 'on' : ''}" data-act="cmode" data-v="assist" style="padding:10px">💉 강급·튜브</button></div>
+    <p class="muted" style="margin:8px 0 0">${A ? '기초대사량부터 시작해 천천히 늘려요. 주치의가 정해준 양이 있으면 그 값을 먼저 따라주세요.' : '체중과 생활에 맞춘 하루 유지 칼로리예요. 주치의가 정해준 양이 있으면 그 값을 먼저 따라주세요.'}</p>
     <div class="kv"><span>체중 <b>${S.pet?.weightKg ? esc(S.pet.weightKg) + 'kg' : '미입력'}</b></span><button class="btn ghost sm" data-act="go-set">${S.pet?.weightKg ? '바꾸기' : '넣기'}</button></div>
     <label class="f">하루 급여 횟수</label><input type="number" inputmode="numeric" id="c-meals" value="${esc(C.meals)}">
-    <label class="f">아이 상태</label><select id="c-factor">${FACTORS.map(f => `<option value="${f.v}" ${num(C.factor) === f.v ? 'selected' : ''}>${f.t} ×${f.v}</option>`).join('')}</select>
+    <label class="f">${A ? '회복 단계' : '아이 상태'}</label><select id="c-factor">${fl.map(f => `<option value="${f.v}" ${num(C.factor) === f.v ? 'selected' : ''}>${f.t} ×${f.v}</option>`).join('')}</select>
     <label class="f">주치의가 정해준 하루 칼로리 (있으면 이 값을 우선 사용)</label><input type="number" inputmode="decimal" id="c-override" value="${esc(C.override)}" placeholder="비워두면 위 계산 사용">
-    <label class="f" style="display:flex;gap:8px;align-items:center;color:var(--ink)"><input type="checkbox" id="c-ramp" ${C.ramp ? 'checked' : ''} style="width:20px;height:20px"> 3일에 걸쳐 늘리기 (1일차 1/3 → 2일차 2/3 → 3일차부터 전량)</label>
-    <div id="c-startwrap" class="${C.ramp ? '' : 'hidden'}"><label class="f">늘리기 시작일</label><input type="date" id="c-start" value="${esc(C.start)}"></div>
+    ${A ? `<label class="f" style="display:flex;gap:8px;align-items:center;color:var(--ink)"><input type="checkbox" id="c-ramp" ${C.ramp ? 'checked' : ''} style="width:20px;height:20px"> 3일에 걸쳐 늘리기 (1일차 1/3 → 2일차 2/3 → 3일차부터 전량)</label>
+    <div id="c-startwrap" class="${C.ramp ? '' : 'hidden'}"><label class="f">늘리기 시작일</label><input type="date" id="c-start" value="${esc(C.start)}"></div>` : ''}
   </div>
   <div class="card"><h3>먹이는 사료</h3>
     ${foods.length ? `<p class="muted" style="margin:0 0 6px">섞어 먹이면 칼로리 비율(%)을 나눠 주세요.</p>
     <div id="c-mix">${C.mix.map((m, i) => `<div class="edit-row"><select class="grow" data-mix="${i}" data-k="foodId">${foodOpts(m.foodId)}</select><input type="number" style="width:76px" data-mix="${i}" data-k="pct" value="${esc(m.pct)}"><span class="muted">%</span><button class="btn ghost sm" data-act="mix-del" data-i="${i}">✕</button></div>`).join('')}</div>
     <button class="btn ghost sm" data-act="mix-add" style="margin-top:8px">+ 사료 섞기</button>`
     : `<p class="muted">설정에서 사료와 라벨 칼로리를 먼저 등록해주세요.</p><button class="btn acc sm" data-act="go-food">🔍 사료 이름으로 칼로리 찾기</button>`}
-    <div class="two"><div><label class="f">회당 섞는 물 (ml, 선택)</label><input type="number" inputmode="decimal" id="c-water" value="${esc(C.water)}" placeholder="예: 5"></div>
-    <div><label class="f">주사기 크기 (ml)</label><input type="number" inputmode="decimal" id="c-syringe" value="${esc(C.syringe)}"></div></div>
+    ${A ? `<div class="two"><div><label class="f">회당 섞는 물 (ml, 선택)</label><input type="number" inputmode="decimal" id="c-water" value="${esc(C.water)}" placeholder="예: 5"></div>
+    <div><label class="f">주사기 크기 (ml)</label><input type="number" inputmode="decimal" id="c-syringe" value="${esc(C.syringe)}"></div></div>` : ''}
   </div>
   <div id="c-out"></div>
   <button class="btn acc full" data-act="calc-save" style="margin-top:4px">저장하기</button>
@@ -680,17 +685,20 @@ function vCalc() {
 function calcRead() {
   if (!$('#c-meals')) return;
   C.weight = S.pet?.weightKg ?? ''; C.meals = $('#c-meals').value; C.factor = $('#c-factor').value; C.override = $('#c-override').value;
-  C.ramp = $('#c-ramp').checked; C.start = $('#c-start').value || today(); C.water = $('#c-water').value; C.syringe = $('#c-syringe').value;
+  if ($('#c-ramp')) { C.ramp = $('#c-ramp').checked; C.start = $('#c-start').value || today(); }
+  if ($('#c-water')) { C.water = $('#c-water').value; C.syringe = $('#c-syringe').value; }
   document.querySelectorAll('[data-mix]').forEach(el => { const m = C.mix[+el.dataset.mix]; if (m) m[el.dataset.k] = el.dataset.k === 'pct' ? el.value : el.value; });
-  $('#c-startwrap').classList.toggle('hidden', !C.ramp);
+  $('#c-startwrap')?.classList.toggle('hidden', !C.ramp);
 }
 function calcUpdate() {
   const out = $('#c-out'); if (!out) return;
+  C.weight = S.pet?.weightKg ?? C.weight;
   const w = num(C.weight), meals = Math.max(1, Math.round(num(C.meals) || 1));
   if (!w && !num(C.override)) { out.innerHTML = '<div class="card muted">설정에서 체중을 넣으면 결과가 나와요.</div>'; return; }
   const base = w ? rer(w) : null;
   const full = num(C.override) || base * (num(C.factor) || 1);
-  const pseudo = { plan: { ramp: C.ramp, start: C.start } };
+  const AS = C.mode === 'assist';
+  const pseudo = { plan: { ramp: AS && C.ramp, start: C.start } };
   const k = today(), frac = rampFrac(pseudo, k), di = C.ramp ? dayIndex(pseudo, k) : null;
   const todayK = full * frac;
   const foods = S.pet?.foods || [];
@@ -712,17 +720,17 @@ function calcUpdate() {
     });
     if (Math.abs(pctSum - 100) > 0.5) warn = `<div class="muted" style="margin-top:6px">비율 합이 ${r0(pctSum)}%라서 100% 기준으로 맞춰 계산했어요.</div>`;
   }
-  const water = num(C.water) || 0, syr = num(C.syringe);
+  const water = AS ? num(C.water) || 0 : 0, syr = AS ? num(C.syringe) : null;
   const totalVol = vol + water;
-  const ramps = C.ramp ? [1, 2, 3].map(d => `<td style="text-align:center;font-weight:${di === d ? 700 : 400};${di === d ? 'color:var(--acc)' : ''}">${d}일차<br>${r0(full * (d === 1 ? 1 / 3 : d === 2 ? 2 / 3 : 1))}kcal</td>`).join('') : '';
+  const ramps = AS && C.ramp ? [1, 2, 3].map(d => `<td style="text-align:center;font-weight:${di === d ? 700 : 400};${di === d ? 'color:var(--acc)' : ''}">${d}일차<br>${r0(full * (d === 1 ? 1 / 3 : d === 2 ? 2 / 3 : 1))}kcal</td>`).join('') : '';
   out.innerHTML = `<div class="res">
     <div class="k">${num(C.override) ? '주치의 지정 칼로리' : `기초대사량 ${r0(base)}kcal × ${num(C.factor) || 1}`}</div>
     <div class="row" style="align-items:baseline;gap:6px"><span class="big">${r0(todayK)}</span><span class="muted">kcal / 오늘${frac < 1 ? ` (전량 ${r0(full)}kcal의 ${frac < .5 ? '1/3' : '2/3'})` : ''}</span></div>
     <div class="muted">회당 약 ${r0(todayK / meals)}kcal × ${meals}회</div>
     ${ramps ? `<table style="margin-top:8px"><tr>${ramps}</tr></table>` : ''}
-    ${rows ? `<table style="margin-top:10px">${rows}${totalVol > 0 ? `<tr><td>회당 총량${water ? ` (물 ${water}ml 포함)` : ''}</td><td>약 ${r1(totalVol)}ml${syr ? ` · ${syr}ml 주사기 ${r1(totalVol / syr)}개` : ''}</td></tr>` : ''}</table>${warn}` : ''}
+    ${rows ? `<table style="margin-top:10px">${rows}${AS && totalVol > 0 ? `<tr><td>회당 총량${water ? ` (물 ${water}ml 포함)` : ''}</td><td>약 ${r1(totalVol)}ml${syr ? ` · ${syr}ml 주사기 ${r1(totalVol / syr)}개` : ''}</td></tr>` : ''}</table>${warn}` : ''}
   </div>
-  <p class="muted" style="margin:8px 2px 12px">g·ml가 섞인 경우 1g ≈ 1ml로 어림했어요. 강급 중 토하거나 거부가 심하면 양을 늘리지 말고 주치의와 상의해주세요.</p>`;
+  <p class="muted" style="margin:8px 2px 12px">${AS ? 'g·ml가 섞인 경우 1g ≈ 1ml로 어림했어요. 강급 중 토하거나 거부가 심하면 양을 늘리지 말고 주치의와 상의해주세요.' : '체중이 2주 넘게 계속 줄거나 늘면 주치의와 목표를 다시 정해주세요.'}</p>`;
 }
 $('#main').addEventListener('input', e => { if (S.tab === 'calc' && e.target.closest('.card') && !/^q-/.test(e.target.id)) { calcRead(); calcUpdate(); } });
 $('#main').addEventListener('change', e => { if (S.tab === 'calc' && !/^q-/.test(e.target.id)) { calcRead(); calcUpdate(); } });
@@ -997,7 +1005,7 @@ function petsBar() {
   if (!pets.length) return '';
   return `<div class="chips" style="margin:-4px 0 12px">${pets.map(x => `<button class="chip ${x.id === S.pet?.id ? 'on' : ''}" data-act="pet" data-id="${esc(x.id)}">${x.species === 'dog' ? '🐶' : '🐱'} ${esc(x.name || '이름 없음')}</button>`).join('')}<button class="chip" data-act="pet-add">+ 아이 추가</button></div>`;
 }
-function petBase() { return JSON.parse(JSON.stringify(S.pet || { species: 'cat', factor: 1, meals: 4, foods: [], tasks: [] })); }
+function petBase() { return JSON.parse(JSON.stringify(S.pet || { species: 'cat', meals: 4, foods: [], tasks: [] })); }
 async function savePet(p, msg) { if (await write(() => putPet(p))) { toast(msg || '저장했어요'); render(true); } }
 
 /* ---------- sheet (new log) ---------- */
@@ -1039,7 +1047,7 @@ function openSheet(type, E) {
     <label class="f">시간</label><input type="datetime-local" id="n-time" value="${localDT(Date.now())}">
     <div class="two" style="margin-top:16px"><button class="btn ghost" data-act="close">취소</button><button class="btn acc" data-act="save-log">저장</button></div>`;
   $('#sheet').classList.add('open'); $('#sheetBg').classList.add('open');
-  if (type === 'feed' && !E) { const mm = ls.get('aigyeot-method'); if (mm && $('#n-method')) $('#n-method').value = mm; const lastF = S.logs.find(l => l.type === 'feed'); const lf = lastF && (S.pet?.foods || []).find(x => x.name === lastF.food); if (lf && $('#n-food')) $('#n-food').value = lf.id; }
+  if (type === 'feed' && !E) { const mm = ls.get('aigyeot-method') || (feedModeOf(S.pet) === 'assist' ? '강급' : '스스로 먹음'); if (mm && $('#n-method')) $('#n-method').value = mm; const lastF = S.logs.find(l => l.type === 'feed'); const lf = lastF && (S.pet?.foods || []).find(x => x.name === lastF.food); if (lf && $('#n-food')) $('#n-food').value = lf.id; }
   if (E) fillSheet(E);
   if (type === 'feed') feedUpdate();
 }
@@ -1405,12 +1413,13 @@ document.addEventListener('click', async e => {
   else if (a === 'task-up') { const p = petBase(), i = +b.dataset.i; [p.tasks[i - 1], p.tasks[i]] = [p.tasks[i], p.tasks[i - 1]]; savePet(p, '순서를 바꿨어요'); }
   else if (a === 'mix-add') { calcRead(); const f = (S.pet?.foods || [])[0]; if (!f) return; C.mix.push({ foodId: f.id, pct: 0 }); render(true); }
   else if (a === 'mix-del') { calcRead(); C.mix.splice(+b.dataset.i, 1); render(true); }
+  else if (a === 'cmode') { calcRead(); if (C.mode !== b.dataset.v) { C.mode = b.dataset.v; C.factor = null; } render(true); }
   else if (a === 'calc-save') {
     calcRead();
     if (!S.pet) return toast('먼저 설정에서 아이 정보를 저장해주세요');
     const p = petBase();
     p.weightKg = num(C.weight); p.factor = num(C.factor) || 1; p.targetKcal = num(C.override); p.meals = Math.max(1, Math.round(num(C.meals) || 1));
-    p.plan = { ramp: !!C.ramp, start: C.start }; p.water = num(C.water); p.syringe = num(C.syringe);
+    p.feedMode = C.mode; p.plan = { ramp: C.mode === 'assist' && !!C.ramp, start: C.start }; if (C.mode === 'assist') { p.water = num(C.water); p.syringe = num(C.syringe); }
     p.mix = C.mix.map(m => ({ foodId: m.foodId, pct: num(m.pct) || 0 }));
     savePet(p, '저장했어요. 가족 화면에도 반영돼요');
   }
