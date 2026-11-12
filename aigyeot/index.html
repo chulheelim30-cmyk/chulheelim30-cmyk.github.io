@@ -61,6 +61,10 @@ header.top{display:flex;align-items:center;justify-content:space-between;gap:12p
 .log.alert .ic{background:var(--warn-soft)}
 .daylbl{font-size:13px;font-weight:700;color:var(--sub);margin:14px 2px 4px}
 .chips{display:flex;flex-wrap:wrap;gap:6px}
+.fam{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+.mem{display:flex;gap:8px;align-items:center;border:1px solid var(--line);border-radius:14px;padding:8px 10px}
+.mem.me{border-color:var(--ok)}
+.ini{flex:none;width:34px;height:34px;border-radius:50%;background:var(--acc-soft);color:var(--acc);display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:15px}
 .chip{border:1px solid var(--line);background:var(--card);border-radius:999px;padding:6px 12px;font-size:14px;cursor:pointer}
 .chip.on{background:var(--ink);color:#fff;border-color:var(--ink)}
 .chip.danger.on{background:var(--warn);border-color:var(--warn)}
@@ -305,7 +309,7 @@ function sbBackend(code) {
     if (loading) { again = true; return; } loading = true; again = false;
     try {
       const r = await rpc('ag_get', { p_code: code });
-      st = { pet: r.pet || null, logs: r.logs || [], checks: r.checks || [] }; stamp = r.stamp;
+      st = { pet: r.pet || null, logs: r.logs || [], checks: r.checks || [] }; stamp = r.stamp; S.fresh = true;
       failed.forEach(op => applyOp(st, op)); q.forEach(op => applyOp(st, op));
       saveC();
       if (S.slow) { S.slow = false; renderBanner(); }
@@ -381,6 +385,56 @@ async function write(fn) {
   }
 }
 
+/* ---------- 함께 돌보는 보호자 ---------- */
+// 기기마다 id를 하나 두고 이름을 가족 정보(members)에 한 번 남겨요(이름을 바꾸면 다시 저장). 접속 시간은 남기지 않아요.
+const devId = () => { let d = ls.get('aigyeot-dev'); if (!d) { d = uid() + uid(); ls.set('aigyeot-dev', d); } return d; };
+function members() {
+  const m = (S.family?.members || []).map(x => ({ id: x.id, name: x.name, n: 0 }));
+  const k = today();
+  (S.allLogs || []).forEach(l => {
+    if (!l.by) return;
+    let x = m.find(y => y.name === l.by);
+    if (!x) { x = { name: l.by, n: 0 }; m.push(x); }
+    if (dkey(l.t) === k) x.n++;
+  });
+  (S.checks || []).forEach(c => { if (c.date === k && c.by) { const x = m.find(y => y.name === c.by); if (x) x.n++; } });
+  const me = devId();
+  const out = m.map(x => ({ ...x, me: x.id ? x.id === me : x.name === S.me }));
+  if (S.me && !out.some(x => x.me)) out.push({ name: S.me, n: 0, me: true });
+  return out.sort((a, b) => (b.me - a.me) || (b.n - a.n));
+}
+const initial = n => esc(String(n || '?').trim().slice(0, 1));
+async function touchMember() {
+  if (!S.me || !S.fresh || !S.family || !backend || S.readOnly || S.touching) return;
+  const id = devId(), fam = JSON.parse(JSON.stringify(S.family)); fam.members = fam.members || [];
+  const i = fam.members.findIndex(x => x.id === id);
+  if (i >= 0 && fam.members[i].name === S.me) return;
+  S.touching = true;
+  const rec = { id, name: S.me };
+  if (i >= 0) fam.members[i] = rec; else fam.members.push(rec);
+  fam.members = fam.members.slice(-12);
+  try { await backend.savePet(fam); S.family = fam; } catch (e) {} finally { S.touching = false; }
+}
+// 새로 들어온 가족 알려주기 (이 기기에서 처음 본 사람만)
+function noticeNewMembers() {
+  const key = 'aigyeot-known-' + familyCode(), ms = (S.family?.members || []).filter(x => x.id && x.id !== devId());
+  let known = null; try { known = JSON.parse(ls.get(key)); } catch (e) {}
+  if (Array.isArray(known)) { const fresh = ms.filter(x => !known.includes(x.id)); if (fresh.length) toast(`${fresh.map(x => x.name).join(', ')}님이 함께 돌보기 시작했어요`); }
+  ls.set(key, JSON.stringify(ms.map(x => x.id)));
+}
+function familyCard() {
+  if (!S.me) return '';
+  const ms = members(), others = ms.filter(x => !x.me);
+  if (!others.length) return `<div class="card"><h3 style="margin:0">👨‍👩‍👧 함께 돌보는 가족</h3><p class="muted" style="margin:6px 0 10px">아직 혼자 기록하고 있어요. 링크를 보내면 가족이 같이 보고 기록할 수 있어요.</p><button class="btn ghost sm" data-act="share">💬 가족에게 링크 보내기</button></div>`;
+  return `<div class="card"><div class="row between"><h3 style="margin:0">👨‍👩‍👧 함께 돌보는 가족 ${ms.length}명</h3><button class="btn ghost sm" data-act="share">+ 초대</button></div>
+    <div class="fam">${ms.map(x => `<div class="mem${x.me ? ' me' : ''}"><span class="ini">${initial(x.name)}</span><div><b>${esc(x.name)}</b>${x.me ? ' <span class="muted" style="font-size:12px">(나)</span>' : ''}<div class="muted" style="font-size:12px">${x.n ? `오늘 ${x.n}건` : '오늘 기록 없음'}</div></div></div>`).join('')}</div></div>`;
+}
+function familyList() {
+  const ms = members();
+  if (!ms.length) return '';
+  return `<div class="fam" style="margin:4px 0 12px">${ms.map(x => `<div class="mem${x.me ? ' me' : ''}"><span class="ini">${initial(x.name)}</span><div><b>${esc(x.name)}</b>${x.me ? ' <span class="muted" style="font-size:12px">(나)</span>' : ''}</div></div>`).join('')}</div>`;
+}
+
 /* ---------- boot ---------- */
 function setMode(m) {
   S.mode = m;
@@ -399,7 +453,7 @@ function renderBanner() {
 }
 function start(b) {
   backend = b;
-  b.subPet(p => { S.family = normFam(p); pickPet(); S.petLoaded = true; render(); });
+  b.subPet(p => { S.family = normFam(p); pickPet(); S.petLoaded = true; if (S.fresh) { noticeNewMembers(); touchMember(); } render(); });
   b.subLogs(l => { S.allLogs = l; filterLogs(); render(); });
   b.subChecks(c => { S.checks = c; render(); });
 }
@@ -510,7 +564,7 @@ function vToday() {
   const p = S.pet;
   if (!p && S.petLoaded) return quickSetup();
   if (!p) return `<div class="card muted">불러오는 중…</div>`;
-  return nameCard() + quickCard() + startGuide() + walkCard() + (num(p.weightKg) ? kcalCard() : '') + checklistCard() + writeCard() + recentCard();
+  return nameCard() + familyCard() + quickCard() + startGuide() + walkCard() + (num(p.weightKg) ? kcalCard() : '') + checklistCard() + writeCard() + recentCard();
 }
 // 처음 만든 직후: 이름·종류·체중만 넣고 바로 시작 (나머지는 나중에 설정에서)
 function quickSetup() {
@@ -1069,7 +1123,7 @@ function vSet() {
 
   ${isStandalone() ? '' : `<div class="card"><h3>홈 화면에 앱으로 두기</h3>${installHow()}${isIOS ? '<p class="muted" style="margin:8px 0 0">아이폰은 홈 화면 앱이 처음 열릴 때 가족 링크를 한 번 붙여넣어야 할 수 있어요. 아래 링크를 미리 복사해 두세요.</p>' : ''}</div>`}
   ${(() => { try { return sessionStorage.getItem('aigyeot-rotated'); } catch (e) { return null; } })() ? '<div class="note" style="margin-bottom:12px"><b>새 링크로 바꿨어요.</b> 옛 링크는 이제 열리지 않아요. 아래 버튼으로 가족에게 새 링크를 다시 보내주세요.</div>' : ''}
-  <div class="card"><h3>가족과 같이 쓰기</h3>
+  <div class="card"><h3>가족과 같이 쓰기</h3>${familyList()}
     <p class="muted" style="margin:0 0 8px">이 링크를 가족에게 보내면, 가입 없이 바로 같은 기록을 보고 남길 수 있어요.</p>
     <input type="text" id="shareUrl" value="${esc(shareLink())}" onfocus="this.select();this.setSelectionRange(0,this.value.length)" style="font-size:16px">
     <div style="display:grid;grid-template-columns:2fr 1fr;gap:8px;margin-top:8px"><button class="btn" data-act="share" style="white-space:nowrap">💬 가족에게 보내기</button><button class="btn ghost" data-act="copy-link" style="white-space:nowrap">링크 복사</button></div>
@@ -1569,7 +1623,7 @@ document.addEventListener('click', async e => {
     } catch (err) { toast('바꾸지 못했어요. 인터넷 연결을 확인해주세요'); S.rotArm = false; render(true); }
   }
   else if (a === 'join') { const v = ($('#join')?.value || '').trim(); const m = v.match(/[?&]g=([0-9a-f]{20,64})/i) || v.match(/^([0-9a-f]{20,64})$/i); if (!m) return toast('링크가 맞지 않아요. 가족에게 받은 링크 전체를 붙여넣어 주세요'); history.replaceState(null, '', location.pathname + '?g=' + m[1]); boot(); }
-  else if (a === 'setname') { const v = (b.dataset.v || $('#nm')?.value || '').trim().slice(0, 10); if (!v) return toast('이름을 넣어주세요'); S.me = v; ls.set('aigyeot-name', v); toast(v + '(으)로 기록할게요'); render(true); }
+  else if (a === 'setname') { const v = (b.dataset.v || $('#nm')?.value || '').trim().slice(0, 10); if (!v) return toast('이름을 넣어주세요'); S.me = v; ls.set('aigyeot-name', v); toast(v + '(으)로 기록할게요'); render(true); touchMember(); }
   else if (a === 'share') { ls.set('aigyeot-shared-' + familyCode(), '1'); const url = shareLink(), text = `${S.pet?.name || '우리 아이'} 하루 기록을 같이 써요. 이 링크로 들어오면 돼요.`; if (navigator.share) { try { await navigator.share({ title: '아이곁', text, url }); } catch (err) {} } else { if (await copyText(text + '\n' + url)) toast('복사했어요. 카톡에 붙여넣어 주세요'); else { $('#shareUrl')?.focus(); toast('위 링크 칸을 길게 눌러 복사해주세요'); } } }
   else if (a === 'copy-link') { ls.set('aigyeot-shared-' + familyCode(), '1'); if (await copyText(shareLink())) toast('링크를 복사했어요'); else { $('#shareUrl')?.focus(); toast('위 링크 칸을 길게 눌러 복사해주세요'); } }
   else if (a === 'er-check') erCheck();
