@@ -51,6 +51,26 @@ ol.rec .ex{color:var(--muted);font-size:14px}
 ul.chk{padding-left:18px;margin:6px 0}
 .note{font-size:13px;color:var(--muted);margin-top:10px}
 #result{display:none}
+.hero{background:var(--navy);color:#fff;border:0}
+.hero h2{color:#fff}
+.hero .kick{font-size:12px;letter-spacing:2px;color:var(--gold);margin-bottom:2px}
+.hero .badge{background:var(--gold)}
+.hero .badge .s{color:#fff}
+.hero .bar{background:rgba(255,255,255,.15)}
+.hero .sc{color:#e6e9ef}
+.hero #rRange{background:rgba(255,255,255,.08)!important;color:#e6e9ef}
+.hero #rGradeTxt{color:#e6e9ef}
+.hero .note{color:#9fb0c8}
+.legend{display:grid;gap:8px;margin-top:8px}
+.lg{display:flex;gap:10px;align-items:flex-start;font-size:14px}
+.lg .no{flex:0 0 26px;height:26px;border-radius:8px;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px}
+.lg .tm{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}
+.lg .tm span{font-size:11px;background:var(--stone);border-radius:6px;padding:1px 6px}
+.tgrid{width:100%;border-collapse:separate;border-spacing:3px;font-size:12px}
+.tgrid th{font-weight:500;color:var(--muted);text-align:center}
+.tgrid td.n{white-space:nowrap;max-width:110px;overflow:hidden;text-overflow:ellipsis;padding-right:4px}
+.tgrid td.c{height:22px;border-radius:5px;background:#f1ede4}
+.tgrid tr.sum td.n{font-weight:700;color:var(--navy)}
 #copied{display:none;text-align:center;color:var(--ok);font-size:14px;margin-top:8px}
 textarea#copybox{display:none;width:100%;height:160px;margin-top:8px;font:inherit;font-size:13px}
 footer{font-size:12px;color:var(--muted);text-align:center;margin-top:24px}
@@ -152,7 +172,8 @@ footer{font-size:12px;color:var(--muted);text-align:center;margin-top:24px}
 </form>
 
 <div id="result">
-  <div class="card">
+  <div class="card hero">
+    <div class="kick">공실공 간이진단 리포트 · <span id="rDate"></span></div>
     <h2 id="rTitle">진단 결과</h2>
     <div class="grade">
       <div class="badge"><div class="g" id="rGrade">-</div><div class="s" id="rScore">-</div></div>
@@ -161,6 +182,19 @@ footer{font-size:12px;color:var(--muted);text-align:center;margin-top:24px}
     <div id="rRange" style="margin-top:12px;background:var(--ivory);border-radius:10px;padding:10px 12px;font-size:14px"></div>
     <div id="rBars" style="margin-top:12px"></div>
     <p class="note">보수적으로 매겼습니다. 역 거리·입주율·배기·호가처럼 추정이 들어간 값은 만점의 70~80%까지, 모르는 항목은 절반 이하로 줍니다. A등급은 공실공 현장 확인 후에만 나옵니다.</p>
+  </div>
+
+  <div class="card">
+    <h2>MD 배치도</h2>
+    <div id="rIso"></div>
+    <div class="legend" id="rLegend"></div>
+    <p class="note">숫자는 호실 번호입니다. 색은 업종 분야(음식·생활·의료·운동/교육·리테일·업무)입니다. 면적을 넣으면 칸 크기가 면적에 맞춰집니다.</p>
+  </div>
+
+  <div class="card">
+    <h2>시간대별 손님 커버리지</h2>
+    <div id="rTime"></div>
+    <p class="note" id="rTimeNote"></p>
   </div>
 
   <div class="card">
@@ -195,7 +229,7 @@ footer{font-size:12px;color:var(--muted);text-align:center;margin-top:24px}
   <p class="note" style="text-align:center">공실공은 분석과 문서 작성만 합니다. 임대 알선·계약은 임대인 또는 공인중개사가 진행합니다.</p>
 </div>
 
-<footer>© 공실공 · 간이진단 v2 (2026.11)</footer>
+<footer>© 공실공 · 간이진단 v3 (2026.11)</footer>
 </div>
 
 <script>
@@ -212,6 +246,48 @@ document.querySelectorAll('.presets button').forEach(b=>b.addEventListener('clic
   document.querySelectorAll('#exist .chip').forEach(c=>c.classList.toggle('on',p.exist.includes(c.dataset.k)));
   $('extra').innerHTML="";
 }));
+const CAT={fnb:["음식","#B08D57"],life:["생활","#4E7C8C"],med:["의료","#6D8F6A"],fit:["운동·교육","#7B6AA3"],retail:["리테일","#C0796B"],office:["업무","#5B6B82"],none:["검토","#9aa3ad"]};
+const TIMES=["아침","점심","오후","저녁","주말","심야"];
+function renderIso(out,x){
+  const c30=0.866,s30=0.5,P=(X,Y,Z)=>[(X-Y)*c30,(X+Y)*s30-Z];
+  const pts=a=>a.map(p=>P(...p)).map(q=>q[0].toFixed(1)+","+q[1].toFixed(1)).join(" ");
+  const shade=(hex,f)=>{const n=parseInt(hex.slice(1),16);let r=n>>16,g=n>>8&255,b=n&255;r=Math.round(r*f);g=Math.round(g*f);b=Math.round(b*f);return `rgb(${Math.min(255,r)},${Math.min(255,g)},${Math.min(255,b)})`;};
+  const L=240,D=70,H=30;const boxes=[];let svg="";
+  const items=out.map((o,i)=>({...o,no:i+1,ar:o.r.area||40}));
+  const f1f=items.filter(o=>o.r.pos==="front"),f1i=items.filter(o=>o.r.pos==="inner"),up=items.filter(o=>o.r.pos==="upper");
+  function lay(arr,y0,d,z){const tot=arr.reduce((a,o)=>a+o.ar,0)||1;let xx=0;arr.forEach(o=>{const w=L*o.ar/tot;boxes.push({x:xx,y:y0,w,d,z,h:H-4,o});xx+=w;});}
+  const G=(L+D)*s30+40; // 층 사이 간격(분해도)
+  const floors=[];if(up.length)floors.push({nm:"2층 이상",z:G,arr:up});floors.push({nm:"1층",z:0,arr:null});
+  if(f1i.length&&f1f.length){lay(f1i,0,D/2,0);lay(f1f,D/2,D/2,0);}else lay(f1f.concat(f1i),0,D,0);
+  if(up.length)lay(up,0,D,G);
+  const draw=(b,fill,label)=>{const {x:X,y:Y,w,d,z,h}=b;
+    svg+=`<polygon points="${pts([[X+w,Y,z],[X+w,Y+d,z],[X+w,Y+d,z+h],[X+w,Y,z+h]])}" fill="${shade(fill,0.72)}"/>`;
+    svg+=`<polygon points="${pts([[X,Y+d,z],[X+w,Y+d,z],[X+w,Y+d,z+h],[X,Y+d,z+h]])}" fill="${shade(fill,0.86)}"/>`;
+    svg+=`<polygon points="${pts([[X,Y,z+h],[X+w,Y,z+h],[X+w,Y+d,z+h],[X,Y+d,z+h]])}" fill="${fill}" stroke="#fff" stroke-width="1.2"/>`;
+    const c=P(X+w/2,Y+d/2,z+h);svg+=`<circle cx="${c[0].toFixed(1)}" cy="${c[1].toFixed(1)}" r="10" fill="#fff"/><text x="${c[0].toFixed(1)}" y="${(c[1]+4).toFixed(1)}" text-anchor="middle" font-size="12" font-weight="700" fill="#13233D">${label}</text>`;};
+  floors.forEach(f=>{ // 바닥판 + 층 이름
+    svg+=`<polygon points="${pts([[-10,-10,f.z],[L+10,-10,f.z],[L+10,D+10,f.z],[-10,D+10,f.z]])}" fill="#E9E3D6"/>`;
+    const t=P(-10,D+10,f.z);svg+=`<text x="${(t[0]-6).toFixed(1)}" y="${(t[1]+4).toFixed(1)}" font-size="12" font-weight="700" fill="#13233D" text-anchor="end">${f.nm}</text>`;
+    boxes.filter(b=>b.z===f.z).sort((a,b)=>a.y-b.y||a.x-b.x).forEach(b=>draw(b,CAT[b.o.pick?b.o.pick.cat:"none"][1],b.o.no));
+  });
+  if(up.length){const p1=P(L/2,D/2,H),p2=P(L/2,D/2,G-4);svg+=`<line x1="${p1[0]}" y1="${p1[1]}" x2="${p2[0]}" y2="${p2[1]}" stroke="#13233D" stroke-dasharray="3 4" opacity=".35"/>`;}
+  const a1=P(L*0.62,D+14,0),a2=P(L*0.62,D+48,0);
+  svg+=`<line x1="${a1[0]}" y1="${a1[1]}" x2="${a2[0]}" y2="${a2[1]}" stroke="#B08D57" stroke-width="2" marker-end="url(#ar)"/>`;
+  const lt=P(L*0.62,D+56,0);svg+=`<text x="${lt[0]}" y="${lt[1]+12}" font-size="11" fill="#6b7280" text-anchor="middle">도로·역 방향 (전면)</text>`;
+  const topz=(up.length?G:0)+H;
+  const all=[[-10,-10,0],[L+10,D+10,0],[L+10,-10,0],[-10,D+10,0],[L*0.62,D+70,0],[0,0,topz],[L,0,topz],[0,D,topz]].map(p=>P(...p));
+  const mnx=Math.min(...all.map(p=>p[0]))-70,mxx=Math.max(...all.map(p=>p[0]))+12,mny=Math.min(...all.map(p=>p[1]))-14,mxy=Math.max(...all.map(p=>p[1]))+20;
+  $('rIso').innerHTML=`<svg viewBox="${mnx} ${mny} ${mxx-mnx} ${mxy-mny}" width="100%" role="img" aria-label="MD 배치도"><defs><marker id="ar" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8z" fill="#B08D57"/></marker></defs>${svg}</svg>`;
+  $('rLegend').innerHTML=items.map(o=>{const ct=CAT[o.pick?o.pick.cat:"none"];return `<div class="lg"><div class="no" style="background:${ct[1]}">${o.no}</div><div><b>${o.pick?o.pick.n:"비F&B·분할 검토"}</b> <span style="color:var(--muted);font-size:12px">${POSNM[o.r.pos]}${o.r.area!==null?" · "+o.r.area+"㎡":""} · ${ct[0]}</span>${o.pick?`<div class="tm">${o.pick.tm.map(t=>"<span>"+t+"</span>").join("")}</div>`:""}</div></div>`;}).join("");
+}
+function renderTime(out){
+  const picks=out.filter(o=>o.pick);
+  const cov=TIMES.map(t=>picks.filter(o=>o.pick.tm.includes(t)).length);
+  const row=(n,arr,col,cls)=>`<tr class="${cls||""}"><td class="n">${n}</td>${TIMES.map((t,i)=>`<td class="c" style="${arr[i]?"background:"+col+(cls?";opacity:"+Math.min(1,0.35+arr[i]*0.3):""):""}"></td>`).join("")}</tr>`;
+  $('rTime').innerHTML=`<table class="tgrid"><tr><th></th>${TIMES.map(t=>"<th>"+t+"</th>").join("")}</tr>${picks.map((o,i)=>row((out.indexOf(o)+1)+". "+o.pick.n,TIMES.map(t=>o.pick.tm.includes(t)),CAT[o.pick.cat][1])).join("")}${row("건물 전체",cov,"#13233D","sum")}</table>`;
+  const empty=TIMES.filter((t,i)=>!cov[i]);const crowd=TIMES.filter((t,i)=>cov[i]>=3);
+  $('rTimeNote').textContent=(empty.length?`비어 있는 시간대: ${empty.join("·")} — 이 시간대 업종을 넣으면 건물에 사람이 끊기지 않습니다. `:"모든 시간대에 손님이 드는 구성입니다. ")+(crowd.length?`${crowd.join("·")}에 3개 이상 몰려 있어 같은 손님을 나눠 가질 수 있습니다.`:"");
+}
 const POSNM={front:"1층 전면",inner:"1층 안쪽",upper:"2층 이상"};
 function addRow(v){v=v||{};const d=document.createElement('div');d.className='urow';
   d.innerHTML=`<button type="button" class="del">삭제</button><label>추가 호실 위치</label><select class="upos"><option value="front">1층 전면</option><option value="inner">1층 안쪽</option><option value="upper">2층 이상</option></select><div class="row"><div><label>전용면적 ㎡</label><input type="number" class="uarea" inputmode="numeric"></div><div><label>호가 월세 (만원)</label><input type="number" class="urent" inputmode="numeric"></div></div>`;
@@ -231,22 +307,22 @@ document.querySelectorAll('#exist .chip').forEach(c=>c.addEventListener('click',
 
 // 업종 후보: t=맞는 건물유형, f=층(1/2), d=배기 필요, c=겹치는 기존 업종, a=[최소,최대]면적
 const CANDS=[
- {n:"버거·치킨 (소형 매장)",ex:"예: 노브랜드버거 컴팩트, 파파이스 — 둘 다 15평(약 50㎡) 모델로 출점 확대 중",t:["jisan","officetel","mixed","retail","small"],f:["front"],d:true,c:["burger"],a:[40,100],w:"간판 노출이 중요한 업종. 점심·저녁 모두 수요"},
- {n:"편의점",ex:"예: CU, GS25, 세븐일레븐",t:["officetel","mixed","retail","small","jisan"],f:["front","inner"],d:false,c:["cvs"],a:[30,120],w:"1인 가구 생활 필수. 24시간 불 켜진 1층이 건물 인상을 바꿈"},
- {n:"도시락",ex:"예: 한솥도시락",t:["jisan","officetel"],f:["front","inner"],d:false,c:["dosirak"],a:[33,80],w:"점심 단체주문·포장. 조리 설비 적음"},
- {n:"아침 토스트",ex:"예: 이삭토스트 — 가맹비 없음",t:["jisan","officetel"],f:["front","inner"],d:false,c:[],a:[25,70],w:"출근길 07~10시 수요. 다른 칸과 시간대가 안 겹침"},
- {n:"세탁·코인빨래방",ex:"예: 크린토피아",t:["officetel","mixed"],f:["front","inner"],d:false,c:["laundry"],a:[20,90],w:"오피스텔 입주민 고정 수요. 안쪽 칸도 가능"},
- {n:"저가 커피",ex:"예: 메가MGC, 컴포즈, 빽다방",t:["officetel","jisan","retail","small","mixed"],f:["front"],d:false,c:["coffee"],a:[20,70],w:"역 출근 동선 테이크아웃. 건물 안에 커피가 이미 있으면 제외"},
- {n:"무인 매장 (아이스크림·밀키트·문구)",ex:"인건비 없는 소형 업종",t:["officetel","mixed"],f:["front","inner"],d:false,c:["unmanned"],a:[15,50],w:"작은 칸·안쪽 칸 채우기 좋음"},
- {n:"샐러드",ex:"예: 샐러디",t:["jisan","officetel"],f:["front","inner"],d:false,c:[],a:[30,70],w:"점심 보완. 배기 부담 적음"},
- {n:"의원 + 약국",ex:"1층 약국 · 2층 의원 조합",t:["officetel","mixed","retail","small"],f:["front","upper"],d:false,c:["pharmacy"],a:[40,330],w:"역세권 오피스텔 배후에 강함. 의원은 2층도 가능"},
- {n:"PT·필라테스",ex:"소형 1:1 스튜디오",t:["officetel","mixed","retail","small","jisan"],f:["upper","inner"],d:false,c:["fitness"],a:[50,330],w:"목적 방문 업종이라 2층·안쪽이어도 됨. 저녁 수요"},
- {n:"미용실",ex:"1~2인 소형 살롱",t:["officetel","mixed","retail","small"],f:["inner","upper","front"],d:false,c:["hair"],a:[25,100],w:"예약제라 노출 약한 칸도 가능"},
- {n:"반찬가게·정육",ex:"동네 생활 업종",t:["officetel","mixed"],f:["front","inner"],d:false,c:["dosirak"],a:[25,70],w:"1~2인 가구 저녁 장보기"},
- {n:"학원",ex:"보습·음악·코딩 등",t:["mixed","retail","small"],f:["upper"],d:false,c:["academy"],a:[60,330],w:"아파트 단지 배후일 때"},
- {n:"생활용품·드럭스토어",ex:"예: 다이소, 올리브영 — 1층 대형 칸 앵커",t:["officetel","mixed","retail","small"],f:["front"],d:false,c:[],a:[100,700],w:"넓은 1층 전면 칸을 한 번에 채우는 앵커. 유동이 많아야 함"},
- {n:"대형 카페·베이커리",ex:"좌석형 카페, 베이커리 카페",t:["officetel","mixed","retail","small","jisan"],f:["front"],d:false,c:["coffee"],a:[80,300],w:"넓은 칸에 맞는 체류형 F&B. 주말 수요 확인 필요"},
- {n:"세무·노무·법무 사무소",ex:"비(非)F&B",t:["jisan"],f:["inner","upper"],d:false,c:[],a:[25,200],w:"입주 기업이 고객. F&B가 넘칠 때 대안"}
+ {n:"버거·치킨 (소형 매장)",cat:"fnb",tm:["점심","저녁","주말"],eq:"튀김·그릴 배기 덕트",ex:"15평 안팎 소형 매장 모델로 출점을 늘리는 프랜차이즈 업종",t:["jisan","officetel","mixed","retail","small"],f:["front"],d:true,c:["burger"],a:[40,100],w:"간판 노출이 중요한 앵커 업종. 점심·저녁 모두 수요"},
+ {n:"편의점",cat:"life",tm:["아침","점심","오후","저녁","주말","심야"],eq:"냉장 전력",ex:"1층 출입구·도로변, 24시간 운영",t:["officetel","mixed","retail","small","jisan"],f:["front","inner"],d:false,c:["cvs"],a:[30,120],w:"1인 가구 생활 필수. 밤에도 불 켜진 1층이 건물 인상을 바꿈"},
+ {n:"도시락",cat:"fnb",tm:["점심"],eq:"소형 조리 배기",ex:"점심 단체주문·포장 중심 소형 매장",t:["jisan","officetel"],f:["front","inner"],d:false,c:["dosirak"],a:[33,80],w:"점심 단체주문·포장. 조리 설비 적음"},
+ {n:"아침 토스트",cat:"fnb",tm:["아침","점심"],eq:"철판·소형 배기",ex:"출근길 테이크아웃, 창업비 부담 낮은 소형 업종",t:["jisan","officetel"],f:["front","inner"],d:false,c:[],a:[25,70],w:"출근길 07~10시 수요. 다른 칸과 시간대가 안 겹침"},
+ {n:"세탁·코인빨래방",cat:"life",tm:["저녁","주말","심야"],eq:"급배수·전기 증설",ex:"세탁 편의점 또는 무인 코인빨래방",t:["officetel","mixed"],f:["front","inner"],d:false,c:["laundry"],a:[20,90],w:"오피스텔 입주민 고정 수요. 안쪽 칸도 가능"},
+ {n:"저가 커피",cat:"fnb",tm:["아침","점심","오후"],eq:"급배수",ex:"테이크아웃 중심 10~15평 매장",t:["officetel","jisan","retail","mixed","small"],f:["front"],d:false,c:["coffee"],a:[20,70],w:"역 출근 동선 테이크아웃. 건물 안에 커피가 이미 있으면 제외"},
+ {n:"무인 매장",cat:"retail",tm:["오후","저녁","주말","심야"],eq:"전력",ex:"아이스크림·밀키트·문구 등 무인 소형 매장",t:["officetel","mixed"],f:["front","inner"],d:false,c:["unmanned"],a:[15,50],w:"인건비 없는 소형 업종. 작은 칸·안쪽 칸 채우기 좋음"},
+ {n:"샐러드",cat:"fnb",tm:["점심"],eq:"급배수",ex:"샐러드·포케 등 가벼운 점심 매장",t:["jisan","officetel"],f:["front","inner"],d:false,c:[],a:[30,70],w:"점심 보완. 배기 부담 적음"},
+ {n:"의원 + 약국",cat:"med",tm:["점심","오후","주말"],eq:"급배수·의료 전력",ex:"1층 약국 · 2층 의원 조합",t:["officetel","mixed","retail","small"],f:["front","upper"],d:false,c:["pharmacy"],a:[40,330],w:"역세권 주거 배후에 강함. 의원은 2층도 가능"},
+ {n:"PT·필라테스",cat:"fit",tm:["아침","저녁","주말"],eq:"방음·바닥 하중",ex:"1:1·소그룹 스튜디오",t:["officetel","mixed","retail","small","jisan"],f:["upper","inner"],d:false,c:["fitness"],a:[50,330],w:"목적 방문 업종이라 2층·안쪽이어도 됨. 저녁 수요"},
+ {n:"미용실",cat:"life",tm:["오후","저녁","주말"],eq:"급배수",ex:"1~2인 예약제 소형 살롱",t:["officetel","mixed","retail","small"],f:["inner","upper","front"],d:false,c:["hair"],a:[25,100],w:"예약제라 노출 약한 칸도 가능"},
+ {n:"반찬가게·정육",cat:"retail",tm:["오후","저녁"],eq:"냉장 전력",ex:"동네 생활 장보기 업종",t:["officetel","mixed"],f:["front","inner"],d:false,c:["dosirak"],a:[25,70],w:"1~2인 가구 저녁 장보기"},
+ {n:"학원",cat:"fit",tm:["오후","저녁"],eq:"방음",ex:"보습·음악·코딩 등",t:["mixed","retail","small"],f:["upper"],d:false,c:["academy"],a:[60,330],w:"아파트 단지 배후일 때"},
+ {n:"생활용품·드럭스토어",cat:"retail",tm:["점심","오후","저녁","주말"],eq:"전력",ex:"넓은 1층 전면을 한 번에 채우는 대형 앵커",t:["officetel","mixed","retail","small"],f:["front"],d:false,c:[],a:[100,700],w:"넓은 1층 전면 칸 앵커. 유동이 많아야 함"},
+ {n:"대형 카페·베이커리",cat:"fnb",tm:["아침","오후","주말"],eq:"급배수·배기",ex:"좌석형 카페, 베이커리 카페",t:["officetel","mixed","retail","small","jisan"],f:["front"],d:false,c:["coffee"],a:[80,300],w:"넓은 칸에 맞는 체류형 F&B. 주말 수요 확인 필요"},
+ {n:"세무·노무·법무 사무소",cat:"office",tm:["점심","오후"],eq:"없음",ex:"입주 기업·건물주 대상 전문 사무소",t:["jisan","small"],f:["inner","upper"],d:false,c:[],a:[25,200],w:"F&B가 넘칠 때 대안. 노출 약한 칸 OK"}
 ];
 const TYPE_NM={small:"꼬마빌딩·소형 근린",officetel:"오피스텔",jisan:"지식산업센터",mixed:"주상복합·단지 상가",retail:"근린상가"};
 const num=v=>v===""||v==null||isNaN(+v)?null:+v;
@@ -345,14 +421,14 @@ $('f').addEventListener('submit',e=>{
     if(r2.length){recs=recs.concat(r2);split=true;}
   }
   recs=recs.slice(0,5);
-  $('rRec').innerHTML=(split?`<p style="margin:0 0 6px;font-size:14px"><b>${x.area}㎡는 한 업종으로 채우기 큽니다.</b> 2칸(각 약 ${Math.round(x.area/2)}㎡)으로 나누면 아래 업종이 가능합니다.</p>`:"")+(recs.length?recs.map(c=>`<li><b>${c.n}</b>${c.d&&x.duct===""?'<span class="tag w">배기 확인 필요</span>':''}<div>${c.w}</div><div class="ex">${c.ex}</div></li>`).join(""):"<li>입력한 조건에 맞는 업종이 적습니다. 공실공이 분할·업종 전환안을 따로 검토해 드립니다.</li>");
+  $('rRec').innerHTML=(split?`<p style="margin:0 0 6px;font-size:14px"><b>${x.area}㎡는 한 업종으로 채우기 큽니다.</b> 2칸(각 약 ${Math.round(x.area/2)}㎡)으로 나누면 아래 업종이 가능합니다.</p>`:"")+(recs.length?recs.map(c=>`<li><b>${c.n}</b>${c.d&&x.duct===""?'<span class="tag w">배기 확인 필요</span>':''}<div>${c.w}</div><div class="ex">${c.ex} · 필요 설비: ${c.eq}</div></li>`).join(""):"<li>입력한 조건에 맞는 업종이 적습니다. 공실공이 분할·업종 전환안을 따로 검토해 드립니다.</li>");
 
   // 호실별 배치안 (여러 호실일 때 업종 안 겹치게)
   const rows=[{pos:x.pos,area:x.area,rent:x.rent}].concat([...document.querySelectorAll('#extra .urow')].map(r=>({pos:r.querySelector('.upos').value,area:num(r.querySelector('.uarea').value),rent:num(r.querySelector('.urent').value)})));
-  let planText="";
-  if(rows.length>1){
+  let planText="";let out=[];
+  if(rows.length>=1){
     const usedC=new Set(x.exist),usedN=new Set(),order=rows.map((r,i)=>({...r,i})).sort((a,b)=>({front:0,inner:1,upper:2}[a.pos])-({front:0,inner:1,upper:2}[b.pos]));
-    const out=[];
+    out=[];
     for(const r of order){
       let c=CANDS.filter(c=>c.t.includes(x.type)&&c.f.includes(r.pos)&&!usedN.has(c.n)&&!c.c.some(k=>usedC.has(k)));
       if(x.duct==="n")c=c.filter(c=>!c.d);
@@ -360,10 +436,12 @@ $('f').addEventListener('submit',e=>{
       const pick=c[0];if(pick){usedN.add(pick.n);pick.c.forEach(k=>usedC.add(k));}
       out[r.i]={r,pick,alt:c[1]};
     }
-    $('recTitle').textContent="호실별 배치안 (업종 안 겹치게)";
-    $('rPlan').innerHTML='<ol class="rec">'+out.map((o,i)=>`<li><b>${i===0?"대표 호실":"호실 "+(i+1)} · ${POSNM[o.r.pos]}${o.r.area!==null?" "+o.r.area+"㎡":""}${o.r.rent!==null?" · 호가 "+o.r.rent+"만":""}</b><div>${o.pick?o.pick.n+(o.pick.d&&x.duct===""?' <span class="tag w">배기 확인</span>':''):"F&B 과밀 → 비F&B·분할·통합 임대 검토"}</div>${o.pick?`<div class="ex">${o.pick.ex}${o.alt?" / 2안: "+o.alt.n:""}</div>`:""}</li>`).join("")+'</ol><p class="note" style="margin-top:0">앞쪽(1층 전면) 칸부터 앵커 업종을 배정하고, 같은 손님을 나눠 먹는 업종은 한 건물에 하나만 넣었습니다.</p><h2 style="margin-top:14px">대표 호실에 맞는 업종 (전체 후보)</h2>';
+    $('recTitle').textContent=rows.length>1?"호실별 MD 배치안":"MD 제안";
+    $('rPlan').innerHTML='<ol class="rec">'+out.map((o,i)=>`<li><b>${i===0?"대표 호실":"호실 "+(i+1)} · ${POSNM[o.r.pos]}${o.r.area!==null?" "+o.r.area+"㎡":""}${o.r.rent!==null?" · 호가 "+o.r.rent+"만":""}</b><div>${o.pick?o.pick.n+(o.pick.d&&x.duct===""?' <span class="tag w">배기 확인</span>':''):"F&B 과밀 → 비F&B·분할·통합 임대 검토"}</div>${o.pick?`<div class="ex">${o.pick.w} · 필요 설비: ${o.pick.eq}${o.alt?" · 2안: "+o.alt.n:""}</div>`:""}</li>`).join("")+'</ol><p class="note" style="margin-top:0">1층 전면 칸부터 앵커 업종을 배정하고, 같은 손님을 나눠 갖는 업종은 한 건물에 하나만 넣었습니다.</p><h2 style="margin-top:14px">대표 호실 업종 후보</h2>';
     planText="\n\n[호실별 배치안]\n"+out.map((o,i)=>`${i===0?"대표":"호실"+(i+1)} ${POSNM[o.r.pos]} ${o.r.area??"?"}㎡ → ${o.pick?o.pick.n:"비F&B·분할 검토"}`).join("\n");
-  }else{$('recTitle').textContent="이 공실에 맞는 업종";$('rPlan').innerHTML="";}
+  }
+  renderIso(out,x);renderTime(out);
+  $('rDate').textContent=new Date().toLocaleDateString('ko-KR');
 
   // 임대 조건
   let mText="";
