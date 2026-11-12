@@ -351,7 +351,7 @@ setTimeout(boot);
 const who = by => by || '';
 
 /* ---------- render ---------- */
-const TABS = [['today', '🏠', '오늘'], ['er', '🚨', '응급'], ['calc', '🧮', '급여 계산'], ['logs', '📋', '기록'], ['vet', '🏥', '병원 요약'], ['set', '⚙️', '설정']];
+const TABS = [['today', '🏠', '오늘'], ['er', '🚨', '응급'], ['calc', '🥄', '급여 계산'], ['logs', '📋', '기록'], ['vet', '🏥', '병원 요약'], ['set', '⚙️', '설정']];
 function renderTabs() {
   $('#tabs').innerHTML = TABS.map(([k, ic, n]) => `<button data-tab="${k}" class="${S.tab === k ? 'on' : ''}"><span class="ic">${ic}</span>${n}</button>`).join('');
 }
