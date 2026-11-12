@@ -52,6 +52,18 @@ ol.rec .ex{color:var(--muted);font-size:14px}
 ul.chk{padding-left:18px;margin:6px 0}
 .note{font-size:13px;color:var(--muted);margin-top:10px}
 #result{display:none}
+.plan{border:2px solid var(--gold)}
+.pstep{display:grid;grid-template-columns:28px 1fr auto;gap:8px;align-items:start;padding:10px 0;border-top:1px solid var(--stone)}
+.pstep:first-of-type{border-top:0}
+.pstep .k{width:24px;height:24px;border-radius:50%;background:var(--navy);color:#fff;font-size:12px;display:flex;align-items:center;justify-content:center;font-weight:700}
+.pstep .who{font-size:12px;color:var(--gold);font-weight:700}
+.pstep .how{font-size:13px;color:var(--muted)}
+.pstep .pt{text-align:right;font-size:13px;white-space:nowrap}
+.pstep .pt b{display:block;font-size:15px;color:var(--navy)}
+.path{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin:4px 0 10px}
+.path span{font-family:'Noto Serif KR',serif;font-weight:700;font-size:20px;width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;background:var(--stone);color:var(--navy)}
+.path span.on{background:var(--gold);color:#fff}
+.path i{color:var(--muted);font-style:normal}
 .sample{padding:12px}
 .sample img{width:100%;border-radius:10px;display:block}
 .kick2{font-size:12px;letter-spacing:2px;color:var(--gold);margin:2px 2px 8px;font-weight:700}
@@ -90,7 +102,7 @@ footer{font-size:12px;color:var(--muted);text-align:center;margin-top:24px}
 <header><div class="in">
   <div class="logo">0<b>실</b>0 공실공</div>
   <h1>상가 공실 간이진단</h1>
-  <p style="color:var(--gold);margin:0 0 4px;font-size:14px">대형 빌딩만 받던 임대·MD 전략을, 작은 건물에도.</p>
+  <p style="color:var(--gold);margin:0 0 4px;font-size:14px">등급을 매기는 게 아니라, 등급을 올립니다. D급 공실도 A급으로.</p>
   <p>꼬마빌딩부터 오피스텔·지식산업센터 상가까지. 주소와 아는 값만 넣고, 모르는 건 비워 두세요. 3분이면 끝납니다.</p>
 </div></header>
 
@@ -200,6 +212,13 @@ footer{font-size:12px;color:var(--muted);text-align:center;margin-top:24px}
     <p class="note">보수적으로 매겼습니다. 역 거리·입주율·배기·호가처럼 추정이 들어간 값은 만점의 70~80%까지, 모르는 항목은 절반 이하로 줍니다. A등급은 공실공 현장 확인 후에만 나옵니다.</p>
   </div>
 
+
+  <div class="card plan">
+    <h2>등급 올리기 기획 플랜</h2>
+    <div class="path" id="pPath"></div>
+    <div id="pSteps"></div>
+    <p class="note" id="pNote"></p>
+  </div>
   <div class="card">
     <h2>MD 배치도</h2>
     <div id="rIso"></div>
@@ -245,7 +264,7 @@ footer{font-size:12px;color:var(--muted);text-align:center;margin-top:24px}
   <p class="note" style="text-align:center">공실공은 분석과 문서 작성만 합니다. 임대 알선·계약은 임대인 또는 공인중개사가 진행합니다.</p>
 </div>
 
-<footer>© 공실공 · 간이진단 v3.2 (2026.11)</footer>
+<footer>© 공실공 · 간이진단 v4 (2026.11)</footer>
 </div>
 
 <script>
@@ -372,6 +391,37 @@ function renderIso3D(out,x){
 }
 function renderLegend(out){const items=out.map((o,i)=>({...o,no:i+1}));
   $('rLegend').innerHTML=items.map(o=>{const ct=CAT[o.pick?o.pick.cat:"none"];return `<div class="lg"><div class="no" style="background:${ct[1]}">${o.no}</div><div><b>${o.pick?o.pick.n:"비F&B·분할 검토"}</b> <span style="color:var(--muted);font-size:12px">${POSNM[o.r.pos]}${o.r.area!==null?" · "+o.r.area+"㎡":""} · ${ct[0]}</span>${o.pick?`<div class="tm">${o.pick.tm.map(t=>"<span>"+t+"</span>").join("")}</div>${o.pick.img?`<img src="${o.pick.img}" alt="${o.pick.n} 예시" loading="lazy">`:""}`:""}</div></div>`;}).join("");
+}
+
+// D→A 기획 플랜: 임대인이 바꿀 수 있는 것만 단계별로 적용해 점수 재계산(모델 추정)
+function scoreV(v,md){
+  const s1=Math.min(30,wScore(v.m)+(md.sign||0));
+  const people=v.units*(v.occ/100)*(v.type==="jisan"?3:1.3);
+  let s2=6+24*Math.min(1,people/400)+(md.anchor||0)+(md.purpose?3:0)+(md.popup||0);
+  const sh=v.shops-(md.conv||0);
+  if(v.type!=="small"&&sh>0){const r=v.units/sh;if(r<10)s2-=Math.min(8,(10-r)*1.2);}
+  s2=Math.max(4,Math.min(30,s2));
+  let s3={front:20,inner:md.purpose?17:13,upper:md.purpose?15:8}[v.pos];if(v.duct!=="y")s3-=3;
+  let vr=sh>0?Math.max(0,v.vac-(md.conv||0))/sh:0.5;if(md.rent)vr*=0.5;
+  const s4=Math.min(20,16-8*Math.min(1,vr)+(md.rent?4:0));
+  return {s1,s2,s3,s4,t:s1+s2+s3+s4};
+}
+function planUp(x,rows,cur){
+  const v={type:x.type,pos:x.pos,m:x.m??700,units:x.units??150,occ:x.occ??50,duct:x.duct==="y"?"y":"n"};
+  v.shops=x.shops||Math.max(4,Math.round(v.units/8));v.vac=x.vac!==null&&x.shops?x.vac:Math.round(v.shops*0.7);
+  const md={};const steps=[];let prev=cur,base=scoreV(v,md).t;
+  const push=(nm,who,how)=>{const r=scoreV(v,md).t;const d=Math.round(r-base);base=r;if(d<=0)return;const t=Math.min(100,prev+d);steps.push({nm,who,how,d,t,g:grade(t)});prev=t;};
+  if(x.duct!=="y"){v.duct="y";push("배기·급배수 선시공","임대인","음식 업종이 들어올 수 있게 덕트·급배수를 미리 깔아 둡니다. 비용은 현장 견적.");}
+  if(x.type!=="small"&&v.units/v.shops<10){const k=Math.max(1,Math.min(Math.round(v.vac*0.5),Math.ceil(v.shops-v.units/10)));md.conv=k;push(`상가 과잉 정리 (${k}실)`,"임대인·공실공",`공실 ${k}실을 업무·창고·공유오피스 등 비F&B로 돌리거나 2칸씩 통합 임대해, 남은 상가끼리 손님을 나눠 갖지 않게 합니다.`);}
+  if(v.vac>0){md.rent=1;push("적정 임대가 + 렌트프리","임대인","주변 시세 기준 임대가와 2~3개월 렌트프리로 첫 계약 속도를 올립니다. 비워 두는 것보다 첫해 수입이 큽니다.");}
+  if(rows.some(r=>r.pos==="front")){md.anchor=4;push("1층 전면 앵커 먼저 유치","임대인·관계 중개법인","인지도 높은 업종 1곳을 먼저 계약하면 외부 손님이 들어오고, 나머지 칸 협상이 쉬워집니다.");}
+  if(rows.some(r=>r.pos!=="front")||x.pos!=="front"){md.purpose=1;push("안쪽·2층에 목적형 업종 배치","공실공","의원·PT·학원·사무소처럼 일부러 찾아오는 업종을 노출이 약한 칸에 넣어 외부 손님을 끌어오고 위치 약점을 지웁니다.");}
+  if(v.vac>=2&&(v.units*(v.occ/100)*(v.type==="jisan"?3:1.3))<400){md.popup=3;push("빈 칸에 팝업·단기 임대로 유동 만들기","공실공·임대인","정식 계약 전까지 1~3개월 팝업·플리마켓을 돌려 사람이 드나드는 건물로 만듭니다. 브랜드 점포개발팀에 보여 줄 유동 근거도 생깁니다.");}
+  if(v.m>200){md.sign=Math.min(4,Math.round(30-wScore(v.m)));if(md.sign>0)push("역 방향 유도 사인·파사드 정비","임대인","역 출구에서 상가가 보이도록 유도 사인과 간판 위치를 통일합니다.");}
+  const last=steps.length?steps[steps.length-1]:{t:cur,g:grade(cur)};
+  const lim=[];const r=scoreV(v,md);
+  if(r.s1<22)lim.push("역에서 먼 입지");if(r.s2<20)lim.push("배후 인원 부족");
+  return {steps,final:last,lim};
 }
 function renderTime(out){
   const picks=out.filter(o=>o.pick);
@@ -533,6 +583,13 @@ $('f').addEventListener('submit',e=>{
     $('rPlan').innerHTML='<ol class="rec">'+out.map((o,i)=>`<li><b>${i===0?"대표 호실":"호실 "+(i+1)} · ${POSNM[o.r.pos]}${o.r.area!==null?" "+o.r.area+"㎡":""}${o.r.rent!==null?" · 호가 "+o.r.rent+"만":""}</b><div>${o.pick?o.pick.n+(o.pick.d&&x.duct===""?' <span class="tag w">배기 확인</span>':''):"F&B 과밀 → 비F&B·분할·통합 임대 검토"}</div>${o.pick?`<div class="ex">${o.pick.w} · 필요 설비: ${o.pick.eq}${o.alt?" · 2안: "+o.alt.n:""}</div>`:""}</li>`).join("")+'</ol><p class="note" style="margin-top:0">1층 전면 칸부터 앵커 업종을 배정하고, 같은 손님을 나눠 갖는 업종은 한 건물에 하나만 넣었습니다.</p><h2 style="margin-top:14px">대표 호실 업종 후보</h2>';
     planText="\n\n[호실별 배치안]\n"+out.map((o,i)=>`${i===0?"대표":"호실"+(i+1)} ${POSNM[o.r.pos]} ${o.r.area??"?"}㎡ → ${o.pick?o.pick.n:"비F&B·분할 검토"}`).join("\n");
   }
+  {const PL=planUp(x,rows,tot);
+    const order=["D","C","B","A"];const g0=g,g1=PL.final.g;const seq=order.slice(order.indexOf(g0),order.indexOf(g1)+1);
+    $('pPath').innerHTML=(seq.length>1?seq:[g0]).map((q,i,a)=>`<span class="${i===a.length-1?"on":""}">${q}</span>`).join("<i>→</i>")+`<i style="margin-left:6px">${tot}점 → ${PL.final.t}점</i>`;
+    $('pSteps').innerHTML=PL.steps.map((st,i)=>`<div class="pstep"><div class="k">${i+1}</div><div><b>${st.nm}</b><div class="who">${st.who}</div><div class="how">${st.how}</div></div><div class="pt"><b>${st.d>=0?"+":""}${st.d}</b>${st.t}점 · ${st.g}</div></div>`).join("");
+    const pot=Math.min(100,PL.final.t+Math.max(0,RG.hi-tot));
+    $('pNote').textContent=(nUnk&&pot>PL.final.t?`지금은 모르는 값을 가장 낮게 본 상태입니다. 현장 확인값이 좋게 나오면 최대 ${pot}점(${grade(pot)}등급)까지 갑니다. `:"")+(PL.final.g==="A"?"임대인이 바꿀 수 있는 것만으로 A등급까지 갈 수 있습니다. ":`기획으로 ${PL.final.g}등급까지 올릴 수 있습니다. 남은 한계: ${PL.lim.join("·")||"세부 조건"} — 팝업·단기 임대로 유동을 먼저 만들거나 업무시설 전환을 함께 검토합니다. `)+"점수는 같은 채점 모델로 계산한 추정치이며, 단계별 실행은 정식 리포트에서 현장 기준으로 다시 잡습니다.";
+    planText="\n\n[등급 올리기 기획 플랜] "+g+" "+tot+"점 → "+PL.final.g+" "+PL.final.t+"점\n"+PL.steps.map((st,i)=>`${i+1}. ${st.nm} (${st.who}) ${st.d>=0?"+":""}${st.d} → ${st.t}점 ${st.g}`).join("\n")+planText;}
   if(!renderIso3D(out,x))renderIso(out,x);renderLegend(out);renderTime(out);
   $('rDate').textContent=new Date().toLocaleDateString('ko-KR');
 
