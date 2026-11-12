@@ -5,14 +5,14 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
 <meta name="theme-color" content="#FBF7F2">
 <script src="kakao.js?v=1"></script>
-<link rel="manifest" href="manifest.webmanifest?v=4">
-<link rel="apple-touch-icon" href="apple-touch-icon.png?v=4">
+<link rel="manifest" href="manifest.webmanifest?v=5">
+<link rel="apple-touch-icon" href="apple-touch-icon.png?v=5">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="아이곁">
 <meta name="description" content="아픈 강아지·고양이 케어 기록. 급여량 계산, 투약·수액·증상 기록, 병원 요약을 가족과 함께.">
 <meta property="og:title" content="아이곁 — 아픈 아이 케어 기록">
 <meta property="og:description" content="가족이 함께 쓰는 반려동물 케어 기록">
-<link rel="icon" href="icon-192.png?v=4">
+<link rel="icon" href="icon-192.png?v=5">
 <title>아이곁 — 아픈 아이 케어 기록</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
@@ -108,6 +108,7 @@ nav.tabs button.on{color:var(--acc);font-weight:700}
     <div class="brand"><span id="hdrName">아이곁</span><small id="hdrSub">아픈 아이 케어 기록</small></div>
     <span id="sync" class="pill">연결 중…</span>
   </header>
+  <div id="petsbar"></div>
   <div id="banner"></div>
   <main id="main"></main>
 </div>
@@ -197,7 +198,17 @@ function fullTarget(pet) {
   return rer(w) * (num(pet.factor) || 1);
 }
 function targetFor(pet, k) { const f = fullTarget(pet); return f == null ? null : f * rampFrac(pet, k); }
-const kcalOf = (food, amt) => food && num(food.kcal) && num(food.per) ? num(food.kcal) / num(food.per) * amt : null;
+function kcalOf(food, amt, unit) {
+  if (!food || amt == null || !num(food.kcal) || !num(food.per)) return null;
+  const per = num(food.kcal) / num(food.per), fu = food.unit; unit = unit || fu;
+  if (unit === fu) return per * amt;
+  const gw = num(food.gw), wt = u => u === 'g' || u === 'ml';
+  if (!gw) return null;
+  if (wt(unit) && !wt(fu)) return per * amt / gw;
+  if (wt(fu) && !wt(unit)) return per * amt * gw;
+  return null;
+}
+const unitsOf = f => !f ? [] : num(f.gw) ? (['g', 'ml'].includes(f.unit) ? [f.unit, '캔'] : [f.unit, 'g']) : [f.unit];
 
 /* ---------- state ---------- */
 const S = { pet: null, petLoaded: false, logs: [], checks: [], me: null, mode: 'loading', readOnly: false, tab: 'today', filter: 'all', sumDays: 7, aiOff: true };
@@ -314,8 +325,8 @@ function renderBanner() {
 }
 function start(b) {
   backend = b;
-  b.subPet(p => { S.pet = p; S.petLoaded = true; render(); });
-  b.subLogs(l => { S.logs = l; render(); });
+  b.subPet(p => { S.family = normFam(p); pickPet(); S.petLoaded = true; render(); });
+  b.subLogs(l => { S.allLogs = l; filterLogs(); render(); });
   b.subChecks(c => { S.checks = c; render(); });
 }
 const familyCode = () => new URLSearchParams(location.search).get('g');
@@ -355,14 +366,15 @@ function render(force) {
   const a = document.activeElement;
   if (!force && a && $('#main').contains(a) && /INPUT|SELECT|TEXTAREA/.test(a.tagName)) { pendingRender = true; return; }
   pendingRender = false;
-  if (S.mode === 'nofamily' || S.mode === 'nofamily-bad') { $('#main').innerHTML = vLanding(); document.querySelector('nav.tabs').classList.add('hidden'); return; }
+  if (S.mode === 'nofamily' || S.mode === 'nofamily-bad') { $('#petsbar').innerHTML = ''; $('#main').innerHTML = vLanding(); document.querySelector('nav.tabs').classList.add('hidden'); return; }
   document.querySelector('nav.tabs').classList.remove('hidden');
+  $('#petsbar').innerHTML = petsBar();
   const p = S.pet;
   $('#hdrName').textContent = p?.name ? p.name + '의 케어 기록' : '아이곁';
   $('#hdrSub').textContent = p?.weightKg ? `${p.species === 'dog' ? '강아지' : '고양이'} · ${p.weightKg}kg${p.condition ? ' · ' + p.condition : ''}` : '아픈 아이 케어 기록';
   const v = { today: vToday, er: vEr, calc: vCalc, logs: vLogs, vet: vVet, set: vSet }[S.tab];
   $('#main').innerHTML = v();
-  if (S.tab === 'calc') calcUpdate();
+  if (S.tab === 'calc') { calcUpdate(); if ($('#q-out')) quickUpdate('amt'); }
 }
 $('#main').addEventListener('focusout', () => setTimeout(() => { if (pendingRender) render(); }, 50));
 
@@ -418,7 +430,7 @@ function writeCard() {
   if (P && P.entries.length) {
     const urgent = P.entries.flatMap(e => e.type === 'symptom' ? (e.symptoms || []).filter(s => URGENT.includes(s)) : e.type === 'potty' && e.pee === '안 봄' ? ['소변 안 봄'] : []);
     h += `<div style="margin-top:12px;border-top:1px solid var(--line);padding-top:10px"><div class="row between"><b style="font-size:14px">이렇게 정리했어요 (${P.entries.length}건)</b><span class="muted">${P.ai ? 'Claude가 정리' : '기본 정리'}</span></div>
-      ${P.entries.map((e, i) => { const t = TYPES[e.type] || TYPES.note; return `<div class="log"><div class="ic">${t.ic}</div><div class="body"><div><b>${t.name}</b> ${logText(e)}</div>${e.memo ? `<div class="muted">${esc(e.memo)}</div>` : ''}<div class="t">${dayLabel(dkey(e.t))} ${hm(e.t)}${e.dateOnly ? ' (시간 미기재)' : e.timeGuess ? ' (시간 미기재 → 지금)' : ''}</div></div><button class="x" data-act="p-del" data-i="${i}">빼기</button></div>`; }).join('')}
+      ${P.entries.map((e, i) => { const t = TYPES[e.type] || TYPES.note; return `<div class="log"><div class="ic">${t.ic}</div><div class="body"><div><b>${t.name}</b> ${logText(e)}${e.petId && e.petId !== S.pet?.id ? ` <span class="pill" style="font-size:11px">${esc((S.family?.pets || []).find(x => x.id === e.petId)?.name || '')}</span>` : ''}</div>${e.memo ? `<div class="muted">${esc(e.memo)}</div>` : ''}<div class="t">${dayLabel(dkey(e.t))} ${hm(e.t)}${e.dateOnly ? ' (시간 미기재)' : e.timeGuess ? ' (시간 미기재 → 지금)' : ''}</div></div><button class="x" data-act="p-del" data-i="${i}">빼기</button></div>`; }).join('')}
       ${P.taskIds.length ? `<div class="muted" style="margin-top:6px">✓ 오늘 할 일 체크: ${esc(P.taskIds.map(id => (S.pet.tasks || []).find(t => t.id === id)?.label).filter(Boolean).join(', '))}</div>` : ''}
       ${urgent.length ? `<div class="alertbox"><b>⚠️ 바로 병원에 연락하세요</b>${esc([...new Set(urgent)].join(', '))}은(는) 빨리 진료가 필요할 수 있는 증상이에요. 다니는 병원이 닫았다면 가까운 24시 동물병원에 전화해주세요.<div style="margin-top:8px"><button class="btn sm" style="background:var(--warn)" data-act="tab" data-to="er">가까운 병원 찾기</button></div></div>` : ''}
       <div class="two" style="margin-top:12px"><button class="btn ghost" data-act="p-cancel">다시 쓰기</button><button class="btn" data-act="p-save">모두 저장</button></div></div>`;
@@ -551,11 +563,36 @@ function calcInit() {
     mix: (p.mix && p.mix.length ? p.mix : (p.foods || []).slice(0, 1).map(f => ({ foodId: f.id, pct: 100 }))).map(m => ({ ...m })),
   };
 }
+function quickKcal() {
+  const foods = S.pet?.foods || [];
+  if (!foods.length) return `<div class="card"><h3>몇 g 먹이면 몇 kcal?</h3><p class="muted" style="margin:0 0 8px">설정에서 사료 라벨 칼로리를 한 번 등록하면 바로 계산돼요.</p><button class="btn ghost sm" data-act="go-set">사료 등록하러 가기</button></div>`;
+  const Q = S.q || (S.q = { food: foods[0].id, amt: '', unit: '', kcal: '' });
+  if (!foods.some(f => f.id === Q.food)) Q.food = foods[0].id;
+  const f = foods.find(x => x.id === Q.food), us = unitsOf(f); if (!us.includes(Q.unit)) Q.unit = us.includes('g') ? 'g' : us[0];
+  return `<div class="card"><h3>몇 g 먹이면 몇 kcal?</h3>
+    <select id="q-food">${foods.map(x => `<option value="${esc(x.id)}" ${x.id === Q.food ? 'selected' : ''}>${esc(x.name)}</option>`).join('')}</select>
+    <div class="two" style="margin-top:8px"><div><label class="f">먹인 양</label><div class="row" style="gap:6px"><input type="number" inputmode="decimal" id="q-amt" value="${esc(Q.amt)}" placeholder="예: 30" style="flex:1"><select id="q-unit" style="width:70px;padding:11px 6px">${us.map(u => `<option ${u === Q.unit ? 'selected' : ''}>${u}</option>`).join('')}</select></div></div>
+    <div><label class="f">또는 칼로리로</label><div class="row" style="gap:6px"><input type="number" inputmode="decimal" id="q-kcal" value="${esc(Q.kcal)}" placeholder="예: 50" style="flex:1"><span class="muted">kcal</span></div></div></div>
+    <div id="q-out" class="res" style="margin-top:10px"></div></div>`;
+}
+function quickUpdate(src) {
+  const out = $('#q-out'); if (!out) return;
+  const Q = S.q; Q.food = $('#q-food').value; Q.unit = $('#q-unit').value;
+  const f = (S.pet?.foods || []).find(x => x.id === Q.food); const per1 = kcalOf(f, 1, Q.unit);
+  if (src === 'kcal') { Q.kcal = $('#q-kcal').value; const k = num(Q.kcal); Q.amt = k != null && per1 ? String(r1(k / per1)) : ''; $('#q-amt').value = Q.amt; }
+  else { Q.amt = $('#q-amt').value; const a = num(Q.amt); Q.kcal = a != null && per1 != null ? String(r1(a * per1)) : ''; $('#q-kcal').value = Q.kcal; }
+  const k = num(Q.kcal), tgt = targetFor(S.pet || {}, today());
+  if (per1 == null) { out.innerHTML = `<span class="muted">이 사료는 ${esc(Q.unit)} 단위로 계산할 수 없어요. 설정에서 1캔(1포) 무게를 넣어주세요.</span>`; return; }
+  out.innerHTML = k == null ? `<span class="muted">1${esc(Q.unit)} = ${r1(per1 * 10) / 10}kcal · 양이나 칼로리를 넣어보세요.</span>`
+    : `<div class="row" style="align-items:baseline;gap:6px"><span class="big">${r1(num(Q.amt))}${esc(Q.unit)} = ${r0(k)}</span><span class="muted">kcal</span></div>${tgt ? `<div class="muted">하루 목표 ${r0(tgt)}kcal의 ${r0(k / tgt * 100)}%</div>` : ''}`;
+}
+$('#main').addEventListener('input', e => { if (e.target.id === 'q-amt') quickUpdate('amt'); else if (e.target.id === 'q-kcal') quickUpdate('kcal'); });
+$('#main').addEventListener('change', e => { if (e.target.id === 'q-food' || e.target.id === 'q-unit') { if (e.target.id === 'q-food') { S.q.food = e.target.value; render(true); } quickUpdate(S.q.kcal && !S.q.amt ? 'kcal' : 'amt'); } });
 function vCalc() {
   if (!C) calcInit();
   const foods = S.pet?.foods || [];
   const foodOpts = id => foods.map(f => `<option value="${esc(f.id)}" ${f.id === id ? 'selected' : ''}>${esc(f.name)}</option>`).join('');
-  return `<div class="card"><h3>강급 계산기</h3>
+  return quickKcal() + `<div class="card"><h3>강급 계산기</h3>
     <p class="muted" style="margin:0">주치의가 정해준 양이 있으면 그 값을 먼저 따라주세요. 이 계산은 일반적인 기준(기초대사량 70×체중<sup>0.75</sup>)이에요.</p>
     <div class="two"><div><label class="f">체중 (kg)</label><input type="number" step="0.01" inputmode="decimal" id="c-weight" value="${esc(C.weight)}" placeholder="예: 3.8"></div>
     <div><label class="f">하루 급여 횟수</label><input type="number" inputmode="numeric" id="c-meals" value="${esc(C.meals)}"></div></div>
@@ -620,8 +657,8 @@ function calcUpdate() {
   </div>
   <p class="muted" style="margin:8px 2px 12px">g·ml가 섞인 경우 1g ≈ 1ml로 어림했어요. 강급 중 토하거나 거부가 심하면 양을 늘리지 말고 주치의와 상의해주세요.</p>`;
 }
-$('#main').addEventListener('input', e => { if (S.tab === 'calc' && e.target.closest('.card')) { calcRead(); calcUpdate(); } });
-$('#main').addEventListener('change', e => { if (S.tab === 'calc') { calcRead(); calcUpdate(); } });
+$('#main').addEventListener('input', e => { if (S.tab === 'calc' && e.target.closest('.card') && !/^q-/.test(e.target.id)) { calcRead(); calcUpdate(); } });
+$('#main').addEventListener('change', e => { if (S.tab === 'calc' && !/^q-/.test(e.target.id)) { calcRead(); calcUpdate(); } });
 
 /* ----- vet summary ----- */
 function buildSummary(days) {
@@ -777,12 +814,15 @@ function vSet() {
     <div class="two"><div><label class="f">체중 (kg)</label><input type="number" step="0.01" inputmode="decimal" id="s-weight" value="${esc(p.weightKg ?? '')}"></div>
     <div><label class="f">나이</label><input type="text" id="s-age" value="${esc(p.age || '')}" placeholder="예: 12살 추정"></div></div>
     <label class="f">진단·상태</label><input type="text" id="s-cond" value="${esc(p.condition || '')}" placeholder="예: 만성 신장질환 3기">
-    <button class="btn acc full" data-act="save-pet" style="margin-top:14px">저장</button></div>
+    <button class="btn acc full" data-act="save-pet" style="margin-top:14px">저장</button>
+    ${(S.family?.pets || []).length > 1 ? (S.petRmArm ? `<div class="alertbox" style="margin-top:10px"><b>${esc(S.pet?.name || '이 아이')}를 목록에서 뺄까요?</b>기록은 지워지지 않고 보이지만 않아요.<div class="two" style="margin-top:10px"><button class="btn ghost sm" data-act="pet-remove-no">그만두기</button><button class="btn sm" style="background:var(--warn)" data-act="pet-remove-yes">빼기</button></div></div>` : `<button class="btn ghost sm" data-act="pet-remove" style="margin-top:8px">이 아이 목록에서 빼기</button>`) : ''}</div>
 
   <div class="card"><h3>사료·처방식</h3><p class="muted" style="margin:0 0 6px">라벨에 적힌 칼로리를 그대로 넣어주세요. 예: 1캔(156g)에 175kcal → 175kcal / 156g</p>
-    ${foods.map(f => `<div class="edit-row"><div class="grow"><b>${esc(f.name)}</b><div class="muted">${esc(f.kcal)}kcal / ${esc(f.per)}${esc(f.unit)}</div></div><button class="btn ghost sm" data-act="food-del" data-id="${esc(f.id)}">삭제</button></div>`).join('')}
+    ${foods.map(f => `<div class="edit-row"><div class="grow"><b>${esc(f.name)}</b><div class="muted">${esc(f.kcal)}kcal / ${esc(f.per)}${esc(f.unit)}${num(f.gw) ? ` · 1${['g', 'ml'].includes(f.unit) ? '캔' : esc(f.unit)} ${esc(f.gw)}g` : ''} · 1g ≈ ${(() => { const k = kcalOf(f, 1, 'g'); return k != null ? r1(k * 10) / 10 + 'kcal' : '?'; })()}</div></div><button class="btn ghost sm" data-act="food-del" data-id="${esc(f.id)}">삭제</button></div>`).join('')}
     <div style="margin-top:10px"><input type="text" id="f-name" placeholder="사료 이름 (예: 회복기 캔)">
     <div class="three" style="margin-top:6px"><input type="number" inputmode="decimal" id="f-kcal" placeholder="kcal"><input type="number" inputmode="decimal" id="f-per" placeholder="양"><select id="f-unit"><option value="g">g</option><option value="ml">ml</option><option value="캔">캔</option><option value="포">포</option></select></div>
+    <input type="number" inputmode="decimal" id="f-gw" placeholder="1캔(1포) 무게 g — 캔·포 단위면 넣어주세요 (선택)" style="margin-top:6px">
+    <p class="muted" style="margin:6px 2px 0">예: 건사료 3800kcal/kg → 3800 / 1000 / g · 캔 175kcal(156g) → 175 / 1 / 캔, 무게 156</p>
     <button class="btn ghost sm" data-act="food-add" style="margin-top:8px">+ 사료 추가</button></div></div>
 
   <div class="card"><h3>매일 할 일</h3>
@@ -801,8 +841,38 @@ function vSet() {
     <label class="f">내 이름 (기록에 함께 남아요)</label>
     <div class="row"><input type="text" id="nm" value="${esc(S.me || '')}" placeholder="예: 엄마"><button class="btn ghost sm" data-act="setname" style="white-space:nowrap">저장</button></div></div>`;
 }
+function normFam(raw) {
+  if (!raw) return null;
+  if (Array.isArray(raw.pets)) return raw;
+  return { pets: [{ ...raw, id: raw.id || 'p1' }] };
+}
+const curKey = () => 'aigyeot-pet-' + familyCode();
+function pickPet() {
+  const pets = S.family?.pets || [];
+  const want = ls.get(curKey());
+  S.pet = pets.find(x => x.id === want) || pets[0] || null;
+  filterLogs();
+}
+function filterLogs() {
+  const first = S.family?.pets?.[0]?.id;
+  S.logs = !S.pet ? (S.allLogs || []) : (S.allLogs || []).filter(l => (l.petId || first) === S.pet.id);
+}
+function switchPet(id) { ls.set(curKey(), id); pickPet(); C = null; S.q = null; S.parsed = null; S.er = null; render(true); window.scrollTo(0, 0); }
+function famWith(p) {
+  const fam = JSON.parse(JSON.stringify(S.family || { pets: [] }));
+  if (!p.id) p.id = 'p' + uid();
+  const i = fam.pets.findIndex(x => x.id === p.id);
+  if (i >= 0) fam.pets[i] = p; else fam.pets.push(p);
+  return fam;
+}
+const putPet = p => { const fam = famWith(p); return backend.savePet(fam).then(() => { S.family = fam; ls.set(curKey(), p.id); S.pet = p; filterLogs(); }); };
+function petsBar() {
+  const pets = S.family?.pets || [];
+  if (!pets.length) return '';
+  return `<div class="chips" style="margin:-4px 0 12px">${pets.map(x => `<button class="chip ${x.id === S.pet?.id ? 'on' : ''}" data-act="pet" data-id="${esc(x.id)}">${x.species === 'dog' ? '🐶' : '🐱'} ${esc(x.name || '이름 없음')}</button>`).join('')}<button class="chip" data-act="pet-add">+ 아이 추가</button></div>`;
+}
 function petBase() { return JSON.parse(JSON.stringify(S.pet || { species: 'cat', factor: 1, meals: 4, foods: [], tasks: [] })); }
-async function savePet(p, msg) { if (await write(() => backend.savePet(p))) { S.pet = p; toast(msg || '저장했어요'); render(true); } }
+async function savePet(p, msg) { if (await write(() => putPet(p))) { toast(msg || '저장했어요'); render(true); } }
 
 /* ---------- sheet (new log) ---------- */
 let F = null;
@@ -816,7 +886,7 @@ function openSheet(type, E) {
     const meals = num(p.meals) || 4, tgt = targetFor(p, today());
     body = `${foods.length ? `<label class="f">사료</label><select id="n-food">${foods.map(f => `<option value="${esc(f.id)}">${esc(f.name)}</option>`).join('')}<option value="">직접 입력</option></select>` : '<p class="muted">설정에서 사료를 등록하면 칼로리가 자동 계산돼요.</p>'}
       <div id="n-foodfree" class="${foods.length ? 'hidden' : ''}"><label class="f">사료 이름</label><input type="text" id="n-foodname"></div>
-      <div class="two"><div><label class="f">먹은 양 <span id="n-unit"></span></label><input type="number" inputmode="decimal" id="n-amount"></div>
+      <div class="two"><div><label class="f">먹은 양</label><div class="row" style="gap:6px"><input type="number" inputmode="decimal" id="n-amount" style="flex:1"><select id="n-unitsel" style="width:76px;padding:11px 6px"></select></div></div>
       <div><label class="f">방식</label><select id="n-method"><option>강급</option><option>스스로 먹음</option><option>일부만 먹음</option><option>튜브</option></select></div></div>
       <div class="muted" id="n-kcal" style="margin-top:6px">${tgt ? `회당 목표 약 ${r0(tgt / meals)}kcal` : ''}</div>`;
   } else if (type === 'med') {
@@ -854,6 +924,7 @@ function fillSheet(E) {
     if ($('#n-food')) $('#n-food').value = f ? f.id : '';
     if (!f) { $('#n-foodfree')?.classList.remove('hidden'); set('#n-foodname', E.food || ''); }
     set('#n-amount', E.amount); if (E.method) set('#n-method', E.method);
+    feedUpdate(); if (E.unit && $('#n-unitsel') && [...$('#n-unitsel').options].some(o => o.value === E.unit)) $('#n-unitsel').value = E.unit;
   } else if (E.type === 'med') { set('#n-name', E.name); set('#n-dose', E.dose || ''); }
   else if (E.type === 'fluid') set('#n-ml', E.ml);
   else if (E.type === 'weight') { set('#n-kg', E.kg); if ($('#n-upd')) $('#n-upd').checked = false; }
@@ -877,9 +948,12 @@ function curFood() { const id = $('#n-food')?.value; return (S.pet?.foods || [])
 function feedUpdate() {
   const f = curFood();
   $('#n-foodfree')?.classList.toggle('hidden', !!f || !(S.pet?.foods || []).length ? !!f : false);
-  if ($('#n-unit')) $('#n-unit').textContent = f ? `(${f.unit})` : '';
-  const amt = num($('#n-amount')?.value), k = f && amt ? kcalOf(f, amt) : null;
-  if (k != null) $('#n-kcal').textContent = `≈ ${r0(k)} kcal`;
+  const sel = $('#n-unitsel');
+  if (sel) { const us = f ? unitsOf(f) : ['g', 'ml', '캔', '포']; const keep = sel.value; if (sel.dataset.food !== (f?.id || '')) { sel.innerHTML = us.map(u => `<option>${u}</option>`).join(''); sel.dataset.food = f?.id || ''; if (us.includes(keep)) sel.value = keep; } }
+  const amt = num($('#n-amount')?.value), k = f && amt != null ? kcalOf(f, amt, sel?.value) : null;
+  const tgt = targetFor(S.pet || {}, today()), meals = num(S.pet?.meals) || 4;
+  const eaten = S.logs.filter(l => l.type === 'feed' && dkey(l.t) === today() && l.id !== F?.editId).reduce((s, l) => s + (num(l.kcal) || 0), 0);
+  $('#n-kcal').innerHTML = k != null ? `<b style="color:var(--ink);font-size:17px">≈ ${r0(k)} kcal</b>${tgt ? ` · 저장하면 오늘 ${r0(eaten + k)} / ${r0(tgt)}kcal` : ''}` : (tgt ? `회당 목표 약 ${r0(tgt / meals)}kcal${f ? ` (약 ${r1(tgt / meals / kcalOf(f, 1, sel?.value))}${sel?.value || f.unit})` : ''}` : (f ? '' : '사료를 고르면 칼로리가 자동으로 계산돼요.'));
 }
 $('#sheet').addEventListener('input', () => { if (F?.type === 'feed') feedUpdate(); });
 $('#sheet').addEventListener('change', () => { if (F?.type === 'feed') feedUpdate(); });
@@ -890,12 +964,14 @@ function urgentCheck() {
 }
 async function saveLog() {
   const tv = $('#n-time').value; const t = tv ? new Date(tv).getTime() : Date.now();
-  const d = { type: F.type, t, by: F.editId ? F.by : (S.me || null), memo: $('#n-memo').value.trim() || null };
+  const d = { type: F.type, t, by: F.editId ? F.by : (S.me || null), petId: S.pet?.id || null, memo: $('#n-memo').value.trim() || null };
   const p = S.pet;
   if (F.type === 'feed') {
     const f = curFood(), amt = num($('#n-amount').value);
     if (amt == null) return toast('먹은 양을 넣어주세요');
-    Object.assign(d, { food: f ? f.name : ($('#n-foodname')?.value.trim() || '급여'), amount: amt, unit: f ? f.unit : '', kcal: f ? r1(kcalOf(f, amt)) : null, method: $('#n-method').value });
+    const un = $('#n-unitsel')?.value || (f ? f.unit : '');
+    const kc = f ? kcalOf(f, amt, un) : null;
+    Object.assign(d, { food: f ? f.name : ($('#n-foodname')?.value.trim() || '급여'), amount: amt, unit: un, kcal: kc != null ? r1(kc) : null, method: $('#n-method').value });
   } else if (F.type === 'med') {
     const n = $('#n-name').value.trim(); if (!n) return toast('약 이름을 넣어주세요');
     Object.assign(d, { name: n, dose: $('#n-dose').value.trim() || null });
@@ -925,7 +1001,7 @@ async function saveLog() {
   if (!ok) return;
   const newestW = S.logs.filter(l => l.type === 'weight' && l.id !== editing).every(l => l.t <= d.t);
   if (F.type === 'weight' && $('#n-upd')?.checked && p && newestW) {
-    const np = petBase(); np.weightKg = d.kg; await write(() => backend.savePet(np)); S.pet = np; C = null;
+    const np = petBase(); np.weightKg = d.kg; await write(() => putPet(np)); C = null;
   }
   closeSheet(); toast(editing ? '고쳤어요' : '기록했어요');
 }
@@ -938,7 +1014,9 @@ function atTime(hh, mm, dayOffset) {
 function normEntry(e) {
   const p = S.pet || {}, foods = p.foods || [];
   const type = TYPES[e.type] ? e.type : 'note';
-  const o = { type, memo: e.memo ? String(e.memo).slice(0, 300) : null };
+  const o = { type, memo: e.memo ? String(e.memo).slice(0, 300) : null, src: e.src || '' };
+  const pets = (S.family?.pets || []).filter(x => x.name);
+  const hit = pets.find(x => x.name === e.petName) || pets.find(x => x.id !== S.pet?.id && (e.src || '').includes(x.name)); if (hit) o.petId = hit.id;
   if (e.date && /^\d{4}-\d{2}-\d{2}$/.test(e.date)) { const [hh, mm] = e.time && /^\d{1,2}:\d{2}$/.test(e.time) ? e.time.split(':').map(Number) : [12, 0]; const d = new Date(e.date + 'T00:00'); d.setHours(hh, mm, 0, 0); o.t = d.getTime(); if (!e.time) o.dateOnly = true; }
   else if (e.time && /^\d{1,2}:\d{2}$/.test(e.time)) { const [h, m] = e.time.split(':').map(Number); o.t = atTime(h, m, num(e.dayOffset) || 0); }
   else if (num(e.dayOffset)) { o.t = Date.now() + num(e.dayOffset) * 864e5; o.timeGuess = true; }
@@ -948,7 +1026,8 @@ function normEntry(e) {
     const f = foods.find(f => f.id === e.foodId) || foods.find(f => e.food && (f.name.includes(e.food) || String(e.food).includes(f.name)));
     o.food = f ? f.name : (e.food || '급여'); o.amount = num(e.amount); o.unit = e.unit || (f ? f.unit : '');
     o.method = e.method || null;
-    o.kcal = f && o.amount != null && o.unit === f.unit ? r1(kcalOf(f, o.amount)) : (num(e.kcal) != null ? r1(num(e.kcal)) : null);
+    const kc = f && o.amount != null ? kcalOf(f, o.amount, o.unit) : null;
+    o.kcal = kc != null ? r1(kc) : (num(e.kcal) != null ? r1(num(e.kcal)) : null);
   } else if (type === 'med') { o.name = e.name || '약'; o.dose = e.dose || null; }
   else if (type === 'fluid') { o.ml = num(e.ml); }
   else if (type === 'symptom') { o.symptoms = (Array.isArray(e.symptoms) ? e.symptoms : []).map(String).slice(0, 8); if (!o.symptoms.length) o.symptoms = ['기타']; o.severity = [1, 2, 3].includes(+e.severity) ? +e.severity : 1; o.alert = o.symptoms.some(s => URGENT.includes(s)); }
@@ -993,11 +1072,14 @@ function ruleParse(text) {
   const p = S.pet || {}, foods = p.foods || [];
   const prevMeds = [...new Set(S.logs.filter(l => l.type === 'med').map(l => l.name).filter(Boolean))];
   const parts = text.split(/\n|\.(?!\d)|[。!?]|,(?!\d)|그리고|그 다음|(?<=[했었였았봤쌌줬])고\s|(?<!오전|오후|아침|점심|저녁|밤|새벽)\s(?=(?:오전|오후|아침|점심|저녁|밤|새벽)?\s?\d{1,2}\s?시(?!간))/).map(s => (s || '').trim()).filter(Boolean);
-  const out = []; let lastTime = null, lastDate = null;
+  const out = []; let lastTime = null, lastDate = null, subj = null;
+  const petNames = (S.family?.pets || []).map(x => x.name).filter(Boolean).sort((a, b) => b.length - a.length);
   const SYM = [[/입\s?벌리|개구호흡|헐떡/, '입 벌리고 숨쉼'], [/숨.{0,4}(가쁘|가빠|차|빨라|몰아)|호흡/, '숨이 가쁨'], [/발작|경련/, '발작'], [/쓰러|의식/, '쓰러짐·의식 흐림'], [/구토|토(했|함|해|하|를|사|가|도|\s*\d\s?번)|\s토\s*$|^토\s*$|게웠|게워|헛구역/, '구토'], [/설사|묽은\s?변/, '설사'], [/(밥|사료|캔|아무것도|하나도).{0,6}안\s?먹|안\s?먹(어|음|는|었|고)|식욕|밥\s?거부/, '식욕 없음'], [/기운|처져|축\s?늘어|무기력|힘없/, '기운 없음'], [/기침|재채기/, '기침·재채기'], [/침\s?흘|침을\s?흘/, '침 흘림'], [/잇몸.{0,6}(하얗|하얘|하얀|허옇|창백|희)/, '잇몸 창백'], [/물.{0,6}안\s?(마|먹)/, '물 안 마심'], [/물.{0,8}(많이|엄청|자주|계속|벌컥).{0,6}(마|먹)/, '물 많이 마심']];
   const symOf = s => { let r = [...new Set(SYM.filter(([re]) => re.test(s)).map(x => x[1]))]; if (r.includes('물 안 마심') && !/밥|사료|캔/.test(s)) r = r.filter(x => x !== '식욕 없음'); return r; };
   const sevOf = s => /심하|많이|계속|여러\s?번|\d\s?번|자꾸/.test(s) ? 3 : /좀|약간|살짝|조금|반쯤/.test(s) ? 1 : 2;
   for (const s of parts) {
+    const pn = petNames.find(n => s.includes(n));
+    if (pn) { subj = pn; if (!s.replace(pn, '').replace(/^\s*(은|는|이는|이|가|도|랑|의|꺼|거)?\s*/, '').trim()) continue; }
     let time = null, m;
     if ((m = s.match(/(\d{1,2}):(\d{2})/))) time = [+m[1], +m[2]];
     else if ((m = s.match(/(오전|오후|아침|낮|저녁|밤|새벽)?\s*(\d{1,2})\s*시\s*(?:(\d{1,2})\s*분|(반))?/))) {
@@ -1009,7 +1091,7 @@ function ruleParse(text) {
     if (time) lastTime = time; else time = lastTime;
     let dm2 = s.match(/(\d{1,2})\s*월\s*(\d{1,2})\s*일/) || s.match(/(?:^|\s)(1[0-2]|0?[1-9])\/(3[01]|[12]\d|0?[1-9])(?=\s|$|에)(?!\s?(정|알|포|캔|ml|개))/);
     if (dm2) { const y = new Date().getFullYear(); let dd = new Date(y, +dm2[1] - 1, +dm2[2]); if (dd.getTime() > Date.now() + 864e5) dd = new Date(y - 1, +dm2[1] - 1, +dm2[2]); lastDate = dkey(dd); }
-    const base = { time: time ? pad(time[0]) + ':' + pad(time[1]) : null, dayOffset: /어제/.test(s) ? -1 : /그저께|그제/.test(s) ? -2 : 0, date: dm2 ? lastDate : null, src: s };
+    const base = { petName: subj, time: time ? pad(time[0]) + ':' + pad(time[1]) : null, dayOffset: /어제/.test(s) ? -1 : /그저께|그제/.test(s) ? -2 : 0, date: dm2 ? lastDate : null, src: s };
     const lv = labsIn(s);
     if (Object.keys(lv).length) { out.push({ ...base, type: 'lab', values: lv, memo: s.length > 40 || /재검|병원|선생님|수의사/.test(s) ? s : null }); continue; }
     const numUnit = s.match(/(\d+(?:\.\d+)?)\s*(kg|킬로|ml|mL|cc|미리|g|그램|캔|포|정)/i);
@@ -1074,7 +1156,7 @@ async function saveParsed() {
   const btn = document.querySelector('[data-act="p-save"]'); if (btn) btn.disabled = true;
   let n = 0;
   for (const e of P.entries) {
-    const d = { ...e, by: S.me || null }; delete d.timeGuess; delete d.dateOnly;
+    const d = { ...e, by: S.me || null, petId: e.petId || S.pet?.id || null }; delete d.timeGuess; delete d.dateOnly; delete d.src; delete d.petName;
     Object.keys(d).forEach(k => d[k] === undefined && delete d[k]);
     if (await write(() => backend.addLog(d))) n++; else break;
   }
@@ -1082,7 +1164,7 @@ async function saveParsed() {
   for (const id of P.taskIds) { const cid = k + '_' + id; if (!S.checks.some(c => c.id === cid)) await write(() => backend.setCheck(cid, { date: k, taskId: id, by: S.me || null, t: Date.now() })); }
   const w = P.entries.filter(e => e.type === 'weight' && e.kg).sort((a, b) => a.t - b.t).pop();
   if (w && S.logs.some(l => l.type === 'weight' && l.t > w.t)) w.kg = null;
-  if (w && w.kg && S.pet) { const np = petBase(); np.weightKg = w.kg; await write(() => backend.savePet(np)); S.pet = np; C = null; }
+  if (w && w.kg && S.pet) { const np = petBase(); np.weightKg = w.kg; await write(() => putPet(np)); C = null; }
   if (n === P.entries.length) { S.parsed = null; S.draft = ''; toast(`${n}건 저장했어요`); }
   render(true);
 }
@@ -1093,7 +1175,21 @@ let delArm = null;
 document.addEventListener('click', async e => {
   const b = e.target.closest('[data-act]'); if (!b) return;
   const a = b.dataset.act;
-  if (a === 'create') createFamily(b);
+  if (a === 'pet') switchPet(b.dataset.id);
+  else if (a === 'pet-add') {
+    const base = S.pet || {};
+    const np = { id: 'p' + uid(), name: '', species: base.species || 'cat', factor: 1, meals: base.meals || 4, foods: JSON.parse(JSON.stringify(base.foods || [])), tasks: [], area: base.area };
+    if (await write(() => putPet(np))) { switchPet(np.id); S.tab = 'set'; renderTabs(); render(true); toast('새 아이를 추가했어요. 이름과 체중을 넣어주세요'); setTimeout(() => $('#s-name')?.focus(), 50); }
+  }
+  else if (a === 'pet-remove') { S.petRmArm = true; render(true); }
+  else if (a === 'pet-remove-no') { S.petRmArm = false; render(true); }
+  else if (a === 'pet-remove-yes') {
+    const fam = JSON.parse(JSON.stringify(S.family)); fam.pets = fam.pets.filter(x => x.id !== S.pet.id);
+    if (!fam.pets.length) return;
+    S.petRmArm = false;
+    if (await write(() => backend.savePet(fam))) { S.family = fam; switchPet(fam.pets[0].id); toast('목록에서 뺐어요'); }
+  }
+  else if (a === 'create') createFamily(b);
   else if (a === 'rotate') { S.rotArm = true; render(true); }
   else if (a === 'rotate-no') { S.rotArm = false; render(true); }
   else if (a === 'rotate-yes') {
@@ -1156,7 +1252,8 @@ document.addEventListener('click', async e => {
   else if (a === 'food-add') {
     const name = $('#f-name').value.trim(), kcal = num($('#f-kcal').value), per = num($('#f-per').value), unit = $('#f-unit').value;
     if (!name || !kcal || !per) return toast('이름, kcal, 양을 모두 넣어주세요');
-    const p = petBase(); p.foods = [...(p.foods || []), { id: uid(), name, kcal, per, unit }];
+    const gw = num($('#f-gw')?.value);
+    const p = petBase(); p.foods = [...(p.foods || []), { id: uid(), name, kcal, per, unit, ...(gw ? { gw } : {}) }];
     if (!p.mix || !p.mix.length) p.mix = [{ foodId: p.foods[0].id, pct: 100 }];
     C = null; savePet(p, '사료를 추가했어요');
   }
