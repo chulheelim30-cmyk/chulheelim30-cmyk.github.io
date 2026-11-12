@@ -1052,11 +1052,29 @@ const FOOD_DB = [
   { n: '로얄캐닌 캣 에이징 11+ 건식', k: 'royal canin 로얄캐닌 로캐 에이징 ageing aging 11 노령 시니어 건사료 고양이', kcal: 4033, per: 1000, unit: 'g', nut: { protein: 28, fat: 15, fiber: 3.9, moisture: 6.5, ash: 6.7, calcium: 0.63, phosphorus: 0.54 }, from: '로얄캐닌 한국 공식', note: '' },
   { n: '로얄캐닌 캣 가스트로인테스티널 파이버 리스폰스 습식', k: 'royal canin 로얄캐닌 로캐 가스트로 gastro 인테스티널 파이버 fibre fiber 변비 습식 고양이 처방', kcal: 71, per: 100, unit: 'g', nut: null, from: '로얄캐닌 한국 공식(100g당 71kcal)', note: '' },
   { n: "힐스 s/d 고양이 캔 (156g)", k: 'hills 힐스 sd s/d 에스디 결석 요로 urinary 캔 고양이 처방', kcal: 156, per: 1, unit: '캔', gw: 156, nut: null, from: "Hill's 공식(미국·캐나다판)", note: '' },
+  // ----- 일반 사료 (11/12 추가). 칼로리는 제조사·판매처 공개값(대사에너지), 나라별 표기가 조금 다를 수 있어요. -----
+  { n: '로얄캐닌 미니 어덜트 (강아지 건식)', k: 'royal canin 로얄캐닌 로캐 미니 mini 어덜트 adult 소형견 성견 강아지 건사료', kcal: 3912, per: 1000, unit: 'g', nut: { protein: 27, fat: 16, fiber: 1.4, moisture: 8, ash: 6.8 }, from: '영국판 표기(100g당 391kcal)', note: '' },
+  { n: '로얄캐닌 엑스스몰 어덜트 (강아지 건식)', k: 'royal canin 로얄캐닌 로캐 엑스스몰 x-small xsmall 엑스 스몰 초소형견 어덜트 강아지 건사료', kcal: 3840, per: 1000, unit: 'g', nut: null, from: '미국판 참고값', note: '' },
+  { n: '로얄캐닌 미니 인도어 어덜트 (강아지 건식)', k: 'royal canin 로얄캐닌 로캐 미니 인도어 indoor 실내견 어덜트 강아지 건사료', kcal: 3770, per: 1000, unit: 'g', nut: null, from: '로얄캐닌 공식(일본판, 100g당 377kcal)', note: '' },
+  { n: '로얄캐닌 말티즈 어덜트 (강아지 건식)', k: 'royal canin 로얄캐닌 로캐 말티즈 maltese 몰티즈 어덜트 강아지 건사료 견종', kcal: 4031, per: 1000, unit: 'g', nut: { protein: 24, fat: 18, fiber: 1.5, ash: 5.6 }, from: '판매처 표기(1kg당 4031kcal)', note: '' },
+  { n: '로얄캐닌 푸들 어덜트 (강아지 건식)', k: 'royal canin 로얄캐닌 로캐 푸들 poodle 어덜트 강아지 건사료 견종', kcal: 4057, per: 1000, unit: 'g', nut: { protein: 30, fat: 19, fiber: 2, ash: 5.3 }, from: '유럽판 표기(1kg당 4057kcal), 성분은 로얄캐닌 한국 페이지', note: '' },
+  { n: '오리젠 스몰브리드 (강아지 건식)', k: 'orijen 오리젠 스몰브리드 small breed 스몰 소형견 강아지 건사료', kcal: 3940, per: 1000, unit: 'g', nut: null, from: '오리젠 공식(아시아·태평양판)', note: '' },
+  { n: '오리젠 식스피쉬 독 (강아지 건식)', k: 'orijen 오리젠 식스피쉬 six fish 6피쉬 생선 독 강아지 건사료', kcal: 3760, per: 1000, unit: 'g', nut: null, from: '오리젠 공식(한국어 페이지)', note: '' },
+  { n: '아카나 라이트 앤 핏 (강아지 건식)', k: 'acana 아카나 라이트 light 핏 fit 체중 다이어트 강아지 건사료', kcal: 3055, per: 1000, unit: 'g', nut: null, from: '아카나 공식(한국어 페이지)', note: '' },
+  { n: '아카나 어덜트 스몰브리드 (강아지 건식)', k: 'acana 아카나 어덜트 adult 스몰브리드 small breed 스몰 소형견 강아지 건사료', kcal: 3510, per: 1000, unit: 'g', nut: null, from: '판매처 표기(제조사 문구)', note: '' },
+  { n: '나우 프레쉬 그레인프리 스몰브리드 어덜트 (강아지 건식)', k: 'now fresh 나우 프레쉬 프레시 그레인프리 grain free 스몰브리드 small breed 스몰 소형견 어덜트 강아지 건사료', kcal: 3741, per: 1000, unit: 'g', nut: { protein: 28, moisture: 8 }, from: '판매처 표기(제조사 성분표)', note: '판매처에 따라 1kg당 3711kcal로도 표기돼요.' },
+  { n: '하림펫푸드 더리얼 로우 닭고기 어덜트 (강아지)', k: '하림 하림펫푸드 더리얼 the real 로우 raw 닭고기 치킨 어덜트 강아지', kcal: 4805, per: 1000, unit: 'g', nut: { moisture: 6 }, from: '판매처 표기(1kg당 4805kcal)', note: '' },
+  { n: '로얄캐닌 인도어 27 (고양이 건식)', k: 'royal canin 로얄캐닌 로캐 인도어 indoor 27 실내묘 고양이 건사료', kcal: 3755, per: 1000, unit: 'g', nut: { protein: 27, fat: 13, ash: 7.3 }, from: '유럽판 표기(1kg당 3755kcal)', note: '미국판은 1kg당 3534kcal로 표기돼요.' },
+  { n: '오리젠 오리지널 캣 (캣앤키튼, 고양이 건식)', k: 'orijen 오리젠 오리지널 original 캣 cat 키튼 kitten 캣앤키튼 고양이 건사료', kcal: 4120, per: 1000, unit: 'g', nut: { protein: 40, fat: 19 }, from: '오리젠 공식(아시아·태평양판)', note: '' },
 ];
 const normQ = s => String(s || '').toLowerCase().replace(/[\s()\/·.,-]/g, '');
 function foodSearch(q) {
   const t = String(q || '').toLowerCase().split(/\s+/).map(normQ).filter(Boolean); if (!t.length) return [];
-  return FOOD_DB.filter(d => { const h = normQ(d.n + ' ' + d.k); return t.every(w => h.includes(w)); }).slice(0, 6);
+  const all = FOOD_DB.filter(d => { const h = normQ(d.n + ' ' + d.k); return t.every(w => h.includes(w)); });
+  if (all.length) return all.slice(0, 8);
+  // 다 맞는 게 없으면 일부라도 맞는 것을 많이 맞는 순서로 (예: '로캐 말티즈 퍼피' → 말티즈 어덜트)
+  return FOOD_DB.map(d => { const h = normQ(d.n + ' ' + d.k); return [d, t.filter(w => w.length >= 2 && h.includes(w)).length]; })
+    .filter(x => x[1]).sort((a, b) => b[1] - a[1]).slice(0, 6).map(x => x[0]);
 }
 function nutLine(n) { return NUTS.filter(([k]) => num(n[k]) != null && !['ash', 'calcium', 'fiber'].includes(k)).map(([k, t]) => `${t} ${num(n[k])}%`).join(' · '); }
 const dmv = (v, m) => num(v) == null || num(m) == null || m >= 100 ? null : r1(num(v) / (100 - num(m)) * 100);
@@ -1108,7 +1126,7 @@ function vSet() {
   <div class="card" id="food-card"><h3>사료·처방식</h3>
     ${foods.map(f => `<div class="edit-row"><div class="grow"><b>${esc(f.name)}</b>${f.nut ? `<span class="tag ${f.nut.src === 'label' ? 'lbl' : ''}">${f.nut.src === 'label' ? '라벨' : '참고값'}</span>` : ''}<div class="muted">${esc(f.kcal)}kcal / ${esc(f.per)}${esc(f.unit)}${num(f.gw) ? ` (${esc(f.gw)}g)` : ''}</div>${f.nut && nutLine(f.nut) ? `<div class="muted">${nutLine(f.nut)}</div>` : ''}</div><button class="btn ghost sm" data-act="food-edit" data-id="${esc(f.id)}">고치기</button><button class="btn ghost sm" data-act="food-del" data-id="${esc(f.id)}">삭제</button></div>`).join('')}
     <div style="margin-top:10px"><label class="f" style="margin-top:0">사료 이름</label>
-    <div class="row"><input type="text" id="f-name" autocomplete="off" placeholder="예: 리커버리, a/d, 레날, k/d" style="flex:1"><button class="btn acc sm" data-act="food-find" style="white-space:nowrap">🔍 찾기</button></div>
+    <div class="row"><input type="text" id="f-name" autocomplete="off" placeholder="${isDog(p) ? '예: 로얄캐닌 미니, 오리젠, 나우' : '예: 인도어, 오리젠, 레날, k/d'}" style="flex:1"><button class="btn acc sm" data-act="food-find" style="white-space:nowrap">🔍 찾기</button></div>
     <div id="f-sugg"></div><div id="f-nutbox"></div>
     <label class="f">칼로리 (라벨 기준)</label>
     <div class="three" style="margin-top:6px"><input type="number" inputmode="decimal" id="f-kcal" placeholder="kcal"><input type="number" inputmode="decimal" id="f-per" placeholder="양"><select id="f-unit"><option value="g">g</option><option value="ml">ml</option><option value="캔">캔</option><option value="포">포</option></select></div>
