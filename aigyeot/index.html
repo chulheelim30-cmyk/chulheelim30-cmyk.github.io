@@ -213,7 +213,7 @@ const LABS = [
   { k: 'sdma', n: 'SDMA', u: 'μg/dL', re: /sdma/i },
   { k: 'phos', n: '인', u: 'mg/dL', re: /phos|인\s?수치|인산|(^|\s)인(?=\s?\d)/i },
   { k: 'k', n: '칼륨', u: 'mEq/L', re: /칼륨|포타슘|(^|\s)k(?=\s?\d)/i },
-  { k: 'hct', n: '적혈구용적(HCT)', u: '%', re: /hct|pcv|헤마토크릿|적혈구\s?용적/i },
+  { k: 'hct', n: '적혈구용적(HCT)', u: '%', re: /hct|pcv|헤마토크릿|적혈구\s?용적|빈혈\s?수치/i },
   { k: 'usg', n: '요비중', u: '', re: /요비중|usg/i },
   { k: 'glu', n: '혈당', u: 'mg/dL', re: /혈당|glu/i },
 ];
@@ -226,7 +226,7 @@ function labsIn(s) {
   }
   return v;
 }
-const SYMPTOMS = ['구토', '설사', '식욕 없음', '기운 없음', '물 안 마심', '물 많이 마심', '기침·재채기', '침 흘림', '숨이 가쁨', '입 벌리고 숨쉼', '발작', '소변 안 봄', '쓰러짐·의식 흐림', '잇몸 창백', '기타'];
+const SYMPTOMS = ['구토', '설사', '식욕 없음', '기운 없음', '물 안 마심', '물 많이 마심', '기침·재채기', '침 흘림', '숨이 가쁨', '입 벌리고 숨쉼', '발작', '소변 안 봄', '쓰러짐·의식 흐림', '잇몸 창백', '빈뇨', '걸음 이상', '통증 반응', '기타'];
 const URGENT = ['입 벌리고 숨쉼', '숨이 가쁨', '발작', '소변 안 봄', '쓰러짐·의식 흐림', '잇몸 창백'];
 // 먹는 방식별 배수. 스스로 먹으면 유지 칼로리(종·중성화·활동량), 강급·튜브는 기초대사량부터 시작.
 const FACTORS_SELF = {
@@ -674,7 +674,7 @@ function logText(l) {
   switch (l.type) {
     case 'feed': return `${esc(shortFood(l.food) || '급여')} ${l.amount ?? ''}${esc(l.unit || '')}${num(l.kcal) ? ` · ${r0(l.kcal)}kcal` : ''}${l.method ? ` · ${esc(l.method)}` : ''}`;
     case 'med': return `${esc(l.name || '약')}${l.dose ? ' · ' + esc(l.dose) : ''}`;
-    case 'fluid': return `피하수액 ${l.ml ?? ''}ml`;
+    case 'fluid': return num(l.ml) ? `피하수액 ${l.ml}ml` : '피하수액';
     case 'symptom': return `${esc((l.symptoms || []).join(', ') || '증상')} · ${['', '약함', '중간', '심함'][l.severity || 1]}`;
     case 'weight': return `${l.kg}kg`;
     case 'walk': return [num(l.min) ? l.min + '분' : '', num(l.km) ? l.km + 'km' : '', [l.pee && '소변', l.poop && '대변'].filter(Boolean).join('·')].filter(Boolean).join(' · ');
@@ -919,13 +919,58 @@ function buildSummary(days) {
   if (L.length === 0) lines.push('', '이 기간에 남긴 기록이 없어요.');
   return lines.join('\n');
 }
+// 기록을 보고 '선생님께 여쭤볼 것' 초안 만들기. 진단·처방 판단은 하지 않고, 기록된 사실 + 질문만.
+function autoQuestions(days) {
+  const p = S.pet || {}, since = Date.now() - days * 864e5;
+  const L = S.logs.filter(l => l.t >= since).slice().sort((a, b) => a.t - b.t);
+  const md = t => dkey(t).slice(5).replace('-', '/');
+  const qs = [];
+  // 1) 보호자가 메모에 직접 적은 질문
+  const asked = [];
+  L.forEach(l => {
+    let m = String(l.memo || '');
+    m = m.replace(/\(([^()]*[?？])\)?/g, (_, inner) => { asked.push(inner.trim()); return ''; });
+    m.split(/(?<=[?？.])\s+|\n/).forEach(x => { x = x.trim(); if (x.length > 2 && (/[?？]$/.test(x) || /(는지|을지|ㄹ지|할지|맞는지|될지|까)\s*[?？]?$/.test(x))) asked.push(x); });
+  });
+  [...new Set(asked.map(x => x.replace(/[?？]*$/, '?')))].slice(0, 4).forEach(x => qs.push(x));
+  // 2) 며칠째 이어지는 증상
+  const symDays = {};
+  L.filter(l => l.type === 'symptom').forEach(l => (l.symptoms || []).forEach(sy => { (symDays[sy] = symDays[sy] || new Set()).add(dkey(l.t)); }));
+  Object.entries(symDays).sort((a, b) => b[1].size - a[1].size).slice(0, 5).forEach(([sy, set]) => {
+    const n = set.size, last = [...set].sort().pop();
+    const tail = sy === '설사' ? '지사제나 식이 조절이 필요할까요? 탈수는 어떻게 확인하면 될까요?' : sy === '식욕 없음' ? '식욕촉진제나 급여 방법을 바꿔야 할까요?' : sy === '걸음 이상' ? '신경·관절 쪽 검사가 필요할까요?' : sy === '통증 반응' ? '통증 관리가 필요할까요?' : sy === '빈뇨' ? '소변 검사가 필요할까요?' : URGENT.includes(sy) ? '바로 진료가 필요한 상황인지 알려주세요.' : '추가 검사나 약 조정이 필요할까요?';
+    const ga = (() => { const c = sy.charCodeAt(sy.length - 1); return c >= 0xAC00 && c <= 0xD7A3 && (c - 0xAC00) % 28 ? '이' : '가'; })();
+    qs.push(n >= 2 ? `${sy}${ga} ${n}일 동안 기록됐어요(마지막 ${last.slice(5).replace('-', '/')}). ${tail}` : `${last.slice(5).replace('-', '/')}에 ${sy}${ga} 있었어요. ${tail}`);
+  });
+  // 3) 먹는 양·강급
+  const feeds = L.filter(l => l.type === 'feed'), forced = feeds.filter(l => /강급|튜브/.test(l.method || ''));
+  const ft = fullTarget(p), byDay = {};
+  feeds.forEach(l => { const k = dkey(l.t); byDay[k] = (byDay[k] || 0) + (num(l.kcal) || 0); });
+  const kd = Object.values(byDay).filter(v => v > 0);
+  if (ft && kd.length >= 2) { const avg = kd.reduce((a, b) => a + b, 0) / kd.length; if (avg < ft * 0.8) qs.push(`하루 평균 ${r0(avg)}kcal로 목표(${r0(ft)}kcal)의 ${r0(avg / ft * 100)}%만 먹고 있어요. 급여량을 어떻게 늘리면 될까요?`); }
+  if (forced.length) qs.push(`스스로 잘 안 먹어서 최근 ${days}일 동안 강급을 ${forced.length}번 했어요. 강급을 계속할지, 양·횟수와 식욕촉진제를 어떻게 할지 여쭤보고 싶어요.`);
+  // 4) 체중
+  const ws = L.filter(l => l.type === 'weight' && num(l.kg));
+  if (ws.length >= 2) { const a = num(ws[0].kg), b = num(ws[ws.length - 1].kg), d = (b - a) / a * 100; if (Math.abs(d) >= 3) qs.push(`체중이 ${md(ws[0].t)} ${a}kg → ${md(ws[ws.length - 1].t)} ${b}kg로 ${d < 0 ? '줄었어요' : '늘었어요'}(${r1(d)}%). 괜찮은 변화인지요?`); }
+  // 5) 검사 수치
+  const labs = S.logs.filter(l => l.type === 'lab' && l.values).slice().sort((a, b) => a.t - b.t);
+  LABS.forEach(Lb => { const ps = labs.filter(l => l.values[Lb.k] != null); if (!ps.length || ps[ps.length - 1].t < since) return; const last = ps[ps.length - 1], prev = ps[ps.length - 2];
+    qs.push(prev ? `${Lb.n}가 ${prev.values[Lb.k]} → ${last.values[Lb.k]}${Lb.u ? Lb.u : ''}로 바뀌었어요. 다음 검사는 언제 하면 될까요?` : `${md(last.t)} ${Lb.n} ${last.values[Lb.k]}${Lb.u ? Lb.u : ''} 결과가 어떤 의미인지, 다음 검사는 언제인지 궁금해요.`); });
+  // 6) 지금 먹는 약·수액
+  const meds = [...new Set(L.filter(l => l.type === 'med').map(l => l.name).filter(n => n && n !== '약'))];
+  if (meds.length) qs.push(`지금 주는 약(${meds.slice(0, 6).join(', ')})을 계속 줘도 될까요? 바꾸거나 줄일 약이 있을까요?`);
+  if (L.some(l => l.type === 'fluid')) qs.push('피하수액을 집에서 계속해야 할까요? 양과 횟수는 어떻게 할까요?');
+  return [...new Set(qs)].slice(0, 12);
+}
 function vVet() {
   return `<div class="card"><h3>병원에 보여줄 요약</h3><p class="muted" style="margin:0">진료실에서 이 화면을 보여주거나, 복사해서 병원 카카오톡·문자로 보내세요.</p>
     <div class="chips" style="margin-top:10px">${[3, 7, 14, 30].map(d => `<button class="chip ${S.sumDays === d ? 'on' : ''}" data-act="sumdays" data-d="${d}">최근 ${d}일</button>`).join('')}</div>
     <pre class="sum" id="sumText">${esc(buildSummary(S.sumDays))}</pre>
     <button class="btn acc full" data-act="copy">요약 복사하기</button></div>
     <div class="card"><h3>선생님께 여쭤볼 것</h3><p class="muted" style="margin:0 0 6px">생각날 때 적어두면 요약 맨 아래에 붙어요.</p>
-    <textarea id="qText" placeholder="예: 크레아티닌이 올랐는데 수액 양을 늘려야 할까요?">${esc(S.pet?.questions || '')}</textarea>
+    <button class="btn acc sm" data-act="auto-q" style="margin-bottom:8px">✨ 최근 ${S.sumDays}일 기록으로 질문 만들기</button>
+    <textarea id="qText" style="min-height:120px" placeholder="예: 크레아티닌이 올랐는데 수액 양을 늘려야 할까요?">${esc(S.pet?.questions || '')}</textarea>
+    <p class="muted" style="margin:6px 2px 0">만든 질문은 고치거나 지운 뒤 저장하세요. 기록을 바탕으로 한 질문일 뿐, 진단이 아니에요.</p>
     <button class="btn ghost sm" data-act="save-q" style="margin-top:8px">저장</button></div>
     <button class="btn ghost full" data-act="tab" data-to="er">🚨 응급할 때 볼 안내·가까운 병원</button>`;
 }
@@ -1476,17 +1521,40 @@ JSON만 답해: {"entries":[{"type":"feed","time":"08:00","dayOffset":0,"foodId"
 function ruleParse(text) {
   const p = S.pet || {}, foods = p.foods || [];
   const prevMeds = [...new Set(S.logs.filter(l => l.type === 'med').map(l => l.name).filter(Boolean))];
-  const parts = text.split(/\n|\.(?!\d)|[。!?]|,(?!\d)|그리고|그 다음|(?<=[했었였았봤쌌줬])고\s|(?<!오전|오후|아침|점심|저녁|밤|새벽)\s(?=(?:오전|오후|아침|점심|저녁|밤|새벽)?\s?\d{1,2}\s?시(?!간))/).map(s => (s || '').trim()).filter(Boolean);
-  const out = []; let lastTime = null, lastVague = false, lastDate = null, subj = null;
+  // 붙여넣은 일지: '11.7.토' 같은 날짜만 있는 줄은 날짜 표시로, '(1. 처방캔 1/2, 2. …)' 목록 번호는 지우고, '⁃' 글머리표도 지워요.
+  const YR = new Date().getFullYear();
+  const dateOfMD = (mo, d) => { let dd = new Date(YR, +mo - 1, +d); if (dd.getTime() > Date.now() + 864e5) dd = new Date(YR - 1, +mo - 1, +d); return dkey(dd); };
+  const lines = text.split(/\n/).map(l => {
+    const t = l.replace(/^[\s⁃•·\-*▪◦]+/, '').trim();
+    const h = t.match(/^(1[0-2]|0?[1-9])\s*[.\/월]\s*(3[01]|[12]\d|0?[1-9])\s*일?\s*\.?\s*\(?\s*([월화수목금토일])?(요일)?\s*\)?\s*\.?$/);
+    if (h) return '§D' + dateOfMD(h[1], h[2]) + '§';
+    if (/^\s*[⁃•▪◦]/.test(l) || /^\t+\S/.test(l)) return '§N' + t;
+    return t.replace(/(^|[\s(,])\d\.\s?(?=[^\d\s])/g, '$1');
+  });
+  const parts = [];
+  lines.forEach((ln, li) => ln.startsWith('§N') ? parts.push(Object.assign(new String(ln), { li })) : ln.split(/\.(?!\d)|[。!]|(?<=[?？])\s*|,(?!\d)|그리고|그 다음|(?<=[했었였았봤쌌줬])고\s|(?<!오전|오후|아침|점심|저녁|밤|새벽)\s(?=(?:오전|오후|아침|점심|저녁|밤|새벽)?\s?\d{1,2}\s?시(?!간))/).map(x => (x || '').trim()).filter(x => /[가-힣a-z0-9]/i.test(x)).forEach(x => parts.push(Object.assign(new String(x), { li }))));
+  const out = []; let lastTime = null, lastVague = false, lastDate = null, hdrDate = null, subj = null, ctxMethod = null, lastLi = -1, lastT = null, lastFood = null;
   const petNames = (S.family?.pets || []).map(x => x.name).filter(Boolean).sort((a, b) => b.length - a.length);
-  const SYM = [[/입\s?벌리|개구호흡|헐떡/, '입 벌리고 숨쉼'], [/숨.{0,4}(가쁘|가빠|차|빨라|몰아)|호흡/, '숨이 가쁨'], [/발작|경련/, '발작'], [/쓰러|의식/, '쓰러짐·의식 흐림'], [/구토|토(했|함|해|하|를|사|가|도|\s*\d\s?번)|\s토\s*$|^토\s*$|게웠|게워|헛구역/, '구토'], [/설사|묽은\s?변/, '설사'], [/(밥|사료|캔|아무것도|하나도).{0,6}안\s?먹|안\s?먹(어|음|는|었|고)|식욕|밥\s?거부/, '식욕 없음'], [/기운|처져|축\s?늘어|무기력|힘없/, '기운 없음'], [/기침|재채기/, '기침·재채기'], [/침\s?흘|침을\s?흘/, '침 흘림'], [/잇몸.{0,6}(하얗|하얘|하얀|허옇|창백|희)/, '잇몸 창백'], [/물.{0,6}안\s?(마|먹)/, '물 안 마심'], [/물.{0,8}(많이|엄청|자주|계속|벌컥).{0,6}(마|먹)/, '물 많이 마심']];
-  const symOf = s => { let r = [...new Set(SYM.filter(([re]) => re.test(s)).map(x => x[1]))]; if (r.includes('물 안 마심') && !/밥|사료|캔/.test(s)) r = r.filter(x => x !== '식욕 없음'); return r; };
+  const SYM = [[/입\s?벌리|개구호흡|헐떡/, '입 벌리고 숨쉼'], [/숨.{0,4}(가쁘|가빠|차|빨라|몰아)|호흡/, '숨이 가쁨'], [/발작|경련/, '발작'], [/쓰러|의식/, '쓰러짐·의식 흐림'], [/구토|토(했|함|해|하|를|사|가|도|\s*\d\s?번)|\s토\s*$|^토\s*$|게웠|게워|헛구역/, '구토'], [/설사|묽은\s?변|변.{0,3}(흐르|흘러)/, '설사'], [/(밥|사료|캔|아무것도|하나도|식사).{0,8}(안\s?먹|먹지\s?(못|않)|못\s?먹)|안\s?먹(어|음|는|었|고)|먹지\s?(못|않)|식욕\s?(없|저하|부진|떨어)|밥\s?거부|식이\s?거부|자발식이\s?없/, '식욕 없음'], [/기운|처져|축\s?늘어|무기력|힘없|활동\s?없|활력.{0,4}(떨어|없)/, '기운 없음'], [/빈뇨|소변.{0,4}자주/, '빈뇨'], [/비틀|잘\s?(못\s?)?걷지|걷지\s?못|주저앉|뒷다리.{0,6}(힘|풀)|후지|기울|거동/, '걸음 이상'], [/불편감|소리\s?(내|를)|아파|통증|아픈\s?듯/, '통증 반응'], [/기침|재채기/, '기침·재채기'], [/침\s?흘|침을\s?흘/, '침 흘림'], [/잇몸.{0,6}(하얗|하얘|하얀|허옇|창백|희)/, '잇몸 창백'], [/물.{0,6}안\s?(마|먹)/, '물 안 마심'], [/물.{0,8}(많이|엄청|자주|계속|벌컥).{0,6}(마|먹)/, '물 많이 마심']];
+  const symOf = s => { if (/줄어|줄었|나아|좋아|개선|회복|굿/.test(s) && !/여전|계속|심해/.test(s)) return []; let r = [...new Set(SYM.filter(([re]) => re.test(s)).map(x => x[1]))]; if (r.includes('물 안 마심') && !/밥|사료|캔/.test(s)) r = r.filter(x => x !== '식욕 없음'); return r; };
   const sevOf = s => /심하|많이|계속|여러\s?번|\d\s?번|자꾸/.test(s) ? 3 : /좀|약간|살짝|조금|반쯤/.test(s) ? 1 : 2;
-  for (const s of parts) {
+  for (const sObj of parts) {
+    let s = String(sObj);
+    const hm2 = s.match(/^§D(\d{4}-\d{2}-\d{2})§$/);
+    if (hm2) { hdrDate = lastDate = hm2[1]; lastTime = null; lastVague = false; ctxMethod = null; continue; }
+    if (sObj.li !== lastLi) { lastLi = sObj.li; ctxMethod = null; lastT = null; lastFood = null; }
+    const tm = lastTime ? pad(lastTime[0]) + ':' + pad(lastTime[1]) : null, bn = { petName: subj, vague: lastVague, time: tm, dayOffset: 0, date: hdrDate };
+    // 글머리표 줄(참고 메모)과 물음표로 끝나는 말(질문·추측)은 메모로
+    if (s.startsWith('§N')) { s = s.slice(2); out.push({ ...bn, type: 'note', memo: s, src: s }); lastT = 'note'; continue; }
+    let qTail = null; const qm = s.match(/\(([^()]*)[?？]\s*\)?$/);
+    if (qm) { qTail = '(' + qm[1].trim() + '?)'; s = s.slice(0, qm.index).trim(); if (!s) continue; }
+    if (/[?？]$/.test(s) || /(을지|ㄹ지|는지|할지|될지|맞는지|있을지)$/.test(s)) { out.push({ ...bn, type: 'note', memo: s.replace(/[?？]*$/, '?'), src: s }); lastT = 'note'; continue; }
+    const before = out.length;
+    const attachQ = () => { if (qTail && out.length > before) { const e = out[out.length - 1]; e.memo = [e.memo, qTail].filter(Boolean).join(' '); } };
     const pn = petNames.find(n => s.includes(n));
     if (pn) { subj = pn; if (!s.replace(pn, '').replace(/^\s*(은|는|이는|이|가|도|랑|의|꺼|거)?\s*/, '').trim()) continue; }
     let time = null, m, vague = false;
-    if ((m = s.match(/(\d{1,2}):(\d{2})/))) time = [+m[1], +m[2]];
+    if ((m = s.match(/(오전|오후|아침|낮|저녁|밤|새벽)?\s*(\d{1,2}):(\d{2})/))) { let h = +m[2]; if (/오후|저녁|밤/.test(m[1] || '') && h < 12) h += 12; time = [h, +m[3]]; }
     else if ((m = s.match(/(오전|오후|아침|낮|저녁|밤|새벽)?\s*(\d{1,2})\s*시(?!간)\s*(?:(\d{1,2})\s*분|(반))?/))) {
       let h = +m[2]; const mm = m[3] ? +m[3] : m[4] ? 30 : 0;
       if (/오후|저녁|밤/.test(m[1] || '') && h < 12) h += 12;
@@ -1494,9 +1562,12 @@ function ruleParse(text) {
       time = [h, mm];
     } else if ((m = s.match(/(아침|점심|오후|낮|저녁|밤|새벽)/))) { time = [{ 아침: 8, 점심: 12, 오후: 15, 낮: 13, 저녁: 19, 밤: 22, 새벽: 3 }[m[1]], 0]; vague = true; }
     if (time) { lastTime = time; lastVague = vague; } else { time = lastTime; vague = lastVague; }
-    let dm2 = s.match(/(\d{1,2})\s*월\s*(\d{1,2})\s*일/) || s.match(/(?:^|\s)(1[0-2]|0?[1-9])\/(3[01]|[12]\d|0?[1-9])(?=\s|$|에)(?!\s?(정|알|포|캔|ml|개))/);
+    // 시간만 있는 줄('새벽 2:20', '11:36')은 다음 줄들의 시간으로만 써요.
+    if (!s.replace(/(오전|오후|아침|점심|낮|저녁|밤|새벽)?\s*\d{1,2}(:\d{2}|\s*시(?!간)(\s*\d{1,2}\s*분|\s*반)?)(에|쯤|경)?/g, '').replace(/[\s~]/g, '')) continue;
+    if (/\(/.test(s) && /강급|주사기|튜브/.test(s) && !/\)/.test(s)) ctxMethod = /튜브/.test(s) ? '튜브' : '강급';
+    let dm2 = s.match(/(\d{1,2})\s*월\s*(\d{1,2})\s*일/) || (hdrDate ? null : s.match(/(?<![캔포정알개약]\s?)(?:^|\s)(1[0-2]|0?[1-9])\/(3[01]|[12]\d|0?[1-9])(?=\s|$|에)(?!\s?(정|알|포|캔|ml|개))/));
     if (dm2) { const y = new Date().getFullYear(); let dd = new Date(y, +dm2[1] - 1, +dm2[2]); if (dd.getTime() > Date.now() + 864e5) dd = new Date(y - 1, +dm2[1] - 1, +dm2[2]); lastDate = dkey(dd); }
-    const base = { petName: subj, vague, time: time ? pad(time[0]) + ':' + pad(time[1]) : null, dayOffset: /어제/.test(s) ? -1 : /그저께|그제/.test(s) ? -2 : 0, date: dm2 ? lastDate : null, src: s };
+    const base = { petName: subj, vague, time: time ? pad(time[0]) + ':' + pad(time[1]) : null, dayOffset: /어제/.test(s) ? -1 : /그저께|그제/.test(s) ? -2 : 0, date: dm2 ? lastDate : hdrDate, src: s };
     const lv = labsIn(s);
     if (Object.keys(lv).length) { out.push({ ...base, type: 'lab', values: lv, memo: s.length > 40 || /재검|병원|선생님|수의사/.test(s) ? s : null }); continue; }
     const numUnit = s.match(/(\d+(?:\.\d+)?)\s*(kg|킬로|ml|mL|cc|미리|g|그램|캔|포|정)/i);
@@ -1511,42 +1582,56 @@ function ruleParse(text) {
       continue;
     }
     if (/목욕|샴푸|미용/.test(s)) { out.push({ ...base, type: 'bath', kind: /미용/.test(s) ? '미용실' : /발|얼굴|부분/.test(s) ? '발·얼굴만' : '집에서 목욕' }); continue; }
-    if (/소변|오줌|대변|똥|응가|배변/.test(s)) {
+    if (/소변|오줌|대변|똥|응가|배변|배뇨|(^|\s)변\s?(을|이)?\s?(봄|봤|보고|봐|눔|눴)/.test(s) && !/빈뇨/.test(s)) {
       const NO = /안\s?(봤|봄|봐|쌌|쌈|싸|나|눴|눔)|못\s?(봤|쌌|눴|봄|쌈)|없/;
       const PO = /대변|똥|응가|배변|설사|변비|묽|무른\s?변/, pp = s.split(/(?=똥|대변|응가|배변|설사|변비|묽|무른\s?변)/), peeT = pp.find(x => /소변|오줌/.test(x)) || s, poopT = pp.find(x => PO.test(x)) || s;
       const st = t => NO.test(t) ? '안 봄' : /피/.test(t) ? '피 섞임' : null;
       const e = { ...base, type: 'potty' };
-      if (/소변|오줌/.test(s)) e.pee = st(peeT) || (/많|늘|증가|자주/.test(peeT) ? '많음' : /적|조금|줄|감소/.test(peeT) ? '적음' : '정상');
-      if (PO.test(s)) e.poop = /설사/.test(poopT) ? '설사' : /무[르름]|묽/.test(poopT) ? '무름' : /변비|딱딱/.test(poopT) ? '변비' : NO.test(poopT) ? '안 봄' : '정상';
-      out.push(e); continue;
+      if (/소변|오줌|배뇨/.test(s)) e.pee = st(peeT) || (/많|늘|증가|자주|커짐|커졌|사이즈\s?업/.test(peeT) ? '많음' : /적|조금|줄|감소|작아/.test(peeT) ? '적음' : '정상');
+      if (PO.test(s) || /(^|\s)변\s?(을|이)?\s?(봄|봤|보고|봐)/.test(s)) e.poop = /설사/.test(poopT) ? '설사' : /무[르름]|묽/.test(poopT) ? '무름' : /변비|딱딱/.test(poopT) ? '변비' : NO.test(poopT) ? '안 봄' : '정상';
+      out.push(e);
+      if (/묽|설사/.test(s) && !/설사/.test(e.poop || '')) { const sy2 = symOf(s); if (sy2.length) out.push({ ...base, type: 'symptom', symptoms: sy2, severity: sevOf(s) }); }
+      lastT = 'potty'; attachQ(); continue;
     }
+    if (/단약|약.{0,4}(끊|중단|그만)/.test(s)) { out.push({ ...base, type: 'note', memo: s }); lastT = 'note'; continue; }
     const known = prevMeds.find(n => s.includes(n));
-    if ((known || /약|투약|알약|시럽|복용|정\b|\d\/\d\s*정|반\s?(알|정)|안약|연고/.test(s)) && !/강급|사료|캔|츄르/.test(s)) {
-      const dm = s.match(/(\d+\/\d+|\d+(?:\.\d+)?)\s*(정|알|ml|cc|방울|포)/i), half = s.match(/반\s?(알|정|포)/);
-      const dose = dm ? dm[0].replace(/\s+/g, '') : half ? '1/2' + half[1] : null;
+    const MEDW = /약|투약|알약|시럽|복용|정\b|\d\/\d\s*정|반\s?(알|정)|안약|연고|주사|스테로이드|항생제|촉진제|유산균|영양제|처방약/;
+    const shortNoun = lastT === 'med' && s.length <= 12 && !/[다요음함]$|먹|했|봤/.test(s);
+    if ((known || MEDW.test(s) || shortNoun) && !/강급|사료|캔|츄르|트릿|간식/.test(s)) {
+      const dm = s.match(/(\d+\/\d+|\d+(?:\.\d+)?)\s*(정|알|ml|cc|방울|포)/i), half = s.match(/반\s?(알|정|포)/), times = s.match(/(\d+)\s*회/);
+      const dose = dm ? dm[0].replace(/\s+/g, '') : half ? '1/2' + half[1] : times ? `하루 ${times[1]}회` : null;
       const toks = s.replace(/(오전|오후|아침|점심|저녁|밤|새벽)?\s*\d{1,2}\s*시(\s*\d{1,2}\s*분|\s*반)?(에|쯤)?|\d{1,2}:\d{2}/g, ' ')
         .replace(/(\d+\/\d+|\d+(?:\.\d+)?)\s*(정|알|ml|cc|방울|포)/gi, ' ').split(/[\s,]+/)
         .map(t => t.replace(/(을|를|이|가|은|는|도|에|으로|로|랑|하고)$/, ''))
-        .filter(t => t && !/\d/.test(t) && !/^(반|약$|투약|먹|줬|줌|주|복용|아침|점심|저녁|밤|새벽|오전|오후|에|시|쯤|그리고|했|함|하|그|오늘|어제|알약|시럽|안약|연고|바름|발라|넣)/.test(t));
-      const name = known || toks[0] || (/안약/.test(s) ? '안약' : /연고/.test(s) ? '연고' : '약');
-      out.push({ ...base, type: 'med', name, dose }); continue;
+        .filter(t => t && !/\d/.test(t) && !/^(반|약$|투약|먹|줬|줌|주|복용|아침|점심|저녁|밤|새벽|오전|오후|에$|시$|쯤|그리고|했|함|하|그|오늘|어제|알약|시럽|안약|연고|바름|발라|넣)/.test(t));
+      const name = known || (/안약/.test(s) ? '안약' : null) || toks.find(t => !/^(회|번|처치|받음|받|맞음|맞)$/.test(t)) || (/연고/.test(s) ? '연고' : '약');
+      out.push({ ...base, type: 'med', name, dose }); lastT = 'med'; continue;
     }
-    if (/먹|급여|강급|캔|사료|밥|그램|\dg\b|주사기|튜브|파우치|츄르/.test(s) && (!/안\s?먹/.test(s) || /강급|주사기|튜브|\d\s*(g|그램|ml|캔|포)/.test(s))) {
+    if ((/먹|급여|강급|캔|사료|밥|그램|\dg\b|주사기|튜브|파우치|츄르|트릿|간식|자발식이|젤/.test(s) || ctxMethod) && (!/안\s?먹|먹지\s?(못|않)|못\s?먹|자발식이\s?없/.test(s) || /강급|주사기|튜브|\d\s*(g|그램|ml|캔|포)/.test(s))) {
       const named = foodIn(s, foods);
       let amount = null, unit = null;
-      if (/반\s?캔/.test(s)) { amount = 0.5; unit = '캔'; }
+      const fr = s.match(/(캔|포)\s*(\d+)\s*\/\s*(\d+)|(\d+)\s*\/\s*(\d+)\s*(캔|포)/);
+      if (fr) { amount = r2(fr[1] ? +fr[2] / +fr[3] : +fr[4] / +fr[5]); unit = fr[1] || fr[6]; }
+      else if (/반\s?포/.test(s)) { amount = 0.5; unit = '포'; }
+      else if (/반\s?캔/.test(s)) { amount = 0.5; unit = '캔'; }
       else if (/한\s?캔/.test(s)) { amount = 1; unit = '캔'; }
       else if ((m = s.match(/(\d+(?:\.\d+)?)\s*(g|그램|ml|cc|캔|포|개|봉|스틱)/i))) { amount = +m[1]; unit = { 그램: 'g', cc: 'ml' }[m[2]] || m[2].toLowerCase(); if (/개|봉|스틱/.test(unit)) { const f2 = foods.find(x => s.includes(x.name)); unit = f2 && /포|캔/.test(f2.unit) ? f2.unit : '개'; } }
       const fsy = symOf(s); if (fsy.length) out.push({ ...base, type: 'symptom', symptoms: fsy, severity: sevOf(s) });
       // 이름이 안 나와도 사료가 하나뿐이고 단위가 맞으면 그 사료로 봐요.
       const f = named || (foods.length === 1 && (!unit || unitsOf(foods[0]).includes(unit)) ? foods[0] : null);
       if (f && !unit && amount != null) unit = f.unit;
-      out.splice(fsy.length ? out.length - 1 : out.length, 0, { ...base, type: 'feed', foodId: f ? f.id : null, food: f ? f.name : '급여', amount, unit, method: /강급|주사기/.test(s) ? '강급' : /튜브/.test(s) ? '튜브' : /조금|일부|남겼/.test(s) ? '일부만 먹음' : /혼자|스스로|자율/.test(s) ? '스스로 먹음' : null });
-      continue;
+      const gn = s.match(/[^\s,()+&]*(트릿|츄르|캔|사료|간식|젤|파우치|무스)[^\s,()+&]*/);
+      if (gn) lastFood = gn[0].replace(/\d.*$/, '') || gn[0];
+      // 양도 없고 먹었다는 말도 없으면(예: '밥 달라고 요구함', '츄르에 반응') 급여가 아니라 메모로
+      if (amount == null && !f && !/먹|급여|강급|주사기|튜브|자발식이|\d\s*회/.test(s)) { if (fsy.length) { lastT = 'symptom'; continue; } out.push({ ...base, type: 'note', memo: s }); lastT = 'note'; continue; }
+      if (amount == null && !gn && !named && fsy.length) { lastT = 'symptom'; continue; }
+      out.splice(fsy.length ? out.length - 1 : out.length, 0, { ...base, type: 'feed', foodId: f ? f.id : null, food: f ? f.name : (gn ? lastFood : lastFood || '급여'), amount, unit, method: /강급|주사기/.test(s) ? '강급' : /튜브/.test(s) ? '튜브' : ctxMethod || (/조금|일부|남겼|\d+\s*(%|프로)/.test(s) ? '일부만 먹음' : /혼자|스스로|자율|자발/.test(s) ? '스스로 먹음' : null) });
+      if (ctxMethod && /\)/.test(s)) ctxMethod = null;
+      lastT = 'feed'; continue;
     }
     const sy = symOf(s);
-    if (sy.length) { out.push({ ...base, type: 'symptom', symptoms: sy, severity: sevOf(s) }); continue; }
-    out.push({ ...base, type: 'note', memo: s });
+    if (sy.length) { out.push({ ...base, type: 'symptom', symptoms: sy, severity: sevOf(s), memo: s.length > 12 ? s : null }); lastT = 'symptom'; attachQ(); continue; }
+    out.push({ ...base, type: 'note', memo: s + (qTail ? ' ' + qTail : '') }); lastT = 'note';
   }
   const entries = out.map(normEntry);
   return { ai: false, entries, taskIds: tasksDoneBy(entries, S.checks.filter(c => c.date === today()).map(c => c.taskId)) };
@@ -1696,6 +1781,12 @@ document.addEventListener('click', async e => {
     const txt = buildSummary(S.sumDays);
     if (await copyText(txt)) toast('복사했어요');
     else { const r = document.createRange(); r.selectNodeContents($('#sumText')); const s = getSelection(); s.removeAllRanges(); s.addRange(r); toast('글자를 길게 눌러 복사해주세요'); }
+  }
+  else if (a === 'auto-q') {
+    const qs = autoQuestions(S.sumDays), ta = $('#qText');
+    if (!qs.length) return toast('질문을 만들 기록이 아직 부족해요');
+    const cur = (ta.value || '').trim(), add = qs.filter(q => !cur.includes(q)).map(q => '• ' + q).join('\n');
+    ta.value = cur ? cur + '\n' + add : add; ta.focus(); toast(`질문 ${qs.length}개를 넣었어요. 고친 뒤 저장해주세요`);
   }
   else if (a === 'save-q') { const p = petBase(); p.questions = $('#qText').value.trim(); savePet(p); }
   else if (a === 'save-pet') {
