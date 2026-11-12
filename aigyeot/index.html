@@ -392,8 +392,8 @@ async function createFamily(btn) {
   if (btn) { btn.disabled = true; btn.textContent = '만드는 중…'; }
   try {
     const code = await rpc('ag_create', {});
-    history.replaceState(null, '', location.pathname + '?g=' + code + '#set');
-    S.tab = 'set'; boot();
+    history.replaceState(null, '', location.pathname + '?g=' + code + '#today');
+    S.tab = 'today'; boot();
   } catch (e) { toast('만들지 못했어요. 인터넷 연결을 확인해주세요'); if (btn) { btn.disabled = false; btn.textContent = '우리 아이 케어 기록 시작하기'; } }
 }
 setTimeout(boot);
@@ -480,9 +480,19 @@ function nameCard() {
 /* ----- today ----- */
 function vToday() {
   const p = S.pet;
-  if (!p && S.petLoaded) return `<div class="card"><h3>처음 오셨네요</h3><p class="muted">아이 이름과 체중만 넣으면 바로 시작할 수 있어요.</p><button class="btn acc full" data-act="go-set">아이 정보 넣기</button></div>` + quickCard() + writeCard() + recentCard();
+  if (!p && S.petLoaded) return quickSetup();
   if (!p) return `<div class="card muted">불러오는 중…</div>`;
   return nameCard() + quickCard() + startGuide() + kcalCard() + checklistCard() + writeCard() + recentCard();
+}
+// 처음 만든 직후: 이름·종류·체중만 넣고 바로 시작 (나머지는 나중에 설정에서)
+function quickSetup() {
+  return `<div class="card" style="padding:20px 16px"><h3 style="font-size:18px;margin-bottom:4px">우리 아이를 알려주세요</h3>
+    <p class="muted" style="margin:0 0 4px">이 세 가지만 넣으면 바로 기록할 수 있어요. 나머지는 나중에 설정에서 넣어도 돼요.</p>
+    <label class="f">이름</label><input type="text" id="qs-name" placeholder="예: 나비" autocomplete="off">
+    <label class="f">종류</label><div class="two"><button class="chip ${S.qsSpecies !== 'dog' ? 'on' : ''}" data-act="qs-sp" data-v="cat" style="padding:10px">🐱 고양이</button><button class="chip ${S.qsSpecies === 'dog' ? 'on' : ''}" data-act="qs-sp" data-v="dog" style="padding:10px">🐶 강아지</button></div>
+    <label class="f">체중 (kg, 모르면 비워두세요)</label><input type="number" step="0.01" inputmode="decimal" id="qs-weight" placeholder="예: 3.8">
+    <label class="f" style="display:flex;gap:8px;align-items:center;color:var(--ink);margin-top:14px"><input type="checkbox" id="qs-tasks" checked style="width:20px;height:20px"> 자주 쓰는 '매일 할 일' 같이 넣기 (급여·약·수액·배변 확인)</label>
+    <button class="btn acc full" data-act="qs-go" style="margin-top:16px">시작하기</button></div>`;
 }
 function writeCard() {
   const P = S.parsed;
@@ -1413,6 +1423,16 @@ document.addEventListener('click', async e => {
     if (await write(() => backend.savePet(fam))) { S.family = fam; switchPet(fam.pets[0].id); toast('목록에서 뺐어요'); }
   }
   else if (a === 'create') createFamily(b);
+  else if (a === 'qs-sp') { const n = $('#qs-name')?.value, w = $('#qs-weight')?.value; S.qsSpecies = b.dataset.v; render(true); if ($('#qs-name')) $('#qs-name').value = n || ''; if ($('#qs-weight')) $('#qs-weight').value = w || ''; }
+  else if (a === 'qs-go') {
+    const name = ($('#qs-name')?.value || '').trim(); if (!name) { $('#qs-name')?.focus(); return toast('아이 이름을 넣어주세요'); }
+    const p = petBase(); p.name = name.slice(0, 20); p.species = S.qsSpecies === 'dog' ? 'dog' : 'cat';
+    const w = num($('#qs-weight')?.value); if (w && w > 0 && w < 150) p.weightKg = w;
+    if ($('#qs-tasks')?.checked && !(p.tasks || []).length) p.tasks = DEFAULT_TASKS.map(l => ({ id: uid(), label: l }));
+    b.disabled = true; b.textContent = '저장하는 중…';
+    if (await write(() => putPet(p))) { C = null; toast(`${name} 케어 기록을 시작했어요`); render(true); window.scrollTo(0, 0); }
+    else { b.disabled = false; b.textContent = '시작하기'; }
+  }
   else if (a === 'fail-retry') backend?.retryFailed?.();
   else if (a === 'fail-drop') { if (b.dataset.sure) backend?.dropFailed?.(); else { b.dataset.sure = '1'; b.textContent = '정말 버릴까요?'; } }
   else if (a === 'rotate') { S.rotArm = true; render(true); }
