@@ -9,11 +9,11 @@
 <link rel="apple-touch-icon" href="apple-touch-icon.png?v=5">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="아이곁">
-<meta name="description" content="아픈 강아지·고양이 케어 기록. 급여량 계산, 투약·수액·증상 기록, 병원 요약을 가족과 함께.">
-<meta property="og:title" content="아이곁 — 아픈 아이 케어 기록">
-<meta property="og:description" content="가족이 함께 쓰는 반려동물 케어 기록">
+<meta name="description" content="강아지·고양이 생활 기록. 밥·산책·목욕·배변·체중을 가족과 함께, 아플 땐 케어 모드로 투약·수액·병원 요약까지.">
+<meta property="og:title" content="아이곁 — 우리 아이 생활 기록">
+<meta property="og:description" content="가족이 함께 쓰는 반려동물 생활 기록">
 <link rel="icon" href="icon-192.png?v=5">
-<title>아이곁 — 아픈 아이 케어 기록</title>
+<title>아이곁 — 우리 아이 생활 기록</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
@@ -139,7 +139,7 @@ header.top .brand{display:flex;align-items:center;gap:10px}
 <body>
 <div class="wrap">
   <header class="top">
-    <div class="brand"><span id="hdrAv"></span><div><span id="hdrName">아이곁</span><small id="hdrSub">아픈 아이 케어 기록</small></div></div>
+    <div class="brand"><span id="hdrAv"></span><div><span id="hdrName">아이곁</span><small id="hdrSub">우리 아이 생활 기록</small></div></div>
     <span id="sync" class="pill">연결 중…</span>
   </header>
   <div id="petsbar"></div>
@@ -191,9 +191,18 @@ const TYPES = {
   symptom: { ic: '🩺', name: '증상' },
   weight:  { ic: '⚖️', name: '체중' },
   potty:   { ic: '🚽', name: '배변·소변' },
+  walk:    { ic: '🦮', name: '산책' },
+  bath:    { ic: '🛁', name: '목욕' },
   lab:     { ic: '🧪', name: '검사' },
   note:    { ic: '📝', name: '메모' },
 };
+// 기본은 건강한 아이의 생활 기록. 치료용 기록(수액·검사)은 '치료 기록' 줄에 작게 둬요(따로 모드 없음).
+const isDog = p => p?.species === 'dog';
+const WALK_MIN = [10, 20, 30, 45, 60];
+const BATH_KINDS = ['집에서 목욕', '미용실', '발·얼굴만'];
+const typesFor = p => ['feed', ...(isDog(p) ? ['walk', 'bath'] : []), 'potty', 'weight', 'med', 'symptom', 'note'];
+const CARE_TYPES = ['fluid', 'lab'];
+const typeName = k => k === 'med' ? '약·영양제' : (TYPES[k] || TYPES.note).name;
 const LABS = [
   { k: 'crea', n: '크레아티닌', u: 'mg/dL', re: /크레아?티닌|크레아틴|creat?i?n?i?n?e?|crea/i },
   { k: 'bun', n: 'BUN', u: 'mg/dL', re: /bun|요소\s?질소|비유엔/i },
@@ -224,6 +233,8 @@ const FACTORS_ASSIST = [{ v: 1.0, t: '기초대사량 그대로 (회복기 기�
 const factorList = mode => mode === 'assist' ? FACTORS_ASSIST : FACTORS_SELF[S.pet?.species === 'dog' ? 'dog' : 'cat'];
 const feedModeOf = p => p?.feedMode || (p?.plan?.ramp || num(p?.water) ? 'assist' : 'self');
 const DEFAULT_TASKS = ['아침 급여', '저녁 급여', '아침 약', '저녁 약', '피하수액', '소변·배변 확인'];
+const DAILY_TASKS = { dog: ['아침 밥', '저녁 밥', '아침 산책', '저녁 산책', '물 갈아주기'], cat: ['아침 밥', '저녁 밥', '물 갈아주기', '화장실 청소'] };
+const tasksFor = p => DAILY_TASKS[isDog(p) ? 'dog' : 'cat'];
 const rer = kg => 70 * Math.pow(kg, 0.75);
 function dayIndex(pet, k) {
   if (!pet?.plan?.start) return null;
@@ -408,15 +419,17 @@ async function createFamily(btn) {
     const code = await rpc('ag_create', {});
     history.replaceState(null, '', location.pathname + '?g=' + code + '#today');
     S.tab = 'today'; boot();
-  } catch (e) { toast('만들지 못했어요. 인터넷 연결을 확인해주세요'); if (btn) { btn.disabled = false; btn.textContent = '우리 아이 케어 기록 시작하기'; } }
+  } catch (e) { toast('만들지 못했어요. 인터넷 연결을 확인해주세요'); if (btn) { btn.disabled = false; btn.textContent = '우리 아이 기록 시작하기'; } }
 }
 setTimeout(boot);
 const who = by => by || '';
 
 /* ---------- render ---------- */
 const TABS = [['today', '🏠', '오늘'], ['calc', '🥄', '급여 계산'], ['logs', '📋', '기록'], ['vet', '🏥', '병원 요약'], ['er', '🚨', '응급'], ['set', '⚙️', '설정']];
+// 응급 탭은 아래 줄에서 빼고, 병원 탭·위급 증상 안내에서 열어요.
+const tabsNow = () => TABS.filter(t => t[0] !== 'er' || S.tab === 'er');
 function renderTabs() {
-  $('#tabs').innerHTML = TABS.map(([k, ic, n]) => `<button data-tab="${k}" class="${S.tab === k ? 'on' : ''}"><span class="ic">${ic}</span>${n}</button>`).join('');
+  $('#tabs').innerHTML = tabsNow().map(([k, ic, n]) => `<button data-tab="${k}" class="${S.tab === k ? 'on' : ''}"><span class="ic">${ic}</span>${n}</button>`).join('');
 }
 $('#tabs').addEventListener('click', e => {
   const b = e.target.closest('[data-tab]'); if (!b) return;
@@ -433,9 +446,10 @@ function render(force) {
   document.querySelector('nav.tabs').classList.remove('hidden');
   $('#petsbar').innerHTML = petsBar();
   const p = S.pet;
-  $('#hdrName').textContent = p?.name ? p.name + '의 케어 기록' : '아이곁';
+  renderTabs();
+  $('#hdrName').textContent = p?.name ? p.name + '의 하루' : '아이곁';
   $('#hdrAv').innerHTML = p?.photo ? avatar(p, 44) : '';
-  $('#hdrSub').textContent = p?.weightKg ? `${p.species === 'dog' ? '강아지' : '고양이'} · ${p.weightKg}kg${p.condition ? ' · ' + p.condition : ''}` : '아픈 아이 케어 기록';
+  $('#hdrSub').textContent = p?.weightKg ? `${p.species === 'dog' ? '강아지' : '고양이'} · ${p.weightKg}kg${p.condition ? ' · ' + p.condition : ''}` : '우리 아이 생활 기록';
   const v = { today: vToday, er: vEr, calc: vCalc, logs: vLogs, vet: vVet, set: vSet }[S.tab];
   $('#main').innerHTML = v();
   if (S.tab === 'calc') { calcUpdate(); if ($('#q-out')) quickUpdate('amt'); }
@@ -462,10 +476,10 @@ function vLanding() {
   return `<div class="card" style="padding:22px 18px">
     ${S.mode === 'nofamily-bad' ? '<div class="banner">이 링크로는 열 수 없어요. 가족이 링크를 새로 바꿨을 수 있어요. 가족에게 새 링크를 받아 열거나 아래에 붙여넣어 주세요.</div>' : ''}
     <div style="font-size:40px;line-height:1">🐾</div>
-    <h2 style="margin:10px 0 6px;font-size:21px">아픈 아이, 가족이 함께 돌봐요</h2>
-    <p class="muted" style="margin:0 0 4px">급여량 계산, 투약·수액·증상 기록, 병원에 보여줄 요약까지 한곳에서.</p>
+    <h2 style="margin:10px 0 6px;font-size:21px">우리 아이의 하루, 가족이 함께 기록해요</h2>
+    <p class="muted" style="margin:0 0 4px">밥·산책·목욕·배변·체중을 한곳에. 아플 때는 약·증상 기록과 병원에 보여줄 요약까지.</p>
     <p class="muted" style="margin:0 0 16px">가입 없이 시작하고, 만든 링크를 가족에게 보내면 같이 기록할 수 있어요.</p>
-    <button class="btn acc full" data-act="create">우리 아이 케어 기록 시작하기</button>
+    <button class="btn acc full" data-act="create">우리 아이 기록 시작하기</button>
     <div style="margin-top:18px;border-top:1px solid var(--line);padding-top:14px"><b style="font-size:14px">가족이 이미 만들었나요?</b>
     <p class="muted" style="margin:4px 0 8px">가족에게 받은 링크를 열거나, 여기에 붙여넣어 주세요.</p>
     <div class="row"><input type="text" id="join" placeholder="링크 붙여넣기"><button class="btn ghost sm" data-act="join" style="white-space:nowrap">들어가기</button></div></div></div>`;
@@ -475,13 +489,12 @@ function startGuide() {
   const p = S.pet || {};
   const steps = [
     ['아이 이름·체중 넣기', !!(p.name && num(p.weightKg)), 'set'],
-    ['사료 칼로리 등록하기', !!(p.foods || []).length, 'set'],
     ['매일 할 일 정하기', !!(p.tasks || []).length, 'set'],
     ['가족에게 링크 보내기', !!ls.get('aigyeot-shared-' + familyCode()), 'set'],
   ];
   if (steps.every(s => s[1])) return '';
   const n = steps.filter(s => s[1]).length;
-  return `<div class="card" style="border-color:var(--ok)"><div class="row between"><h3 style="margin:0">시작하기 ${n}/4</h3><button class="x" data-act="guide-hide" style="border:0;background:none;color:var(--sub)">닫기</button></div>
+  return `<div class="card" style="border-color:var(--ok)"><div class="row between"><h3 style="margin:0">시작하기 ${n}/${steps.length}</h3><button class="x" data-act="guide-hide" style="border:0;background:none;color:var(--sub)">닫기</button></div>
     <div style="margin-top:6px">${steps.map(s => `<div class="check ${s[1] ? 'done' : ''}" data-act="tab" data-to="${s[2]}"><span class="box">${s[1] ? '✓' : ''}</span><span class="lbl">${s[0]}</span>${s[1] ? '' : '<span class="who">설정에서 ›</span>'}</div>`).join('')}</div></div>`;
 }
 function nameCard() {
@@ -497,7 +510,7 @@ function vToday() {
   const p = S.pet;
   if (!p && S.petLoaded) return quickSetup();
   if (!p) return `<div class="card muted">불러오는 중…</div>`;
-  return nameCard() + quickCard() + startGuide() + kcalCard() + checklistCard() + writeCard() + recentCard();
+  return nameCard() + quickCard() + startGuide() + walkCard() + (num(p.weightKg) ? kcalCard() : '') + checklistCard() + writeCard() + recentCard();
 }
 // 처음 만든 직후: 이름·종류·체중만 넣고 바로 시작 (나머지는 나중에 설정에서)
 function quickSetup() {
@@ -507,13 +520,13 @@ function quickSetup() {
     <label class="f">이름</label><input type="text" id="qs-name" placeholder="예: 나비" autocomplete="off">
     <label class="f">종류</label><div class="two"><button class="chip ${S.qsSpecies !== 'dog' ? 'on' : ''}" data-act="qs-sp" data-v="cat" style="padding:10px">🐱 고양이</button><button class="chip ${S.qsSpecies === 'dog' ? 'on' : ''}" data-act="qs-sp" data-v="dog" style="padding:10px">🐶 강아지</button></div>
     <label class="f">체중 (kg, 모르면 비워두세요)</label><input type="number" step="0.01" inputmode="decimal" id="qs-weight" placeholder="예: 3.8">
-    <label class="f" style="display:flex;gap:8px;align-items:center;color:var(--ink);margin-top:14px"><input type="checkbox" id="qs-tasks" checked style="width:20px;height:20px"> 자주 쓰는 '매일 할 일' 같이 넣기 (급여·약·수액·배변 확인)</label>
+    <label class="f" style="display:flex;gap:8px;align-items:center;color:var(--ink);margin-top:14px"><input type="checkbox" id="qs-tasks" checked style="width:20px;height:20px"> 자주 쓰는 '매일 할 일' 같이 넣기 (${S.qsSpecies === 'dog' ? '밥·산책·물' : '밥·물·화장실'})</label>
     <button class="btn acc full" data-act="qs-go" style="margin-top:16px">시작하기</button></div>`;
 }
 function writeCard() {
   const P = S.parsed;
   let h = `<div class="card"><h3>한 번에 쭉 적기</h3>
-    <textarea id="w-text" style="min-height:96px" placeholder="예: 아침 8시에 회복캔 30g 강급, 9시 반에 세미톨 1/4정 먹임. 저녁에 수액 100ml. 오후에 한 번 토했고 소변은 정상">${esc(S.draft || '')}</textarea>
+    <textarea id="w-text" style="min-height:96px" placeholder="${isDog(S.pet) ? '예: 아침 8시에 사료 60g 다 먹음. 저녁 7시에 40분 산책, 응가 정상. 오늘 집에서 목욕함' : '예: 아침 8시에 사료 30g, 저녁에 츄르 하나. 소변 정상, 체중 4.2kg'}">${esc(S.draft || '')}</textarea>
     <div class="row" style="margin-top:8px"><button class="btn acc" style="flex:1" data-act="parse" ${S.parsing ? 'disabled' : ''}>${S.parsing ? '정리하는 중…' : '자동으로 정리하기'}</button></div>
     <p class="muted" style="margin:6px 2px 0">시간·양·약 이름을 찾아 항목별로 나눠요. 저장 전에 확인할 수 있어요.</p>`;
   if (P && P.entries.length) {
@@ -568,7 +581,22 @@ function kcalCard() {
     <div class="muted">${eaten >= tgt ? '오늘 목표를 채웠어요.' : `남은 양 약 ${r0(tgt - eaten)} kcal`}</div>${nutTodayHtml()}</div>`;
 }
 function quickCard() {
-  return `<div class="card"><h3>기록하기</h3><div class="grid4">${Object.entries(TYPES).map(([k, t]) => `<button class="qbtn" data-act="new" data-type="${k}"><span class="ic">${t.ic}</span>${t.name}</button>`).join('')}</div></div>`;
+  return `<div class="card"><h3>기록하기</h3><div class="grid4">${typesFor(S.pet).map(k => `<button class="qbtn" data-act="new" data-type="${k}"><span class="ic">${TYPES[k].ic}</span>${typeName(k)}</button>`).join('')}</div>
+    <div class="row" style="margin-top:10px;gap:6px;flex-wrap:wrap;align-items:center"><span class="muted" style="font-size:13px">치료 기록</span>${CARE_TYPES.map(k => `<button class="chip" data-act="new" data-type="${k}">${TYPES[k].ic} ${TYPES[k].name}</button>`).join('')}<button class="chip" data-act="tab" data-to="er">🚨 응급</button></div></div>`;
+}
+// 강아지: 오늘 산책·이번 주 산책·마지막 목욕
+function walkCard() {
+  if (!isDog(S.pet)) return '';
+  const k = today(), wk = Date.now() - 7 * 864e5;
+  const ws = S.logs.filter(l => l.type === 'walk'), tw = ws.filter(l => dkey(l.t) === k), week = ws.filter(l => l.t >= wk);
+  const mins = a => a.reduce((s, l) => s + (num(l.min) || 0), 0);
+  const lb = S.logs.find(l => l.type === 'bath');
+  const ago = lb ? Math.round((new Date(k + 'T00:00') - new Date(dkey(lb.t) + 'T00:00')) / 864e5) : null;
+  const bathTxt = lb ? (ago === 0 ? '오늘' : ago === 1 ? '어제' : ago + '일 전') + (lb.kind && lb.kind !== '집에서 목욕' ? ' · ' + esc(lb.kind) : '') : '기록 없음';
+  return `<div class="card"><div class="two" style="gap:10px">
+    <div><div class="muted" style="font-size:13px">🦮 오늘 산책</div><div class="row" style="align-items:baseline;gap:4px;margin-top:2px"><span class="big">${tw.length}</span><span class="muted">번${mins(tw) ? ' · ' + mins(tw) + '분' : ''}</span></div><div class="muted" style="font-size:12px">최근 7일 ${week.length}번${mins(week) ? ' · ' + mins(week) + '분' : ''}</div></div>
+    <div><div class="muted" style="font-size:13px">🛁 마지막 목욕</div><div style="font-size:19px;font-weight:700;margin-top:6px">${bathTxt}</div></div></div>
+    <div class="two" style="margin-top:10px"><button class="btn ghost sm" data-act="new" data-type="walk">+ 산책</button><button class="btn ghost sm" data-act="new" data-type="bath">+ 목욕</button></div></div>`;
 }
 function checklistCard() {
   const tasks = S.pet?.tasks || [];
@@ -593,6 +621,8 @@ function logText(l) {
     case 'fluid': return `피하수액 ${l.ml ?? ''}ml`;
     case 'symptom': return `${esc((l.symptoms || []).join(', ') || '증상')} · ${['', '약함', '중간', '심함'][l.severity || 1]}`;
     case 'weight': return `${l.kg}kg`;
+    case 'walk': return [num(l.min) ? l.min + '분' : '', num(l.km) ? l.km + 'km' : '', [l.pee && '소변', l.poop && '대변'].filter(Boolean).join('·')].filter(Boolean).join(' · ');
+    case 'bath': return esc(l.kind || '목욕');
     case 'potty': return [l.pee && '소변 ' + esc(l.pee), l.poop && '대변 ' + esc(l.poop)].filter(Boolean).join(' · ') || '배변';
     case 'lab': return LABS.filter(L => l.values && l.values[L.k] != null).map(L => `${L.n} ${l.values[L.k]}`).join(' · ') || '검사';
     default: return '';
@@ -601,7 +631,7 @@ function logText(l) {
 function logRow(l) {
   const t = TYPES[l.type] || TYPES.note;
   const main = logText(l);
-  return `<div class="log ${l.alert ? 'alert' : ''}"><div class="ic">${t.ic}</div><div class="body" data-act="edit" data-id="${esc(l.id)}" style="cursor:pointer"><div><b>${t.name}</b> ${main}</div>${l.memo ? `<div class="muted">${esc(l.memo)}</div>` : ''}<div class="t">${hm(l.t)}${l.by ? ' · ' + esc(who(l.by)) : ''}</div></div><button class="x" data-act="del" data-id="${esc(l.id)}">삭제</button></div>`;
+  return `<div class="log ${l.alert ? 'alert' : ''}"><div class="ic">${t.ic}</div><div class="body" data-act="edit" data-id="${esc(l.id)}" style="cursor:pointer"><div><b>${typeName(l.type)}</b> ${main}</div>${l.memo ? `<div class="muted">${esc(l.memo)}</div>` : ''}<div class="t">${hm(l.t)}${l.by ? ' · ' + esc(who(l.by)) : ''}</div></div><button class="x" data-act="del" data-id="${esc(l.id)}">삭제</button></div>`;
 }
 
 /* ----- logs ----- */
@@ -612,7 +642,7 @@ function vLogs() {
 }
 function vList() {
   const list = S.logs.filter(l => S.filter === 'all' || l.type === S.filter);
-  let h = `<div class="chips scroll" style="margin-bottom:10px"><button class="chip ${S.filter === 'all' ? 'on' : ''}" data-act="filter" data-f="all">전체</button>${Object.entries(TYPES).map(([k, t]) => `<button class="chip ${S.filter === k ? 'on' : ''}" data-act="filter" data-f="${k}">${t.ic} ${t.name}</button>`).join('')}</div>`;
+  let h = `<div class="chips scroll" style="margin-bottom:10px"><button class="chip ${S.filter === 'all' ? 'on' : ''}" data-act="filter" data-f="all">전체</button>${Object.entries(TYPES).filter(([k]) => typesFor(S.pet).includes(k) || S.logs.some(l => l.type === k)).map(([k, t]) => `<button class="chip ${S.filter === k ? 'on' : ''}" data-act="filter" data-f="${k}">${t.ic} ${typeName(k)}</button>`).join('')}</div>`;
   if (!list.length) return h + `<div class="card muted">기록이 없어요.</div>`;
   let cur = '';
   h += '<div class="card" style="padding-top:4px">';
@@ -793,7 +823,7 @@ function buildSummary(days) {
   const since = Date.now() - days * 864e5;
   const L = S.logs.filter(l => l.t >= since).slice().sort((a, b) => a.t - b.t);
   const lines = [];
-  lines.push(`[${p.name || '아이'} 케어 요약 · 최근 ${days}일]`);
+  lines.push(`[${p.name || '아이'} 기록 요약 · 최근 ${days}일]`);
   lines.push(`${p.species === 'dog' ? '강아지' : '고양이'}${p.age ? ' · ' + p.age : ''}${p.weightKg ? ' · 현재 ' + p.weightKg + 'kg' : ''}${p.condition ? ' · ' + p.condition : ''}`);
   if ((p.foods || []).length) { lines.push('', '■ 먹는 사료'); p.foods.forEach(f => lines.push(`${f.name}: ${f.kcal}kcal/${f.per}${f.unit}${f.nut && nutLine(f.nut) ? ' · ' + nutLine(f.nut) : ''}`)); }
   const ws = L.filter(l => l.type === 'weight');
@@ -820,6 +850,10 @@ function buildSummary(days) {
   if (fl.length) lines.push('', '■ 피하수액', `${fl.length}회, 총 ${fl.reduce((s, f) => s + (num(f.ml) || 0), 0)}ml (회당 ${[...new Set(fl.map(f => f.ml))].join('/')}ml)`);
   const pt = L.filter(l => l.type === 'potty');
   if (pt.length) { lines.push('', '■ 배변·소변'); pt.slice(-10).forEach(x => lines.push(`${dkey(x.t).slice(5)} ${hm(x.t)}  ${[x.pee && '소변 ' + x.pee, x.poop && '대변 ' + x.poop].filter(Boolean).join(', ')}`)); }
+  const wl = L.filter(l => l.type === 'walk');
+  if (wl.length) { const m = wl.filter(w => num(w.min)); lines.push('', '■ 산책', `${wl.length}회${m.length ? ` · 평균 ${r0(m.reduce((s, w) => s + num(w.min), 0) / m.length)}분` : ''}`); }
+  const bt = L.filter(l => l.type === 'bath');
+  if (bt.length) lines.push('', '■ 목욕', bt.map(b => `${dkey(b.t).slice(5)} ${b.kind || '목욕'}`).join(', '));
   const allLabs = S.logs.filter(l => l.type === 'lab' && l.values).slice().sort((a, b) => a.t - b.t);
   const labLines = LABS.map(Lb => { const ps = allLabs.filter(l => l.values[Lb.k] != null); if (!ps.length) return null; const last = ps[ps.length - 1]; return `${Lb.n} ${last.values[Lb.k]}${Lb.u ? ' ' + Lb.u : ''} (${dkey(last.t).slice(5)})${ps.length > 1 ? ` ← 이전 ${ps[ps.length - 2].values[Lb.k]} (${dkey(ps[ps.length - 2].t).slice(5)})` : ''}`; }).filter(Boolean);
   if (labLines.length) lines.push('', '■ 최근 검사 수치', ...labLines);
@@ -836,7 +870,8 @@ function vVet() {
     <button class="btn acc full" data-act="copy">요약 복사하기</button></div>
     <div class="card"><h3>선생님께 여쭤볼 것</h3><p class="muted" style="margin:0 0 6px">생각날 때 적어두면 요약 맨 아래에 붙어요.</p>
     <textarea id="qText" placeholder="예: 크레아티닌이 올랐는데 수액 양을 늘려야 할까요?">${esc(S.pet?.questions || '')}</textarea>
-    <button class="btn ghost sm" data-act="save-q" style="margin-top:8px">저장</button></div>`;
+    <button class="btn ghost sm" data-act="save-q" style="margin-top:8px">저장</button></div>
+    <button class="btn ghost full" data-act="tab" data-to="er">🚨 응급할 때 볼 안내·가까운 병원</button>`;
 }
 
 /* ----- emergency ----- */
@@ -1010,7 +1045,7 @@ function vSet() {
     <div><label class="f">종류</label><select id="s-species"><option value="cat" ${p.species !== 'dog' ? 'selected' : ''}>고양이</option><option value="dog" ${p.species === 'dog' ? 'selected' : ''}>강아지</option></select></div></div>
     <div class="two"><div><label class="f">체중 (kg)</label><input type="number" step="0.01" inputmode="decimal" id="s-weight" value="${esc(p.weightKg ?? '')}"></div>
     <div><label class="f">나이</label><input type="text" id="s-age" value="${esc(p.age || '')}" placeholder="예: 12살 추정"></div></div>
-    <label class="f">진단·상태</label><input type="text" id="s-cond" value="${esc(p.condition || '')}" placeholder="예: 만성 신장질환 3기">
+    <label class="f">건강 메모 (선택 · 진단받은 병이 있으면)</label><input type="text" id="s-cond" value="${esc(p.condition || '')}" placeholder="예: 슬개골 탈구 1기, 피부 알러지">
     <button class="btn acc full" data-act="save-pet" style="margin-top:14px">저장</button>
     ${(S.family?.pets || []).length > 1 ? (S.petRmArm ? `<div class="alertbox" style="margin-top:10px"><b>${esc(S.pet?.name || '이 아이')}를 목록에서 뺄까요?</b>기록은 지워지지 않고 보이지만 않아요.<div class="two" style="margin-top:10px"><button class="btn ghost sm" data-act="pet-remove-no">그만두기</button><button class="btn sm" style="background:var(--warn)" data-act="pet-remove-yes">빼기</button></div></div>` : `<button class="btn ghost sm" data-act="pet-remove" style="margin-top:8px">이 아이 목록에서 빼기</button>`) : ''}</div>
 
@@ -1029,8 +1064,8 @@ function vSet() {
 
   <div class="card"><h3>매일 할 일</h3>
     ${tasks.map((t, i) => `<div class="edit-row"><span class="grow">${esc(t.label)}</span><button class="btn ghost sm" data-act="task-up" data-i="${i}" ${i ? '' : 'disabled'}>↑</button><button class="btn ghost sm" data-act="task-del" data-i="${i}">삭제</button></div>`).join('')}
-    <div class="row" style="margin-top:10px"><input type="text" id="t-label" placeholder="예: 저녁 수액 100ml"><button class="btn ghost sm" data-act="task-add" style="white-space:nowrap">추가</button></div>
-    ${tasks.length ? '' : `<button class="btn ghost sm" data-act="task-default" style="margin-top:8px">자주 쓰는 할 일 한 번에 넣기</button>`}</div>
+    <div class="row" style="margin-top:10px"><input type="text" id="t-label" placeholder="${isDog(p) ? '예: 저녁 산책, 양치' : '예: 양치, 사냥놀이'}"><button class="btn ghost sm" data-act="task-add" style="white-space:nowrap">추가</button></div>
+    ${tasks.length ? '' : `<div class="row" style="margin-top:8px;gap:6px;flex-wrap:wrap"><button class="btn ghost sm" data-act="task-default">자주 쓰는 할 일 넣기</button><button class="btn ghost sm" data-act="task-default" data-care="1">치료 중 할 일 넣기 (약·수액)</button></div>`}</div>
 
   ${isStandalone() ? '' : `<div class="card"><h3>홈 화면에 앱으로 두기</h3>${installHow()}${isIOS ? '<p class="muted" style="margin:8px 0 0">아이폰은 홈 화면 앱이 처음 열릴 때 가족 링크를 한 번 붙여넣어야 할 수 있어요. 아래 링크를 미리 복사해 두세요.</p>' : ''}</div>`}
   ${(() => { try { return sessionStorage.getItem('aigyeot-rotated'); } catch (e) { return null; } })() ? '<div class="note" style="margin-bottom:12px"><b>새 링크로 바꿨어요.</b> 옛 링크는 이제 열리지 않아요. 아래 버튼으로 가족에게 새 링크를 다시 보내주세요.</div>' : ''}
@@ -1111,7 +1146,7 @@ async function savePet(p, msg) { if (await write(() => putPet(p))) { toast(msg |
 /* ---------- sheet (new log) ---------- */
 let F = null;
 function openSheet(type, E) {
-  F = { type, symptoms: [], severity: 1, pee: '', poop: '', editId: E?.id || null, by: E ? (E.by ?? null) : undefined };
+  F = { type, symptoms: [], severity: 1, pee: '', poop: '', wpee: false, wpoop: false, kind: BATH_KINDS[0], editId: E?.id || null, by: E ? (E.by ?? null) : undefined };
   const t = TYPES[type], p = S.pet || {}, foods = p.foods || [];
   const prevMeds = [...new Set(S.logs.filter(l => l.type === 'med').map(l => l.name).filter(Boolean))];
   const lastFluid = S.logs.find(l => l.type === 'fluid');
@@ -1138,11 +1173,18 @@ function openSheet(type, E) {
       <label class="f" style="display:flex;gap:8px;align-items:center;color:var(--ink)"><input type="checkbox" id="n-upd" checked style="width:20px;height:20px"> 급여 계산에도 이 체중 쓰기</label>`;
   } else if (type === 'lab') {
     body = `<p class="muted" style="margin:4px 0 0">검사지에 있는 것만 넣으면 돼요.</p><div class="two">${LABS.map(L => `<div><label class="f">${L.n}${L.u ? ` (${L.u})` : ''}</label><input type="number" step="any" inputmode="decimal" data-lab="${L.k}"></div>`).join('')}</div>`;
+  } else if (type === 'walk') {
+    body = `<label class="f">산책 시간 (분)</label><div class="chips" id="n-wmin">${WALK_MIN.map(m => `<button class="chip" data-act="wmin" data-v="${m}">${m}분</button>`).join('')}</div>
+      <div class="two" style="margin-top:8px"><input type="number" inputmode="numeric" id="n-min" placeholder="직접 입력 (분)"><input type="number" step="0.1" inputmode="decimal" id="n-km" placeholder="거리 km (선택)"></div>
+      <label class="f">산책하면서</label><div class="chips" id="n-wpot"><button class="chip" data-act="wpot" data-v="pee">💧 소변</button><button class="chip" data-act="wpot" data-v="poop">💩 대변</button></div>`;
+  } else if (type === 'bath') {
+    const lb = S.logs.find(l => l.type === 'bath');
+    body = `${lb ? `<p class="muted" style="margin:4px 0 0">지난 목욕: ${dayLabel(dkey(lb.t))} · ${esc(lb.kind || '목욕')}</p>` : ''}<label class="f">어떻게 했나요?</label><div class="chips" id="n-bk">${BATH_KINDS.map((k, i) => `<button class="chip ${i === 0 ? 'on' : ''}" data-act="bkind" data-v="${k}">${k}</button>`).join('')}</div>`;
   } else if (type === 'potty') {
     body = `<label class="f">소변</label><div class="chips" id="n-pee">${['정상', '많음', '적음', '안 봄', '피 섞임'].map(s => `<button class="chip ${s === '안 봄' || s === '피 섞임' ? 'danger' : ''}" data-act="pee" data-v="${s}">${s}</button>`).join('')}</div>
       <label class="f">대변</label><div class="chips" id="n-poop">${['정상', '무름', '설사', '변비', '안 봄'].map(s => `<button class="chip" data-act="poop" data-v="${s}">${s}</button>`).join('')}</div><div id="n-alert"></div>`;
   }
-  $('#sheet').innerHTML = `<div class="grab"></div><h2>${t.ic} ${t.name} ${E ? '고치기' : '기록'}</h2>${E?.by ? `<p class="muted" style="margin:0">${esc(E.by)}님이 남긴 기록</p>` : ''}${body}
+  $('#sheet').innerHTML = `<div class="grab"></div><h2>${t.ic} ${typeName(type)} ${E ? '고치기' : '기록'}</h2>${E?.by ? `<p class="muted" style="margin:0">${esc(E.by)}님이 남긴 기록</p>` : ''}${body}
     <label class="f">${type === 'note' ? '내용' : '메모 (선택)'}</label><textarea id="n-memo" placeholder="${type === 'note' ? '오늘 상태, 병원에서 들은 말 등' : ''}"></textarea>
     <label class="f">시간</label><input type="datetime-local" id="n-time" value="${localDT(Date.now())}">
     <div class="two" style="margin-top:16px"><button class="btn ghost" data-act="close">취소</button><button class="btn acc" data-act="save-log">저장</button></div>`;
@@ -1163,6 +1205,8 @@ function fillSheet(E) {
     feedUpdate(); if (E.unit && $('#n-unitsel') && [...$('#n-unitsel').options].some(o => o.value === E.unit)) $('#n-unitsel').value = E.unit;
   } else if (E.type === 'med') { set('#n-name', E.name); set('#n-dose', E.dose || ''); }
   else if (E.type === 'fluid') set('#n-ml', E.ml);
+  else if (E.type === 'walk') { set('#n-min', E.min); set('#n-km', E.km); F.wpee = !!E.pee; F.wpoop = !!E.poop; document.querySelectorAll('#n-wmin .chip').forEach(c => c.classList.toggle('on', +c.dataset.v === num(E.min))); document.querySelectorAll('#n-wpot .chip').forEach(c => c.classList.toggle('on', c.dataset.v === 'pee' ? F.wpee : F.wpoop)); }
+  else if (E.type === 'bath') { F.kind = E.kind || BATH_KINDS[0]; document.querySelectorAll('#n-bk .chip').forEach(c => c.classList.toggle('on', c.dataset.v === F.kind)); }
   else if (E.type === 'weight') { set('#n-kg', E.kg); if ($('#n-upd')) $('#n-upd').checked = false; }
   else if (E.type === 'lab') document.querySelectorAll('[data-lab]').forEach(el => { const v = E.values?.[el.dataset.lab]; if (v != null) el.value = v; });
   else if (E.type === 'symptom') {
@@ -1227,6 +1271,11 @@ async function saveLog() {
   } else if (F.type === 'weight') {
     const kg = num($('#n-kg').value); if (!kg) return toast('체중을 넣어주세요');
     d.kg = kg;
+  } else if (F.type === 'walk') {
+    const mn = num($('#n-min').value), km = num($('#n-km').value);
+    Object.assign(d, { min: mn != null && mn > 0 ? Math.round(mn) : null, km: km != null && km > 0 ? km : null, pee: F.wpee || null, poop: F.wpoop || null });
+  } else if (F.type === 'bath') {
+    d.kind = F.kind || BATH_KINDS[0];
   } else if (F.type === 'potty') {
     if (!F.pee && !F.poop) return toast('소변이나 대변 상태를 골라주세요');
     Object.assign(d, { pee: F.pee || null, poop: F.poop || null, alert: F.pee === '안 봄' || F.pee === '피 섞임' });
@@ -1294,6 +1343,8 @@ function normEntry(e) {
     o.kcal = kc != null ? r1(kc) : (num(e.kcal) != null ? r1(num(e.kcal)) : null);
   } else if (type === 'med') { o.name = e.name || '약'; o.dose = e.dose || null; }
   else if (type === 'fluid') { o.ml = num(e.ml); }
+  else if (type === 'walk') { o.min = num(e.min) ? Math.round(num(e.min)) : null; o.km = num(e.km) || null; o.pee = e.pee ? true : null; o.poop = e.poop ? true : null; }
+  else if (type === 'bath') { o.kind = BATH_KINDS.includes(e.kind) ? e.kind : BATH_KINDS[0]; }
   else if (type === 'symptom') { o.symptoms = (Array.isArray(e.symptoms) ? e.symptoms : []).map(String).slice(0, 8); if (!o.symptoms.length) o.symptoms = ['기타']; o.severity = [1, 2, 3].includes(+e.severity) ? +e.severity : 1; o.alert = o.symptoms.some(s => URGENT.includes(s)); }
   else if (type === 'weight') { o.kg = num(e.kg); if (!o.kg) { o.type = 'note'; } }
   else if (type === 'potty') { o.pee = e.pee || null; o.poop = e.poop || null; o.alert = o.pee === '안 봄' || o.pee === '피 섞임'; }
@@ -1302,7 +1353,7 @@ function normEntry(e) {
   return o;
 }
 // 할 일 자동 체크: 할 일 이름에 들어 있는 종류(급여·약·수액·배변·체중)와 때(아침·저녁…)가 기록과 맞으면 체크. 오늘 기록만.
-const TASK_TYPES = [[/급여|밥|사료|강급|먹이/, 'feed'], [/약|투약|안약|연고/, 'med'], [/수액/, 'fluid'], [/소변|대변|배변|오줌|똥|화장실/, 'potty'], [/체중|몸무게/, 'weight']];
+const TASK_TYPES = [[/급여|밥|사료|강급|먹이/, 'feed'], [/약|투약|안약|연고|영양제/, 'med'], [/수액/, 'fluid'], [/소변|대변|배변|오줌|똥|화장실(?!\s?청소)/, 'potty'], [/체중|몸무게/, 'weight'], [/산책/, 'walk'], [/목욕|샴푸/, 'bath']];
 const TASK_TIMES = [[/아침|오전/, h => h >= 4 && h < 11], [/점심|낮/, h => h >= 11 && h < 15], [/오후/, h => h >= 12 && h < 18], [/저녁/, h => h >= 16 && h < 23], [/밤|자기\s?전/, h => h >= 19 || h < 3]];
 function tasksDoneBy(entries, already) {
   const tasks = S.pet?.tasks || [], k = today(), done = new Set(already);
@@ -1318,14 +1369,16 @@ function tasksDoneBy(entries, already) {
 async function aiParse(text) {
   const p = S.pet || {}, now = new Date();
   const prevMeds = [...new Set(S.logs.filter(l => l.type === 'med').map(l => l.name).filter(Boolean))].slice(0, 15);
-  const prompt = `아픈 반려동물(${p.species === 'dog' ? '강아지' : '고양이'}) 보호자가 쓴 돌봄 메모를 항목별 기록으로 나눠줘.
+  const prompt = `반려동물(${p.species === 'dog' ? '강아지' : '고양이'}) 보호자가 쓴 하루 메모를 항목별 기록으로 나눠줘.${p.condition ? ` (건강 메모: ${p.condition})` : ''}
 지금: ${dkey(now)} ${hm(now)} (${'일월화수목금토'[now.getDay()]}요일)
 등록된 사료: ${JSON.stringify((p.foods || []).map(f => ({ id: f.id, name: f.name, label: `${f.kcal}kcal/${f.per}${f.unit}`, unit: f.unit })))}
 전에 기록한 약 이름: ${JSON.stringify(prevMeds)}
 오늘 할 일 목록: ${JSON.stringify((p.tasks || []).map(t => ({ id: t.id, label: t.label })))}
 
 규칙:
-- 행동 하나당 항목 하나. type은 feed(밥·강급·간식), med(약), fluid(피하수액), symptom(증상), weight(체중), potty(소변·대변), note(그 밖의 메모) 중 하나.
+- 행동 하나당 항목 하나. type은 feed(밥·강급·간식), med(약·영양제), fluid(피하수액), symptom(증상), weight(체중), potty(소변·대변), walk(산책), bath(목욕·미용), note(그 밖의 메모) 중 하나.
+- walk: min(분 숫자, 모르면 null), km(숫자 또는 null), pee/poop(산책 중 소변·대변을 봤으면 true). 산책 중 배변은 따로 potty로 만들지 마.
+- bath: kind는 "집에서 목욕","미용실","발·얼굴만" 중 하나.
 - time은 24시간 "HH:MM". 오후/저녁/밤은 12를 더하고, "아침"만 있으면 08:00, "점심" 12:00, "저녁" 19:00, "밤" 22:00, "새벽" 03:00처럼 어림해. 시간이 전혀 없으면 null. 어제 일이면 dayOffset -1, 아니면 0. 시간이 바로 앞 문장에서 이어지면 같은 시간을 써.
 - feed: foodId는 등록된 사료와 맞으면 그 id, amount는 숫자, unit은 가능하면 그 사료의 unit으로 환산(예: unit이 g이고 라벨이 156g짜리 캔이면 "반 캔"→78). 환산 못 하면 말한 단위 그대로. method는 "강급","스스로 먹음","일부만 먹음","튜브" 중 하나 또는 null. 사료를 알면 kcal도 라벨로 계산.
 - med: name(약 이름, 이전 이름과 비슷하면 그 표기), dose(예 "1/4정","0.5ml").
@@ -1360,7 +1413,7 @@ function ruleParse(text) {
     if (pn) { subj = pn; if (!s.replace(pn, '').replace(/^\s*(은|는|이는|이|가|도|랑|의|꺼|거)?\s*/, '').trim()) continue; }
     let time = null, m, vague = false;
     if ((m = s.match(/(\d{1,2}):(\d{2})/))) time = [+m[1], +m[2]];
-    else if ((m = s.match(/(오전|오후|아침|낮|저녁|밤|새벽)?\s*(\d{1,2})\s*시\s*(?:(\d{1,2})\s*분|(반))?/))) {
+    else if ((m = s.match(/(오전|오후|아침|낮|저녁|밤|새벽)?\s*(\d{1,2})\s*시(?!간)\s*(?:(\d{1,2})\s*분|(반))?/))) {
       let h = +m[2]; const mm = m[3] ? +m[3] : m[4] ? 30 : 0;
       if (/오후|저녁|밤/.test(m[1] || '') && h < 12) h += 12;
       if (!m[1] && h >= 1 && h <= 6 && /저녁|밤|오후/.test(s)) h += 12;
@@ -1376,6 +1429,14 @@ function ruleParse(text) {
     if ((m = s.match(/(\d+(?:\.\d+)?)\s*(kg|킬로그램|킬로|키로)\s*(\d{1,3})?/i))) { const kg = +m[1] + (m[3] ? +m[3] / (m[3].length === 3 ? 1000 : m[3].length === 2 ? 100 : 10) : 0); out.push({ ...base, type: 'weight', kg: Math.round(kg * 1000) / 1000 }); continue; }
     if (/몸무게|체중/.test(s) && (m = s.match(/(\d+(?:\.\d+)?)\s*(g|그램)/))) { out.push({ ...base, type: 'weight', kg: +m[1] / 1000 }); continue; }
     if (/수액/.test(s)) { m = s.match(/(\d+(?:\.\d+)?)\s*(ml|cc|미리|씨씨)/i) || s.replace(/\d{1,2}\s*시(\s*\d{1,2}\s*분)?|\d{1,2}:\d{2}/g, '').match(/(\d{2,3})(?!\s*(g|그램|kg|정|알|번))/); out.push({ ...base, type: 'fluid', ml: m ? +m[1] : null }); const sy = symOf(s); if (sy.length) out.push({ ...base, type: 'symptom', symptoms: sy, severity: sevOf(s) }); continue; }
+    if (/산책/.test(s)) {
+      const t2 = s.replace(/(오전|오후|아침|점심|저녁|밤|새벽)?\s*\d{1,2}\s*시(?!간)(\s*\d{1,2}\s*분|\s*반)?|\d{1,2}:\d{2}/g, ' ');
+      const hr = t2.match(/(\d+(?:\.\d+)?)\s*시간(?:\s*(\d{1,2})\s*분)?/), mn = t2.match(/(\d{1,3})\s*분/), km = t2.match(/(\d+(?:\.\d+)?)\s*(km|키로|킬로)/i);
+      const NO2 = /안\s?(쌌|쌈|싸|눴|봤)|못\s?(쌌|눴)/;
+      out.push({ ...base, type: 'walk', min: hr ? Math.round(+hr[1] * 60 + (hr[2] ? +hr[2] : 0)) : mn ? +mn[1] : null, km: km ? +km[1] : null, pee: /소변|오줌|쉬(?!었|고|는)/.test(s) && !NO2.test(s), poop: /대변|똥|응가|배변/.test(s) && !NO2.test(s) });
+      continue;
+    }
+    if (/목욕|샴푸|미용/.test(s)) { out.push({ ...base, type: 'bath', kind: /미용/.test(s) ? '미용실' : /발|얼굴|부분/.test(s) ? '발·얼굴만' : '집에서 목욕' }); continue; }
     if (/소변|오줌|대변|똥|응가|배변/.test(s)) {
       const NO = /안\s?(봤|봄|봐|쌌|쌈|싸|나|눴|눔)|못\s?(봤|쌌|눴|봄|쌈)|없/;
       const PO = /대변|똥|응가|배변|설사|변비|묽|무른\s?변/, pp = s.split(/(?=똥|대변|응가|배변|설사|변비|묽|무른\s?변)/), peeT = pp.find(x => /소변|오줌/.test(x)) || s, poopT = pp.find(x => PO.test(x)) || s;
@@ -1478,9 +1539,9 @@ document.addEventListener('click', async e => {
     const name = ($('#qs-name')?.value || '').trim(); if (!name) { $('#qs-name')?.focus(); return toast('아이 이름을 넣어주세요'); }
     const p = petBase(); p.name = name.slice(0, 20); p.species = S.qsSpecies === 'dog' ? 'dog' : 'cat'; if (S.qsPhoto) p.photo = S.qsPhoto;
     const w = num($('#qs-weight')?.value); if (w && w > 0 && w < 150) p.weightKg = w;
-    if ($('#qs-tasks')?.checked && !(p.tasks || []).length) p.tasks = DEFAULT_TASKS.map(l => ({ id: uid(), label: l }));
+    if ($('#qs-tasks')?.checked && !(p.tasks || []).length) p.tasks = tasksFor(p).map(l => ({ id: uid(), label: l }));
     b.disabled = true; b.textContent = '저장하는 중…';
-    if (await write(() => putPet(p))) { C = null; S.qsPhoto = null; toast(`${name} 케어 기록을 시작했어요`); render(true); window.scrollTo(0, 0); }
+    if (await write(() => putPet(p))) { C = null; S.qsPhoto = null; toast(`${name} 기록을 시작했어요`); render(true); window.scrollTo(0, 0); }
     else { b.disabled = false; b.textContent = '시작하기'; }
   }
   else if (a === 'fail-retry') backend?.retryFailed?.();
@@ -1499,7 +1560,7 @@ document.addEventListener('click', async e => {
   }
   else if (a === 'join') { const v = ($('#join')?.value || '').trim(); const m = v.match(/[?&]g=([0-9a-f]{20,64})/i) || v.match(/^([0-9a-f]{20,64})$/i); if (!m) return toast('링크가 맞지 않아요. 가족에게 받은 링크 전체를 붙여넣어 주세요'); history.replaceState(null, '', location.pathname + '?g=' + m[1]); boot(); }
   else if (a === 'setname') { const v = (b.dataset.v || $('#nm')?.value || '').trim().slice(0, 10); if (!v) return toast('이름을 넣어주세요'); S.me = v; ls.set('aigyeot-name', v); toast(v + '(으)로 기록할게요'); render(true); }
-  else if (a === 'share') { ls.set('aigyeot-shared-' + familyCode(), '1'); const url = shareLink(), text = `${S.pet?.name || '우리 아이'} 케어 기록을 같이 써요. 이 링크로 들어오면 돼요.`; if (navigator.share) { try { await navigator.share({ title: '아이곁', text, url }); } catch (err) {} } else { try { await navigator.clipboard.writeText(text + '\n' + url); toast('복사했어요. 카톡에 붙여넣어 주세요'); } catch (err) { toast('링크를 길게 눌러 복사해주세요'); } } }
+  else if (a === 'share') { ls.set('aigyeot-shared-' + familyCode(), '1'); const url = shareLink(), text = `${S.pet?.name || '우리 아이'} 하루 기록을 같이 써요. 이 링크로 들어오면 돼요.`; if (navigator.share) { try { await navigator.share({ title: '아이곁', text, url }); } catch (err) {} } else { try { await navigator.clipboard.writeText(text + '\n' + url); toast('복사했어요. 카톡에 붙여넣어 주세요'); } catch (err) { toast('링크를 길게 눌러 복사해주세요'); } } }
   else if (a === 'copy-link') { ls.set('aigyeot-shared-' + familyCode(), '1'); try { await navigator.clipboard.writeText(shareLink()); toast('링크를 복사했어요'); } catch (err) { toast('링크를 길게 눌러 복사해주세요'); } }
   else if (a === 'er-check') erCheck();
   else if (a === 'er-area') { const v = $('#er-area').value.trim(); S.area = v; if (S.pet) { const p = petBase(); p.area = v; savePet(p, '동네를 저장했어요'); } else render(true); }
@@ -1516,7 +1577,7 @@ document.addEventListener('click', async e => {
     if (await write(async () => { nid = await backend.addLog(d); })) {
       const ids = tasksDoneBy([d], S.checks.filter(c => c.date === today()).map(c => c.taskId));
       for (const tid of ids) await write(() => backend.setCheck(today() + '_' + tid, { date: today(), taskId: tid, by: S.me || null, t: Date.now() }));
-      toast(`${(TYPES[l.type] || TYPES.note).name} 기록을 지금 시각으로 남겼어요`, { label: '되돌리기', fn: async () => {
+      toast(`${typeName(l.type)} 기록을 지금 시각으로 남겼어요`, { label: '되돌리기', fn: async () => {
         if (nid && await write(() => backend.delLog(nid))) { for (const tid of ids) await write(() => backend.setCheck(today() + '_' + tid, null)); toast('되돌렸어요'); }
       } });
     }
@@ -1534,6 +1595,9 @@ document.addEventListener('click', async e => {
   else if (a === 'sym') { const v = b.dataset.v; F.symptoms = F.symptoms.includes(v) ? F.symptoms.filter(x => x !== v) : [...F.symptoms, v]; b.classList.toggle('on'); urgentCheck(); }
   else if (a === 'sev') { F.severity = +b.dataset.v; document.querySelectorAll('#n-sev .chip').forEach(c => c.classList.toggle('on', c === b)); }
   else if (a === 'pee' || a === 'poop') { F[a] = F[a] === b.dataset.v ? '' : b.dataset.v; document.querySelectorAll(`#n-${a} .chip`).forEach(c => c.classList.toggle('on', c.dataset.v === F[a])); urgentCheck(); }
+  else if (a === 'wmin') { $('#n-min').value = b.dataset.v; document.querySelectorAll('#n-wmin .chip').forEach(c => c.classList.toggle('on', c === b)); }
+  else if (a === 'wpot') { const k = b.dataset.v === 'pee' ? 'wpee' : 'wpoop'; F[k] = !F[k]; b.classList.toggle('on', F[k]); }
+  else if (a === 'bkind') { F.kind = b.dataset.v; document.querySelectorAll('#n-bk .chip').forEach(c => c.classList.toggle('on', c === b)); }
   else if (a === 'pick-med') { $('#n-name').value = b.dataset.v; const last = S.logs.find(l => l.type === 'med' && l.name === b.dataset.v); if (last?.dose) $('#n-dose').value = last.dose; }
   else if (a === 'del') {
     if (delArm !== b.dataset.id) { delArm = b.dataset.id; b.textContent = '정말 삭제?'; b.classList.add('sure'); setTimeout(() => { if (delArm === b.dataset.id) { delArm = null; b.textContent = '삭제'; b.classList.remove('sure'); } }, 3000); return; }
@@ -1574,7 +1638,7 @@ document.addEventListener('click', async e => {
   else if (a === 'food-edit-no') { S.foodEdit = null; render(true); }
   else if (a === 'food-del') { const p = petBase(); p.foods = (p.foods || []).filter(f => f.id !== b.dataset.id); p.mix = (p.mix || []).filter(m => m.foodId !== b.dataset.id); C = null; savePet(p, '삭제했어요'); }
   else if (a === 'task-add') { const v = $('#t-label').value.trim(); if (!v) return; const p = petBase(); p.tasks = [...(p.tasks || []), { id: uid(), label: v }]; savePet(p, '추가했어요'); }
-  else if (a === 'task-default') { const p = petBase(); p.tasks = DEFAULT_TASKS.map(l => ({ id: uid(), label: l })); savePet(p, '추가했어요. 필요 없는 건 지워주세요'); }
+  else if (a === 'task-default') { const p = petBase(); p.tasks = (b.dataset.care ? DEFAULT_TASKS : tasksFor(p)).map(l => ({ id: uid(), label: l })); savePet(p, '추가했어요. 필요 없는 건 지워주세요'); }
   else if (a === 'task-del') { const p = petBase(); p.tasks.splice(+b.dataset.i, 1); savePet(p, '삭제했어요'); }
   else if (a === 'task-up') { const p = petBase(), i = +b.dataset.i; [p.tasks[i - 1], p.tasks[i]] = [p.tasks[i], p.tasks[i - 1]]; savePet(p, '순서를 바꿨어요'); }
   else if (a === 'mix-add') { calcRead(); const f = (S.pet?.foods || [])[0]; if (!f) return; C.mix.push({ foodId: f.id, pct: 0 }); render(true); }
