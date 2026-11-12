@@ -100,6 +100,20 @@ nav.tabs button.on{color:var(--acc);font-weight:700}
 .three{display:grid;grid-template-columns:2fr 1fr 1fr;gap:6px}
 .banner{border-radius:14px;padding:12px 14px;font-size:13px;margin-bottom:12px;background:var(--warn-soft);color:var(--warn)}
 .hidden{display:none!important}
+.tag{display:inline-block;font-size:11px;font-weight:700;padding:2px 7px;border-radius:999px;margin-left:6px;vertical-align:1px;background:var(--blue-soft);color:var(--blue)}
+.tag.lbl{background:var(--ok-soft);color:var(--ok)}
+.sugg{border:1px solid var(--line);border-radius:12px;margin-top:6px;overflow:hidden;background:#FFFDFB}
+.sugg button{display:block;width:100%;text-align:left;border:0;border-top:1px solid var(--line);background:none;padding:10px 12px;font-size:15px;cursor:pointer}
+.sugg button:first-child{border-top:0}
+.sugg button small{display:block;color:var(--sub);font-size:12px}
+.nut{background:#FFFDFB;border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin-top:10px}
+.nut table{width:100%;border-collapse:collapse;font-size:14px;margin-top:6px}
+.nut th{font-size:12px;color:var(--sub);font-weight:500;text-align:right;padding:2px 0}
+.nut th:first-child{text-align:left}
+.nut td{padding:5px 0;border-top:1px solid var(--line);text-align:right}
+.nut td:first-child{text-align:left;color:var(--sub)}
+details.more summary{cursor:pointer;color:var(--sub);font-size:13px;margin-top:10px}
+.five{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:6px}
 </style>
 </head>
 <body>
@@ -581,7 +595,7 @@ function calcInit() {
 }
 function quickKcal() {
   const foods = S.pet?.foods || [];
-  if (!foods.length) return `<div class="card"><h3>몇 g 먹이면 몇 kcal?</h3><p class="muted" style="margin:0 0 8px">설정에서 사료 라벨 칼로리를 한 번 등록하면 바로 계산돼요.</p><button class="btn ghost sm" data-act="go-set">사료 등록하러 가기</button></div>`;
+  if (!foods.length) return `<div class="card"><h3>몇 g 먹이면 몇 kcal?</h3><p class="muted" style="margin:0 0 8px">설정에서 사료 라벨 칼로리를 한 번 등록하면 바로 계산돼요.</p><button class="btn acc sm" data-act="go-food">🔍 사료 이름으로 칼로리 찾기</button></div>`;
   const Q = S.q || (S.q = { food: foods[0].id, amt: '', unit: '', kcal: '' });
   if (!foods.some(f => f.id === Q.food)) Q.food = foods[0].id;
   const f = foods.find(x => x.id === Q.food), us = unitsOf(f); if (!us.includes(Q.unit)) Q.unit = us.includes('g') ? 'g' : us[0];
@@ -621,7 +635,7 @@ function vCalc() {
     ${foods.length ? `<p class="muted" style="margin:0 0 6px">두 가지 이상 섞으면 칼로리 비율(%)을 나눠 주세요.</p>
     <div id="c-mix">${C.mix.map((m, i) => `<div class="edit-row"><select class="grow" data-mix="${i}" data-k="foodId">${foodOpts(m.foodId)}</select><input type="number" style="width:76px" data-mix="${i}" data-k="pct" value="${esc(m.pct)}"><span class="muted">%</span><button class="btn ghost sm" data-act="mix-del" data-i="${i}">✕</button></div>`).join('')}</div>
     <button class="btn ghost sm" data-act="mix-add" style="margin-top:8px">+ 사료 섞기</button>`
-    : `<p class="muted">설정에서 사료와 라벨 칼로리를 먼저 등록해주세요.</p><button class="btn ghost sm" data-act="go-set">사료 등록하러 가기</button>`}
+    : `<p class="muted">설정에서 사료와 라벨 칼로리를 먼저 등록해주세요.</p><button class="btn acc sm" data-act="go-food">🔍 사료 이름으로 칼로리 찾기</button>`}
     <div class="two"><div><label class="f">회당 섞는 물 (ml, 선택)</label><input type="number" inputmode="decimal" id="c-water" value="${esc(C.water)}" placeholder="예: 5"></div>
     <div><label class="f">주사기 크기 (ml)</label><input type="number" inputmode="decimal" id="c-syringe" value="${esc(C.syringe)}"></div></div>
   </div>
@@ -687,6 +701,7 @@ function buildSummary(days) {
   const lines = [];
   lines.push(`[${p.name || '아이'} 케어 요약 · 최근 ${days}일]`);
   lines.push(`${p.species === 'dog' ? '강아지' : '고양이'}${p.age ? ' · ' + p.age : ''}${p.weightKg ? ' · 현재 ' + p.weightKg + 'kg' : ''}${p.condition ? ' · ' + p.condition : ''}`);
+  if ((p.foods || []).length) { lines.push('', '■ 먹는 사료'); p.foods.forEach(f => lines.push(`${f.name}: ${f.kcal}kcal/${f.per}${f.unit}${f.nut && nutLine(f.nut) ? ' · ' + nutLine(f.nut) : ''}`)); }
   const ws = L.filter(l => l.type === 'weight');
   if (ws.length) lines.push('', '■ 체중', ws.map(w => `${dkey(w.t).slice(5)} ${w.kg}kg`).join(' → '));
   const ft = fullTarget(p);
@@ -823,6 +838,59 @@ level 기준: now=지금 바로 병원(24시 포함), today=오늘 안에 진료
   S.erBusy = false; S.er = res; render(true);
 }
 
+/* ----- food reference list ----- */
+// 참고값: 제조사 공식 자료(나라별 판). 한국 포장 표시와 조금 다를 수 있어 '참고값'으로 표시.
+const NUTS = [['protein', '조단백'], ['fat', '조지방'], ['fiber', '조섬유'], ['moisture', '수분'], ['ash', '조회분'], ['calcium', '칼슘'], ['phosphorus', '인'], ['sodium', '나트륨']];
+const FOOD_DB = [
+  { n: "힐스 a/d 캔 (회복기, 156g)", k: "hills 힐스 ad a/d 에이디 어전트 urgent 회복 처방", kcal: 175, per: 1, unit: '캔', gw: 156, nut: { protein: 10.6, fat: 7.9, fiber: 0.02, moisture: 76, ash: 2.4, calcium: 0.3, phosphorus: 0.28, sodium: 0.21 }, from: "Hill's 공식(중동·남아공판)", note: '미국판은 1캔 183kcal로 표시돼요.' },
+  { n: '로얄캐닌 리커버리 캔 (195g)', k: 'royal canin 로얄캐닌 로캐 리커버리 recovery 회복 무스 처방', kcal: 231, per: 1, unit: '캔', gw: 195, nut: { protein: 12.7, fat: 6.4, fiber: 1.7, moisture: 73, ash: 2.3 }, from: '로얄캐닌 공식(인도네시아판, 1kg당 1183kcal)', note: '나라별로 1kg당 1146~1200kcal로 달라요.' },
+  { n: '로얄캐닌 캣 아이시유 레날 리퀴드 (200ml)', k: 'royal canin 로얄캐닌 로캐 아이시유 icu 레날 renal 리퀴드 liquid 유동식 신장', kcal: 180, per: 200, unit: 'ml', nut: null, from: '로얄캐닌 한국 공식(1ml당 0.9kcal)', note: '' },
+  { n: '힐스 k/d 고양이 건식 (치킨)', k: 'hills 힐스 kd k/d 케이디 신장 kidney 건사료 고양이 처방', kcal: 4215, per: 1000, unit: 'g', nut: { protein: 28.6, fat: 21.5, fiber: 0.9, moisture: 4, ash: 4.9, calcium: 0.7, phosphorus: 0.47, sodium: 0.23 }, from: "Hill's 공식(남아공판)", note: '미국판은 1kg당 4083kcal로 표시돼요.' },
+  { n: '로얄캐닌 캣 레날 건식', k: 'royal canin 로얄캐닌 로캐 레날 renal 신장 건사료 고양이 처방', kcal: 3921, per: 1000, unit: 'g', nut: { protein: 23, fat: 17, fiber: 4.6, moisture: 5.5, ash: 5.9, calcium: 0.6, phosphorus: 0.3, sodium: 0.4 }, from: '로얄캐닌 공식 성분(스위스판) · 칼로리는 호주 판매처 표시', note: '' },
+  { n: '로얄캐닌 캣 레날 셀렉트 건식', k: 'royal canin 로얄캐닌 로캐 레날 셀렉트 renal select 신장 건사료 고양이 처방', kcal: 4083, per: 1000, unit: 'g', nut: { protein: 24.5, fat: 21.5, fiber: 4.6, ash: 6.6, calcium: 0.7, phosphorus: 0.41, sodium: 0.45 }, from: '로얄캐닌 공식(뉴질랜드판)', note: '' },
+  { n: '로얄캐닌 캣 에이징 11+ 건식', k: 'royal canin 로얄캐닌 로캐 에이징 ageing aging 11 노령 시니어 건사료 고양이', kcal: 4033, per: 1000, unit: 'g', nut: { protein: 28, fat: 15, fiber: 3.9, moisture: 6.5, ash: 6.7, calcium: 0.63, phosphorus: 0.54 }, from: '로얄캐닌 한국 공식', note: '' },
+  { n: '로얄캐닌 캣 가스트로인테스티널 파이버 리스폰스 습식', k: 'royal canin 로얄캐닌 로캐 가스트로 gastro 인테스티널 파이버 fibre fiber 변비 습식 고양이 처방', kcal: 71, per: 100, unit: 'g', nut: null, from: '로얄캐닌 한국 공식(100g당 71kcal)', note: '' },
+  { n: "힐스 s/d 고양이 캔 (156g)", k: 'hills 힐스 sd s/d 에스디 결석 요로 urinary 캔 고양이 처방', kcal: 156, per: 1, unit: '캔', gw: 156, nut: null, from: "Hill's 공식(미국·캐나다판)", note: '' },
+];
+const normQ = s => String(s || '').toLowerCase().replace(/[\s()\/·.,-]/g, '');
+function foodSearch(q) {
+  const t = String(q || '').toLowerCase().split(/\s+/).map(normQ).filter(Boolean); if (!t.length) return [];
+  return FOOD_DB.filter(d => { const h = normQ(d.n + ' ' + d.k); return t.every(w => h.includes(w)); }).slice(0, 6);
+}
+function nutLine(n) { return NUTS.filter(([k]) => num(n[k]) != null && !['ash', 'calcium', 'fiber'].includes(k)).map(([k, t]) => `${t} ${num(n[k])}%`).join(' · '); }
+const dmv = (v, m) => num(v) == null || num(m) == null || m >= 100 ? null : r1(num(v) / (100 - num(m)) * 100);
+function nutPanel(d) {
+  const n = d.nut || {}, has = NUTS.some(([k]) => num(n[k]) != null), dm = num(n.moisture) != null;
+  return `<div class="nut"><div class="row between"><b>${esc(d.n)}</b><span class="tag">참고값</span></div>
+    <div style="margin-top:4px"><b style="font-size:18px">${d.kcal}kcal</b> <span class="muted">/ ${d.per}${esc(d.unit)}${d.gw ? ` (${d.gw}g)` : ''}</span></div>
+    ${has ? `<table><tr><th>성분</th><th>표시값</th>${dm ? '<th>건물 기준</th>' : ''}</tr>${NUTS.filter(([k]) => num(n[k]) != null).map(([k, t]) => `<tr><td>${t}</td><td>${n[k]}%</td>${dm ? `<td>${k === 'moisture' ? '–' : dmv(n[k], n.moisture) + '%'}</td>` : ''}</tr>`).join('')}</table>${dm ? '<div class="muted" style="margin-top:6px">건물 기준 = 수분을 뺀 값. 병원에서 인 수치를 물어볼 때 써요.</div>' : ''}` : '<div class="muted" style="margin-top:6px">성분은 아직 목록에 없어요. 아래 "성분 직접 넣기"에 라벨 값을 넣을 수 있어요.</div>'}
+    <div class="muted" style="margin-top:6px">출처: ${esc(d.from)}${d.note ? ' · ' + esc(d.note) : ''}</div>
+    <div class="alertbox" style="margin-top:8px;padding:10px 12px;font-size:13px">한국 포장 표시와 조금 다를 수 있어요. 집에 있는 포장 라벨과 다르면 아래 칸을 라벨 값으로 고쳐 저장해주세요.</div></div>`;
+}
+function showSugg(list, empty) {
+  const box = $('#f-sugg'); if (!box) return;
+  box.innerHTML = list.length ? `<div class="sugg">${list.map(d => `<button data-act="food-pick" data-i="${FOOD_DB.indexOf(d)}">${esc(d.n)}<small>${d.kcal}kcal / ${d.per}${esc(d.unit)}${d.gw ? ` (${d.gw}g)` : ''}</small></button>`).join('')}</div>`
+    : (empty ? '<p class="muted" style="margin:6px 2px 0">목록에 없는 사료예요. 포장 라벨의 칼로리를 아래에 넣어주세요. 성분도 "성분 직접 넣기"에 넣으면 같이 저장돼요.</p>' : '');
+}
+function pickFood(d) {
+  const set = (sel, v) => { const el = $(sel); if (el) el.value = v ?? ''; };
+  set('#f-name', d.n); set('#f-kcal', d.kcal); set('#f-per', d.per); set('#f-unit', d.unit); set('#f-gw', d.gw || '');
+  NUTS.forEach(([k]) => set('#fn-' + k, d.nut && d.nut[k] != null ? d.nut[k] : ''));
+  S.fdPick = { name: d.n, nut: d.nut };
+  $('#f-sugg').innerHTML = ''; $('#f-nutbox').innerHTML = nutPanel(d);
+}
+function readNut() {
+  const n = {}; NUTS.forEach(([k]) => { const v = num($('#fn-' + k)?.value); if (v != null && v >= 0 && v <= 100) n[k] = v; });
+  if (!Object.keys(n).length) return null;
+  const pk = S.fdPick, same = pk && pk.nut && NUTS.every(([k]) => (pk.nut[k] ?? null) === (n[k] ?? null));
+  n.src = same ? 'ref' : 'label'; return n;
+}
+$('#main').addEventListener('input', e => {
+  if (e.target.id !== 'f-name') return;
+  if (S.fdPick && e.target.value !== S.fdPick.name) { S.fdPick = null; $('#f-nutbox').innerHTML = ''; }
+  showSugg(e.target.value.trim().length >= 2 ? foodSearch(e.target.value) : [], false);
+});
+
 /* ----- settings ----- */
 function vSet() {
   const p = S.pet || {};
@@ -836,12 +904,17 @@ function vSet() {
     <button class="btn acc full" data-act="save-pet" style="margin-top:14px">저장</button>
     ${(S.family?.pets || []).length > 1 ? (S.petRmArm ? `<div class="alertbox" style="margin-top:10px"><b>${esc(S.pet?.name || '이 아이')}를 목록에서 뺄까요?</b>기록은 지워지지 않고 보이지만 않아요.<div class="two" style="margin-top:10px"><button class="btn ghost sm" data-act="pet-remove-no">그만두기</button><button class="btn sm" style="background:var(--warn)" data-act="pet-remove-yes">빼기</button></div></div>` : `<button class="btn ghost sm" data-act="pet-remove" style="margin-top:8px">이 아이 목록에서 빼기</button>`) : ''}</div>
 
-  <div class="card"><h3>사료·처방식</h3><p class="muted" style="margin:0 0 6px">라벨에 적힌 칼로리를 그대로 넣어주세요. 예: 1캔(156g)에 175kcal → 175kcal / 156g</p>
-    ${foods.map(f => `<div class="edit-row"><div class="grow"><b>${esc(f.name)}</b><div class="muted">${esc(f.kcal)}kcal / ${esc(f.per)}${esc(f.unit)}${num(f.gw) ? ` · 1${['g', 'ml'].includes(f.unit) ? '캔' : esc(f.unit)} ${esc(f.gw)}g` : ''} · 1g ≈ ${(() => { const k = kcalOf(f, 1, 'g'); return k != null ? r2(k) + 'kcal' : '?'; })()}</div></div><button class="btn ghost sm" data-act="food-edit" data-id="${esc(f.id)}">고치기</button><button class="btn ghost sm" data-act="food-del" data-id="${esc(f.id)}">삭제</button></div>`).join('')}
-    <div style="margin-top:10px"><input type="text" id="f-name" placeholder="사료 이름 (예: 회복기 캔)">
+  <div class="card" id="food-card"><h3>사료·처방식</h3><p class="muted" style="margin:0 0 6px">사료 이름을 치면 자주 쓰는 처방식·회복식은 칼로리와 성분이 바로 채워져요. 목록에 없으면 포장 라벨 값을 넣어주세요.</p>
+    ${foods.map(f => `<div class="edit-row"><div class="grow"><b>${esc(f.name)}</b>${f.nut ? `<span class="tag ${f.nut.src === 'label' ? 'lbl' : ''}">${f.nut.src === 'label' ? '라벨' : '참고값'}</span>` : ''}<div class="muted">${esc(f.kcal)}kcal / ${esc(f.per)}${esc(f.unit)}${num(f.gw) ? ` · 1${['g', 'ml'].includes(f.unit) ? '캔' : esc(f.unit)} ${esc(f.gw)}g` : ''} · 1g ≈ ${(() => { const k = kcalOf(f, 1, 'g'); return k != null ? r2(k) + 'kcal' : '?'; })()}</div>${f.nut && nutLine(f.nut) ? `<div class="muted">${nutLine(f.nut)}</div>` : ''}</div><button class="btn ghost sm" data-act="food-edit" data-id="${esc(f.id)}">고치기</button><button class="btn ghost sm" data-act="food-del" data-id="${esc(f.id)}">삭제</button></div>`).join('')}
+    <div style="margin-top:10px"><label class="f" style="margin-top:0">사료 이름</label>
+    <div class="row"><input type="text" id="f-name" autocomplete="off" placeholder="예: 리커버리, a/d, 레날, k/d" style="flex:1"><button class="btn acc sm" data-act="food-find" style="white-space:nowrap">🔍 찾기</button></div>
+    <div id="f-sugg"></div><div id="f-nutbox"></div>
+    <label class="f">칼로리 (라벨 기준)</label>
     <div class="three" style="margin-top:6px"><input type="number" inputmode="decimal" id="f-kcal" placeholder="kcal"><input type="number" inputmode="decimal" id="f-per" placeholder="양"><select id="f-unit"><option value="g">g</option><option value="ml">ml</option><option value="캔">캔</option><option value="포">포</option></select></div>
     <input type="number" inputmode="decimal" id="f-gw" placeholder="1캔(1포) 무게 g — 캔·포 단위면 넣어주세요 (선택)" style="margin-top:6px">
     <p class="muted" style="margin:6px 2px 0">예: 건사료 3800kcal/kg → 3800 / 1000 / g · 캔 175kcal(156g) → 175 / 1 / 캔, 무게 156</p>
+    <details class="more" id="f-more"><summary>성분 직접 넣기 (선택 · 라벨의 등록성분량 %)</summary>
+      <div class="five">${NUTS.map(([k, t]) => `<input type="number" inputmode="decimal" step="0.01" id="fn-${k}" placeholder="${t} %">`).join('')}</div></details>
     <div class="row" style="margin-top:8px"><button class="btn ${S.foodEdit ? 'acc' : 'ghost'} sm" data-act="food-add">${S.foodEdit ? '고친 내용 저장' : '+ 사료 추가'}</button>${S.foodEdit ? '<button class="btn ghost sm" data-act="food-edit-no">그만두기</button>' : ''}</div></div></div>
 
   <div class="card"><h3>매일 할 일</h3>
@@ -1279,14 +1352,17 @@ document.addEventListener('click', async e => {
   else if (a === 'food-add') {
     const name = $('#f-name').value.trim(), kcal = num($('#f-kcal').value), per = num($('#f-per').value), unit = $('#f-unit').value;
     if (!name || !kcal || !per) return toast('이름, kcal, 양을 모두 넣어주세요');
-    const gw = num($('#f-gw')?.value);
-    const p = petBase();
-    if (S.foodEdit) { const old = (p.foods || []).find(x => x.id === S.foodEdit); p.foods = (p.foods || []).map(x => x.id === S.foodEdit ? { id: x.id, name, kcal, per, unit, ...(gw ? { gw } : {}) } : x); S.foodEdit = null; C = null; savePet(p, '사료를 고쳤어요'); return; }
-    p.foods = [...(p.foods || []), { id: uid(), name, kcal, per, unit, ...(gw ? { gw } : {}) }];
+    const gw = num($('#f-gw')?.value), nut = readNut();
+    const p = petBase(); S.fdPick = null;
+    if (S.foodEdit) { const old = (p.foods || []).find(x => x.id === S.foodEdit); p.foods = (p.foods || []).map(x => x.id === S.foodEdit ? { id: x.id, name, kcal, per, unit, ...(gw ? { gw } : {}), ...(nut ? { nut } : {}) } : x); S.foodEdit = null; C = null; savePet(p, '사료를 고쳤어요'); return; }
+    p.foods = [...(p.foods || []), { id: uid(), name, kcal, per, unit, ...(gw ? { gw } : {}), ...(nut ? { nut } : {}) }];
     if (!p.mix || !p.mix.length) p.mix = [{ foodId: p.foods[0].id, pct: 100 }];
     C = null; savePet(p, '사료를 추가했어요');
   }
-  else if (a === 'food-edit') { const f = (S.pet?.foods || []).find(x => x.id === b.dataset.id); if (!f) return; S.foodEdit = f.id; render(true); const set = (s, v) => { const el = $(s); if (el) el.value = v ?? ''; }; set('#f-name', f.name); set('#f-kcal', f.kcal); set('#f-per', f.per); set('#f-unit', f.unit); set('#f-gw', f.gw); $('#f-name')?.scrollIntoView({ block: 'center' }); }
+  else if (a === 'food-edit') { const f = (S.pet?.foods || []).find(x => x.id === b.dataset.id); if (!f) return; S.foodEdit = f.id; render(true); const set = (s, v) => { const el = $(s); if (el) el.value = v ?? ''; }; set('#f-name', f.name); set('#f-kcal', f.kcal); set('#f-per', f.per); set('#f-unit', f.unit); set('#f-gw', f.gw); NUTS.forEach(([k]) => set('#fn-' + k, f.nut?.[k])); if (f.nut && $('#f-more')) $('#f-more').open = true; $('#f-name')?.scrollIntoView({ block: 'center' }); }
+  else if (a === 'food-find') { const q = $('#f-name')?.value.trim(); if (!q) return toast('사료 이름을 넣어주세요'); const r = foodSearch(q); if (r.length === 1) pickFood(r[0]); else showSugg(r, true); }
+  else if (a === 'food-pick') { const d = FOOD_DB[+b.dataset.i]; if (d) pickFood(d); }
+  else if (a === 'go-food') { S.tab = 'set'; renderTabs(); render(true); setTimeout(() => { $('#food-card')?.scrollIntoView({ block: 'start' }); }, 50); }
   else if (a === 'food-edit-no') { S.foodEdit = null; render(true); }
   else if (a === 'food-del') { const p = petBase(); p.foods = (p.foods || []).filter(f => f.id !== b.dataset.id); p.mix = (p.mix || []).filter(m => m.foodId !== b.dataset.id); C = null; savePet(p, '삭제했어요'); }
   else if (a === 'task-add') { const v = $('#t-label').value.trim(); if (!v) return; const p = petBase(); p.tasks = [...(p.tasks || []), { id: uid(), label: v }]; savePet(p, '추가했어요'); }
