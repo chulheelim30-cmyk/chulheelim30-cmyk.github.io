@@ -22,7 +22,7 @@
     d.id = 'agOut';
     d.style.cssText = 'position:fixed;inset:0;z-index:9999;background:#FBF7F2;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:28px;text-align:center;font-family:inherit;color:#2D2A26';
     var how = isIOS ? '오른쪽 아래 <b>공유(⋯)</b> → <b>Safari로 열기</b>' : '오른쪽 아래(위) <b>⋮</b> → <b>다른 브라우저로 열기</b>';
-    d.innerHTML = '<img src="./icon-192.png" width="84" height="84" style="border-radius:22px;margin-bottom:14px" alt="">' +
+    d.innerHTML = '<img src="./icon-192.png?v=3" width="84" height="84" style="border-radius:22px;margin-bottom:14px" alt="">' +
       '<div style="font-size:20px;font-weight:800;margin-bottom:8px">' + (isIOS ? 'Safari' : '크롬') + '에서 열어 설치해 주세요</div>' +
       '<div style="font-size:14.5px;line-height:1.7;color:#7A726A">' + (inKakao ? '카카오톡' : '이 앱') + ' 안에서는 앱을 설치할 수 없어요.<br>' + (inKakao || isAndroid ? '아래 버튼이 안 되면 ' : '') + how + '를 눌러 주세요.</div>' +
       '<button id="agOutGo" style="margin-top:20px;width:100%;max-width:320px;border:0;border-radius:14px;padding:15px;background:#2D2A26;color:#fff;font-weight:800;font-size:16px">' + (isIOS ? 'Safari' : '크롬') + '로 열기</button>' +
