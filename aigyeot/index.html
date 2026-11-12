@@ -1071,7 +1071,7 @@ function vSet() {
   ${(() => { try { return sessionStorage.getItem('aigyeot-rotated'); } catch (e) { return null; } })() ? '<div class="note" style="margin-bottom:12px"><b>새 링크로 바꿨어요.</b> 옛 링크는 이제 열리지 않아요. 아래 버튼으로 가족에게 새 링크를 다시 보내주세요.</div>' : ''}
   <div class="card"><h3>가족과 같이 쓰기</h3>
     <p class="muted" style="margin:0 0 8px">이 링크를 가족에게 보내면, 가입 없이 바로 같은 기록을 보고 남길 수 있어요.</p>
-    <input type="text" readonly value="${esc(shareLink())}" onclick="this.select()" style="font-size:13px">
+    <input type="text" id="shareUrl" value="${esc(shareLink())}" onfocus="this.select();this.setSelectionRange(0,this.value.length)" style="font-size:16px">
     <div style="display:grid;grid-template-columns:2fr 1fr;gap:8px;margin-top:8px"><button class="btn" data-act="share" style="white-space:nowrap">💬 가족에게 보내기</button><button class="btn ghost" data-act="copy-link" style="white-space:nowrap">링크 복사</button></div>
     <p class="muted" style="margin:10px 0 0">링크를 아는 사람은 누구나 기록을 보고 쓸 수 있으니, 가족에게만 보내주세요.</p>
     ${S.rotArm ? `<div class="alertbox" style="margin-top:10px"><b>링크를 새로 바꿀까요?</b>옛 링크는 바로 막혀요. 기록은 그대로 옮겨가고, 가족에게는 새 링크를 다시 보내야 해요.<div class="two" style="margin-top:10px"><button class="btn ghost sm" data-act="rotate-no">그만두기</button><button class="btn sm" style="background:var(--warn)" data-act="rotate-yes">새 링크로 바꾸기</button></div></div>` : `<button class="btn ghost sm" data-act="rotate" style="margin-top:8px">링크가 다른 사람에게 갔나요? 새 링크로 바꾸기</button>`}
@@ -1512,6 +1512,16 @@ async function saveParsed() {
 }
 $('#main').addEventListener('input', e => { if (e.target.id === 'w-text') S.draft = e.target.value; if (e.target.id === 'er-state') S.erState = e.target.value; });
 
+// 복사: 카톡 안 브라우저 등 clipboard가 막힌 곳에서도 되게 옛 방식(execCommand)으로 한 번 더 시도
+async function copyText(txt) {
+  try { if (navigator.clipboard && window.isSecureContext) { await navigator.clipboard.writeText(txt); return true; } } catch (e) {}
+  try {
+    const ta = document.createElement('textarea'); ta.value = txt; ta.setAttribute('readonly', '');
+    ta.style.cssText = 'position:fixed;top:0;left:0;width:1px;height:1px;opacity:0;font-size:16px';
+    document.body.appendChild(ta); ta.focus(); ta.select(); ta.setSelectionRange(0, txt.length);
+    const ok = document.execCommand('copy'); ta.remove(); return ok;
+  } catch (e) { return false; }
+}
 /* ---------- actions ---------- */
 let delArm = null;
 document.addEventListener('click', async e => {
@@ -1560,11 +1570,11 @@ document.addEventListener('click', async e => {
   }
   else if (a === 'join') { const v = ($('#join')?.value || '').trim(); const m = v.match(/[?&]g=([0-9a-f]{20,64})/i) || v.match(/^([0-9a-f]{20,64})$/i); if (!m) return toast('링크가 맞지 않아요. 가족에게 받은 링크 전체를 붙여넣어 주세요'); history.replaceState(null, '', location.pathname + '?g=' + m[1]); boot(); }
   else if (a === 'setname') { const v = (b.dataset.v || $('#nm')?.value || '').trim().slice(0, 10); if (!v) return toast('이름을 넣어주세요'); S.me = v; ls.set('aigyeot-name', v); toast(v + '(으)로 기록할게요'); render(true); }
-  else if (a === 'share') { ls.set('aigyeot-shared-' + familyCode(), '1'); const url = shareLink(), text = `${S.pet?.name || '우리 아이'} 하루 기록을 같이 써요. 이 링크로 들어오면 돼요.`; if (navigator.share) { try { await navigator.share({ title: '아이곁', text, url }); } catch (err) {} } else { try { await navigator.clipboard.writeText(text + '\n' + url); toast('복사했어요. 카톡에 붙여넣어 주세요'); } catch (err) { toast('링크를 길게 눌러 복사해주세요'); } } }
-  else if (a === 'copy-link') { ls.set('aigyeot-shared-' + familyCode(), '1'); try { await navigator.clipboard.writeText(shareLink()); toast('링크를 복사했어요'); } catch (err) { toast('링크를 길게 눌러 복사해주세요'); } }
+  else if (a === 'share') { ls.set('aigyeot-shared-' + familyCode(), '1'); const url = shareLink(), text = `${S.pet?.name || '우리 아이'} 하루 기록을 같이 써요. 이 링크로 들어오면 돼요.`; if (navigator.share) { try { await navigator.share({ title: '아이곁', text, url }); } catch (err) {} } else { if (await copyText(text + '\n' + url)) toast('복사했어요. 카톡에 붙여넣어 주세요'); else { $('#shareUrl')?.focus(); toast('위 링크 칸을 길게 눌러 복사해주세요'); } } }
+  else if (a === 'copy-link') { ls.set('aigyeot-shared-' + familyCode(), '1'); if (await copyText(shareLink())) toast('링크를 복사했어요'); else { $('#shareUrl')?.focus(); toast('위 링크 칸을 길게 눌러 복사해주세요'); } }
   else if (a === 'er-check') erCheck();
   else if (a === 'er-area') { const v = $('#er-area').value.trim(); S.area = v; if (S.pet) { const p = petBase(); p.area = v; savePet(p, '동네를 저장했어요'); } else render(true); }
-  else if (a === 'copy-call') { const txt = $('#callText').textContent; try { await navigator.clipboard.writeText(txt); toast('복사했어요'); } catch (err) { const r = document.createRange(); r.selectNodeContents($('#callText')); const s = getSelection(); s.removeAllRanges(); s.addRange(r); toast('글자를 길게 눌러 복사해주세요'); } }
+  else if (a === 'copy-call') { const txt = $('#callText').textContent; if (await copyText(txt)) toast('복사했어요'); else { const r = document.createRange(); r.selectNodeContents($('#callText')); const s = getSelection(); s.removeAllRanges(); s.addRange(r); toast('글자를 길게 눌러 복사해주세요'); } }
   else if (a === 'parse') doParse();
   else if (a === 'p-del') { S.parsed.entries.splice(+b.dataset.i, 1); render(true); }
   else if (a === 'p-cancel') { S.parsed = null; render(true); $('#w-text')?.focus(); }
@@ -1610,8 +1620,8 @@ document.addEventListener('click', async e => {
   }
   else if (a === 'copy') {
     const txt = buildSummary(S.sumDays);
-    try { await navigator.clipboard.writeText(txt); toast('복사했어요'); }
-    catch (err) { const r = document.createRange(); r.selectNodeContents($('#sumText')); const s = getSelection(); s.removeAllRanges(); s.addRange(r); toast('글자를 길게 눌러 복사해주세요'); }
+    if (await copyText(txt)) toast('복사했어요');
+    else { const r = document.createRange(); r.selectNodeContents($('#sumText')); const s = getSelection(); s.removeAllRanges(); s.addRange(r); toast('글자를 길게 눌러 복사해주세요'); }
   }
   else if (a === 'save-q') { const p = petBase(); p.questions = $('#qText').value.trim(); savePet(p); }
   else if (a === 'save-pet') {
