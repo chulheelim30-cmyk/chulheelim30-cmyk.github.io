@@ -60,7 +60,8 @@ footer{font-size:12px;color:var(--muted);text-align:center;margin-top:24px}
 <header><div class="in">
   <div class="logo">0<b>실</b>0 공실공</div>
   <h1>상가 공실 간이진단</h1>
-  <p>어떤 상가든 됩니다. 주소와 아는 값만 넣고, 모르는 건 비워 두세요. 3분이면 끝납니다.</p>
+  <p style="color:var(--gold);margin:0 0 4px;font-size:14px">대형 빌딩만 받던 임대·MD 전략을, 작은 건물에도.</p>
+  <p>꼬마빌딩부터 오피스텔·지식산업센터 상가까지. 주소와 아는 값만 넣고, 모르는 건 비워 두세요. 3분이면 끝납니다.</p>
 </div></header>
 
 <div class="wrap">
@@ -82,6 +83,7 @@ footer{font-size:12px;color:var(--muted);text-align:center;margin-top:24px}
       <option value="jisan">지식산업센터</option>
       <option value="mixed">주상복합 · 아파트 단지 상가</option>
       <option value="retail">근린상가 · 상가 전용 건물</option>
+      <option value="small">꼬마빌딩 · 소형 근린건물 (상가 1~10칸)</option>
     </select>
     <label>가장 가까운 역까지 걸어서</label>
     <select id="walk">
@@ -98,7 +100,7 @@ footer{font-size:12px;color:var(--muted);text-align:center;margin-top:24px}
   <div class="card">
     <h2>2. 배후 (건물 안 사람)</h2>
     <div class="row">
-      <div><label>세대 · 실 수 <small>(상가 제외)</small></label><input type="number" id="units" inputmode="numeric" placeholder="예: 300"></div>
+      <div><label>세대 · 실 수 <small>(상가 제외 · 꼬마빌딩은 주변 세대)</small></label><input type="number" id="units" inputmode="numeric" placeholder="예: 300"></div>
       <div><label>입주율 % <small>(모르면 비움)</small></label><input type="number" id="occ" inputmode="numeric" placeholder="예: 60"></div>
     </div>
   </div>
@@ -229,24 +231,24 @@ document.querySelectorAll('#exist .chip').forEach(c=>c.addEventListener('click',
 
 // 업종 후보: t=맞는 건물유형, f=층(1/2), d=배기 필요, c=겹치는 기존 업종, a=[최소,최대]면적
 const CANDS=[
- {n:"버거·치킨 (소형 매장)",ex:"예: 노브랜드버거 컴팩트, 파파이스 — 둘 다 15평(약 50㎡) 모델로 출점 확대 중",t:["jisan","officetel","mixed","retail"],f:["front"],d:true,c:["burger"],a:[40,100],w:"간판 노출이 중요한 업종. 점심·저녁 모두 수요"},
- {n:"편의점",ex:"예: CU, GS25, 세븐일레븐",t:["officetel","mixed","retail","jisan"],f:["front","inner"],d:false,c:["cvs"],a:[30,120],w:"1인 가구 생활 필수. 24시간 불 켜진 1층이 건물 인상을 바꿈"},
+ {n:"버거·치킨 (소형 매장)",ex:"예: 노브랜드버거 컴팩트, 파파이스 — 둘 다 15평(약 50㎡) 모델로 출점 확대 중",t:["jisan","officetel","mixed","retail","small"],f:["front"],d:true,c:["burger"],a:[40,100],w:"간판 노출이 중요한 업종. 점심·저녁 모두 수요"},
+ {n:"편의점",ex:"예: CU, GS25, 세븐일레븐",t:["officetel","mixed","retail","small","jisan"],f:["front","inner"],d:false,c:["cvs"],a:[30,120],w:"1인 가구 생활 필수. 24시간 불 켜진 1층이 건물 인상을 바꿈"},
  {n:"도시락",ex:"예: 한솥도시락",t:["jisan","officetel"],f:["front","inner"],d:false,c:["dosirak"],a:[33,80],w:"점심 단체주문·포장. 조리 설비 적음"},
  {n:"아침 토스트",ex:"예: 이삭토스트 — 가맹비 없음",t:["jisan","officetel"],f:["front","inner"],d:false,c:[],a:[25,70],w:"출근길 07~10시 수요. 다른 칸과 시간대가 안 겹침"},
  {n:"세탁·코인빨래방",ex:"예: 크린토피아",t:["officetel","mixed"],f:["front","inner"],d:false,c:["laundry"],a:[20,90],w:"오피스텔 입주민 고정 수요. 안쪽 칸도 가능"},
- {n:"저가 커피",ex:"예: 메가MGC, 컴포즈, 빽다방",t:["officetel","jisan","retail","mixed"],f:["front"],d:false,c:["coffee"],a:[20,70],w:"역 출근 동선 테이크아웃. 건물 안에 커피가 이미 있으면 제외"},
+ {n:"저가 커피",ex:"예: 메가MGC, 컴포즈, 빽다방",t:["officetel","jisan","retail","small","mixed"],f:["front"],d:false,c:["coffee"],a:[20,70],w:"역 출근 동선 테이크아웃. 건물 안에 커피가 이미 있으면 제외"},
  {n:"무인 매장 (아이스크림·밀키트·문구)",ex:"인건비 없는 소형 업종",t:["officetel","mixed"],f:["front","inner"],d:false,c:["unmanned"],a:[15,50],w:"작은 칸·안쪽 칸 채우기 좋음"},
  {n:"샐러드",ex:"예: 샐러디",t:["jisan","officetel"],f:["front","inner"],d:false,c:[],a:[30,70],w:"점심 보완. 배기 부담 적음"},
- {n:"의원 + 약국",ex:"1층 약국 · 2층 의원 조합",t:["officetel","mixed","retail"],f:["front","upper"],d:false,c:["pharmacy"],a:[40,330],w:"역세권 오피스텔 배후에 강함. 의원은 2층도 가능"},
- {n:"PT·필라테스",ex:"소형 1:1 스튜디오",t:["officetel","mixed","retail","jisan"],f:["upper","inner"],d:false,c:["fitness"],a:[50,330],w:"목적 방문 업종이라 2층·안쪽이어도 됨. 저녁 수요"},
- {n:"미용실",ex:"1~2인 소형 살롱",t:["officetel","mixed","retail"],f:["inner","upper","front"],d:false,c:["hair"],a:[25,100],w:"예약제라 노출 약한 칸도 가능"},
+ {n:"의원 + 약국",ex:"1층 약국 · 2층 의원 조합",t:["officetel","mixed","retail","small"],f:["front","upper"],d:false,c:["pharmacy"],a:[40,330],w:"역세권 오피스텔 배후에 강함. 의원은 2층도 가능"},
+ {n:"PT·필라테스",ex:"소형 1:1 스튜디오",t:["officetel","mixed","retail","small","jisan"],f:["upper","inner"],d:false,c:["fitness"],a:[50,330],w:"목적 방문 업종이라 2층·안쪽이어도 됨. 저녁 수요"},
+ {n:"미용실",ex:"1~2인 소형 살롱",t:["officetel","mixed","retail","small"],f:["inner","upper","front"],d:false,c:["hair"],a:[25,100],w:"예약제라 노출 약한 칸도 가능"},
  {n:"반찬가게·정육",ex:"동네 생활 업종",t:["officetel","mixed"],f:["front","inner"],d:false,c:["dosirak"],a:[25,70],w:"1~2인 가구 저녁 장보기"},
- {n:"학원",ex:"보습·음악·코딩 등",t:["mixed","retail"],f:["upper"],d:false,c:["academy"],a:[60,330],w:"아파트 단지 배후일 때"},
- {n:"생활용품·드럭스토어",ex:"예: 다이소, 올리브영 — 1층 대형 칸 앵커",t:["officetel","mixed","retail"],f:["front"],d:false,c:[],a:[100,700],w:"넓은 1층 전면 칸을 한 번에 채우는 앵커. 유동이 많아야 함"},
- {n:"대형 카페·베이커리",ex:"좌석형 카페, 베이커리 카페",t:["officetel","mixed","retail","jisan"],f:["front"],d:false,c:["coffee"],a:[80,300],w:"넓은 칸에 맞는 체류형 F&B. 주말 수요 확인 필요"},
+ {n:"학원",ex:"보습·음악·코딩 등",t:["mixed","retail","small"],f:["upper"],d:false,c:["academy"],a:[60,330],w:"아파트 단지 배후일 때"},
+ {n:"생활용품·드럭스토어",ex:"예: 다이소, 올리브영 — 1층 대형 칸 앵커",t:["officetel","mixed","retail","small"],f:["front"],d:false,c:[],a:[100,700],w:"넓은 1층 전면 칸을 한 번에 채우는 앵커. 유동이 많아야 함"},
+ {n:"대형 카페·베이커리",ex:"좌석형 카페, 베이커리 카페",t:["officetel","mixed","retail","small","jisan"],f:["front"],d:false,c:["coffee"],a:[80,300],w:"넓은 칸에 맞는 체류형 F&B. 주말 수요 확인 필요"},
  {n:"세무·노무·법무 사무소",ex:"비(非)F&B",t:["jisan"],f:["inner","upper"],d:false,c:[],a:[25,200],w:"입주 기업이 고객. F&B가 넘칠 때 대안"}
 ];
-const TYPE_NM={officetel:"오피스텔",jisan:"지식산업센터",mixed:"주상복합·단지 상가",retail:"근린상가"};
+const TYPE_NM={small:"꼬마빌딩·소형 근린",officetel:"오피스텔",jisan:"지식산업센터",mixed:"주상복합·단지 상가",retail:"근린상가"};
 const num=v=>v===""||v==null||isNaN(+v)?null:+v;
 const won=v=>Math.round(v).toLocaleString('ko-KR')+"만 원";
 
@@ -257,7 +259,7 @@ function raw(v){
   const s1=Math.min(wScore(v.m),21);
   const people=v.units*(v.occ/100)*(v.type==="jisan"?3:1.3);
   let s2=Math.min(30,6+24*Math.min(1,people/400));
-  if(v.shops){const r=v.units/v.shops;if(r<10)s2-=Math.min(8,(10-r)*1.2);}
+  if(v.shops&&v.type!=="small"){const r=v.units/v.shops;if(r<10)s2-=Math.min(8,(10-r)*1.2);}
   s2=Math.max(4,Math.min(s2,24));
   let s3={front:20,inner:13,upper:8}[v.pos];if(v.duct==="n")s3-=3;if(v.duct!=="y"||!v.useK)s3=Math.min(s3,14);
   const vr=v.shops?v.vac/v.shops:0.5;let s4=16-8*Math.min(1,vr);if(!v.rentK)s4=Math.min(s4,10);
@@ -291,13 +293,14 @@ $('f').addEventListener('submit',e=>{
   else s1=Math.round(wScore(x.m));
   // 2 배후 30
   let s2,st2="입력";
-  if(x.units===null){s2=10;st2="모름";chk.push(x.type==="jisan"?"공장·사무실 호실 수":"오피스텔 세대수");}
+  if(x.units===null&&x.type==="small"){s2=12;st2="주변 배후 모름";chk.push("반경 300m 주거 세대·직장인 수 (소상공인 상권정보시스템, 무료)");}
+  else if(x.units===null){s2=10;st2="모름";chk.push(x.type==="jisan"?"공장·사무실 호실 수":"오피스텔 세대수");}
   else{
     const occ=x.occ===null?50:x.occ;
     const people=x.units*(occ/100)*(x.type==="jisan"?3:1.3);
     s2=Math.round(Math.min(30,6+24*Math.min(1,people/400)));
     if(x.occ===null){s2=Math.min(s2,15);st2="입주율 가정 50%";chk.push("관리사무소 기준 실제 입주율");}
-    if(x.shops&&x.units/x.shops<10){s2=Math.max(Math.round(s2-Math.min(8,(10-x.units/x.shops)*1.2)),4);st2=(st2==="입력"?"":st2+", ")+"상가가 배후에 비해 많음";chk.push("상가 1실당 배후 "+(x.units/x.shops).toFixed(1)+"세대·실 — 상가 과잉. 일부 호실은 비F&B·분할·통합 임대 검토");}
+    if(x.type!=="small"&&x.shops&&x.units/x.shops<10){s2=Math.max(Math.round(s2-Math.min(8,(10-x.units/x.shops)*1.2)),4);st2=(st2==="입력"?"":st2+", ")+"상가가 배후에 비해 많음";chk.push("상가 1실당 배후 "+(x.units/x.shops).toFixed(1)+"세대·실 — 상가 과잉. 일부 호실은 비F&B·분할·통합 임대 검토");}
   }
   // 3 스펙 20
   let s3={front:20,inner:13,upper:8}[x.pos],st3="입력";
@@ -379,7 +382,7 @@ $('f').addEventListener('submit',e=>{
 
   const ex=x.exist.length?[...document.querySelectorAll('#exist .chip.on')].map(c=>c.textContent).join(", "):"없음/미입력";
   const posNm={front:"1층 전면",inner:"1층 안쪽",upper:"2층 이상"}[x.pos];
-  $('copybox').value=`[공실공 간이진단]\n현장: ${x.name} (${TYPE_NM[x.type]})\n예비 등급: ${g} (${tot}/100, 보수 채점)\n확인되면: ${nUnk?RG.lo+"~"+RG.hi+"점, 오차 줄이려면 "+RG.drv.slice(0,3).map(d=>d.k).join("·")+" 확인":"없음"}\n- 입지 ${s1}/30, 배후 ${s2}/30, 공실 조건 ${s3}/20, 경제성 ${s4}/20\n입력: 역까지 ${x.m===null?"모름":x.m+"m"}, 세대·실 ${x.units??"모름"}, 입주율 ${x.occ??"모름"}%, 상가 ${x.shops??"?"}실 중 공실 ${x.vac??"?"}, ${posNm} ${x.area??"?"}㎡, 호가 월세 ${x.rent??"?"}만, 용도 ${x.use?x.use+"종 근생":"모름"}, 배기 ${x.duct==="y"?"가능":x.duct==="n"?"불가":"모름"}\n기존 업종: ${ex}\n\n[맞는 업종]${split?" (2칸 분할 시)":""}\n${recs.map((c,i)=>(i+1)+". "+c.n).join("\n")}${mText}\n\n[확인 필요]\n${chk.map(c=>"- "+c).join("\n")}`+planText;
+  $('copybox').value=`[공실공 간이진단]\n현장: ${x.name} (${TYPE_NM[x.type]})\n예비 등급: ${g} (${tot}/100, 보수 채점)\n확인되면: ${nUnk?RG.lo+"~"+RG.hi+"점, 오차 줄이려면 "+RG.drv.slice(0,3).map(d=>d.k).join("·")+" 확인":"없음"}\n- 입지 ${s1}/30, 배후 ${s2}/30, 공실 조건 ${s3}/20, 경제성 ${s4}/20\n입력: 역까지 ${x.m===null?"모름":x.m+"m"}, 세대·실 ${x.units??"모름"}, 입주율 ${x.occ===null?"모름":x.occ+"%"}, 상가 ${x.shops??"?"}실 중 공실 ${x.vac??"?"}, ${posNm} ${x.area??"?"}㎡, 호가 월세 ${x.rent??"?"}만, 용도 ${x.use?x.use+"종 근생":"모름"}, 배기 ${x.duct==="y"?"가능":x.duct==="n"?"불가":"모름"}\n기존 업종: ${ex}\n\n[맞는 업종]${split?" (2칸 분할 시)":""}\n${recs.map((c,i)=>(i+1)+". "+c.n).join("\n")}${mText}\n\n[확인 필요]\n${chk.map(c=>"- "+c).join("\n")}`+planText;
   saveRecent(snapshot());renderRecent();
   $('f').style.display="none";$('result').style.display="block";$('copied').style.display="none";$('copybox').style.display="none";
   window.scrollTo(0,0);
