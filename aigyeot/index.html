@@ -386,18 +386,19 @@ async function write(fn) {
 }
 
 /* ---------- 함께 돌보는 보호자 ---------- */
-// 기기마다 id를 하나 두고 이름을 가족 정보(members)에 한 번 남겨요(이름을 바꾸면 다시 저장). 접속 시간은 남기지 않아요.
+// 기기마다 id를 하나 두고 이름을 가족 정보(members)에 한 번 남겨요(이름을 바꾸면 다시 저장, 옛 이름은 aka에). 접속 시간은 남기지 않아요.
 const devId = () => { let d = ls.get('aigyeot-dev'); if (!d) { d = uid() + uid(); ls.set('aigyeot-dev', d); } return d; };
 function members() {
-  const m = (S.family?.members || []).map(x => ({ id: x.id, name: x.name, n: 0 }));
+  const m = (S.family?.members || []).map(x => ({ id: x.id, name: x.name, aka: x.aka || [], n: 0 }));
+  const find = nm => m.find(y => y.name === nm) || m.find(y => (y.aka || []).includes(nm));
   const k = today();
   (S.allLogs || []).forEach(l => {
     if (!l.by) return;
-    let x = m.find(y => y.name === l.by);
+    let x = find(l.by);
     if (!x) { x = { name: l.by, n: 0 }; m.push(x); }
     if (dkey(l.t) === k) x.n++;
   });
-  (S.checks || []).forEach(c => { if (c.date === k && c.by) { const x = m.find(y => y.name === c.by); if (x) x.n++; } });
+  (S.checks || []).forEach(c => { if (c.date === k && c.by) { const x = find(c.by); if (x) x.n++; } });
   const me = devId();
   const out = m.map(x => ({ ...x, me: x.id ? x.id === me : x.name === S.me }));
   if (S.me && !out.some(x => x.me)) out.push({ name: S.me, n: 0, me: true });
@@ -410,7 +411,8 @@ async function touchMember() {
   const i = fam.members.findIndex(x => x.id === id);
   if (i >= 0 && fam.members[i].name === S.me) return;
   S.touching = true;
-  const rec = { id, name: S.me };
+  const old = fam.members[i], aka = [...new Set([...(old?.aka || []), old?.name].filter(n => n && n !== S.me))].slice(-5);
+  const rec = { id, name: S.me, ...(aka.length ? { aka } : {}) };
   if (i >= 0) fam.members[i] = rec; else fam.members.push(rec);
   fam.members = fam.members.slice(-12);
   try { await backend.savePet(fam); S.family = fam; } catch (e) {} finally { S.touching = false; }
