@@ -6,6 +6,7 @@
 <title>공실공 상가 간이진단</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&family=Noto+Serif+KR:wght@700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js" defer></script>
 <style>
 :root{--navy:#13233D;--gold:#B08D57;--ivory:#F6F3EC;--stone:#E9E3D6;--ink:#1d2533;--muted:#6b7280;--ok:#2f6b4f;--warn:#9a5b13;--bad:#9b2c2c}
 *{box-sizing:border-box}
@@ -51,6 +52,8 @@ ol.rec .ex{color:var(--muted);font-size:14px}
 ul.chk{padding-left:18px;margin:6px 0}
 .note{font-size:13px;color:var(--muted);margin-top:10px}
 #result{display:none}
+#rIso canvas{display:block;width:100%;border-radius:12px;touch-action:pan-y;cursor:grab}
+.isohint{font-size:12px;color:var(--muted);text-align:center;margin-top:4px}
 .hero{background:var(--navy);color:#fff;border:0}
 .hero h2{color:#fff}
 .hero .kick{font-size:12px;letter-spacing:2px;color:var(--gold);margin-bottom:2px}
@@ -188,7 +191,7 @@ footer{font-size:12px;color:var(--muted);text-align:center;margin-top:24px}
     <h2>MD 배치도</h2>
     <div id="rIso"></div>
     <div class="legend" id="rLegend"></div>
-    <p class="note">숫자는 호실 번호입니다. 색은 업종 분야(음식·생활·의료·운동/교육·리테일·업무)입니다. 면적을 넣으면 칸 크기가 면적에 맞춰집니다.</p>
+    <p class="note">숫자는 호실 번호, 색은 업종 분야(음식·생활·의료·운동/교육·리테일·업무)입니다. 면적을 넣으면 칸 크기가 면적에 맞춰집니다.</p>
   </div>
 
   <div class="card">
@@ -229,7 +232,7 @@ footer{font-size:12px;color:var(--muted);text-align:center;margin-top:24px}
   <p class="note" style="text-align:center">공실공은 분석과 문서 작성만 합니다. 임대 알선·계약은 임대인 또는 공인중개사가 진행합니다.</p>
 </div>
 
-<footer>© 공실공 · 간이진단 v3 (2026.11)</footer>
+<footer>© 공실공 · 간이진단 v3.1 (2026.11)</footer>
 </div>
 
 <script>
@@ -279,6 +282,80 @@ function renderIso(out,x){
   const mnx=Math.min(...all.map(p=>p[0]))-70,mxx=Math.max(...all.map(p=>p[0]))+12,mny=Math.min(...all.map(p=>p[1]))-14,mxy=Math.max(...all.map(p=>p[1]))+20;
   $('rIso').innerHTML=`<svg viewBox="${mnx} ${mny} ${mxx-mnx} ${mxy-mny}" width="100%" role="img" aria-label="MD 배치도"><defs><marker id="ar" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8z" fill="#B08D57"/></marker></defs>${svg}</svg>`;
   $('rLegend').innerHTML=items.map(o=>{const ct=CAT[o.pick?o.pick.cat:"none"];return `<div class="lg"><div class="no" style="background:${ct[1]}">${o.no}</div><div><b>${o.pick?o.pick.n:"비F&B·분할 검토"}</b> <span style="color:var(--muted);font-size:12px">${POSNM[o.r.pos]}${o.r.area!==null?" · "+o.r.area+"㎡":""} · ${ct[0]}</span>${o.pick?`<div class="tm">${o.pick.tm.map(t=>"<span>"+t+"</span>").join("")}</div>`:""}</div></div>`;}).join("");
+}
+
+function lighten(hex,f){const n=parseInt(hex.slice(1),16);let r=n>>16,g=n>>8&255,b=n&255;r=Math.round(r+(255-r)*f);g=Math.round(g+(255-g)*f);b=Math.round(b+(255-b)*f);return (r<<16)|(g<<8)|b;}
+let iso3=null;
+function renderIso3D(out,x){
+  const T=window.THREE;if(!T)return false;
+  try{
+  const box=$('rIso');box.innerHTML="";
+  const W=box.clientWidth||360,Hh=Math.round(W*0.9);
+  const rd=new T.WebGLRenderer({antialias:true,alpha:true,preserveDrawingBuffer:true});
+  rd.setPixelRatio(Math.min(2,window.devicePixelRatio||1));rd.setSize(W,Hh);rd.shadowMap.enabled=true;rd.shadowMap.type=T.PCFSoftShadowMap;
+  rd.setClearColor(0xF6F3EC,1);box.appendChild(rd.domElement);
+  const hint=document.createElement('div');hint.className='isohint';hint.textContent='좌우로 밀어서 돌려 보기';box.appendChild(hint);
+  const sc=new T.Scene();
+  sc.add(new T.HemisphereLight(0xffffff,0xe6dfd0,0.95));
+  const sun=new T.DirectionalLight(0xffffff,0.6);sun.position.set(-14,30,22);sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);
+  const sh=sun.shadow.camera;sh.left=-40;sh.right=40;sh.top=40;sh.bottom=-40;sun.shadow.radius=4;sc.add(sun);
+  const items=out.map((o,i)=>({...o,no:i+1,ar:o.r.area||40}));
+  const f1f=items.filter(o=>o.r.pos==="front"),f1i=items.filter(o=>o.r.pos==="inner"),up=items.filter(o=>o.r.pos==="upper");
+  const L=26,D=9,H1=3.4,H2=3.0,GAP=0.18,EX=up.length?7:0;
+  const grp=new T.Group();sc.add(grp);
+  const mat=(c,o)=>new T.MeshStandardMaterial({color:c,roughness:0.85,metalness:0,transparent:o!==undefined,opacity:o===undefined?1:o});
+  const addBox=(w,h,d,x0,y0,z0,m,cast=true)=>{const me=new T.Mesh(new T.BoxGeometry(w,h,d),m);me.position.set(x0+w/2,y0+h/2,z0+d/2);me.castShadow=cast;me.receiveShadow=true;grp.add(me);return me;};
+  // 바닥·보도·도로
+  addBox(L+8,0.3,D+12,-4,-0.3,-4,mat(0xE9E3D6),false);
+  addBox(L+8,0.05,2.6,-4,0,D+0.6,mat(0xFBF9F4),false);
+  addBox(L+8,0.04,4.4,-4,0,D+3.2,mat(0x5d6470),false);
+  for(let i=-3;i<L+4;i+=3)addBox(1.6,0.02,0.18,i,0.045,D+5.3,mat(0xF6F3EC),false);
+  // 호실 상자
+  const labels=[];
+  function lay(arr,z0,d,y0,h,front){const tot=arr.reduce((a,o)=>a+o.ar,0)||1;let xx=0;arr.forEach(o=>{const w=L*o.ar/tot;
+    const col=CAT[o.pick?o.pick.cat:"none"][1];
+    addBox(w-GAP,h,d-GAP,xx+GAP/2,y0,z0+GAP/2,mat(lighten(col,0.55)));
+    addBox(w-GAP,0.06,d-GAP,xx+GAP/2,y0+h,z0+GAP/2,mat(lighten(col,0.15)),false); // 지붕 색
+    if(front){ // 유리 전면 + 간판 띠
+      const gw=w-GAP-0.5;const g=new T.Mesh(new T.PlaneGeometry(gw,h*0.62),new T.MeshStandardMaterial({color:0x1f3554,roughness:0.15,metalness:0.4,transparent:true,opacity:0.85}));
+      g.position.set(xx+w/2,y0+h*0.36,z0+d+0.01);grp.add(g);
+      addBox(w-GAP,0.42,0.12,xx+GAP/2,y0+h*0.72,z0+d-0.02,mat(parseInt(col.slice(1),16)));
+    }
+    labels.push({no:o.no,col,x:xx+w/2,y:y0+h+1.1,z:z0+d/2});xx+=w;});}
+  if(f1i.length&&f1f.length){lay(f1i,0,D/2,0,H1,false);lay(f1f,D/2,D/2,0,H1,true);}else lay(f1f.concat(f1i),0,D,0,H1,f1f.length>0);
+  if(up.length){const y2=H1+EX;
+    const slab=addBox(L+0.6,0.18,D+0.6,-0.3,y2-0.18,-0.3,mat(0xffffff,0.55),false);
+    lay(up,0,D,y2,H2,false);
+    const lm=new T.LineDashedMaterial({color:0x13233D,dashSize:0.4,gapSize:0.35,transparent:true,opacity:0.35});
+    [[0,0],[L,0],[0,D],[L,D]].forEach(([a,b])=>{const gm=new T.BufferGeometry().setFromPoints([new T.Vector3(a,H1+0.1,b),new T.Vector3(a,y2-0.2,b)]);const ln=new T.Line(gm,lm);ln.computeLineDistances();grp.add(ln);});
+  }
+  // 상부 건물(유리 볼륨)
+  const topY=(up.length?H1+EX+H2:H1)+1.2,tH=x.type==="small"?4:9;
+  const tw=new T.Mesh(new T.BoxGeometry(L*0.92,tH,D*0.85),new T.MeshStandardMaterial({color:0x13233D,transparent:true,opacity:0.08,roughness:0.3}));
+  tw.position.set(L/2,topY+tH/2,D/2);grp.add(tw);
+  const te=new T.LineSegments(new T.EdgesGeometry(tw.geometry),new T.LineBasicMaterial({color:0x13233D,transparent:true,opacity:0.25}));te.position.copy(tw.position);grp.add(te);
+  // 라벨 스프라이트
+  const spr=(draw,w,h,sx)=>{const c=document.createElement('canvas');c.width=w;c.height=h;const g=c.getContext('2d');draw(g);const t=new T.CanvasTexture(c);t.anisotropy=4;
+    const sp=new T.Sprite(new T.SpriteMaterial({map:t,depthTest:false,transparent:true}));sp.scale.set(sx,sx*h/w,1);sp.renderOrder=10;grp.add(sp);return sp;};
+  labels.forEach(l=>{const s=spr(g=>{g.fillStyle="#fff";g.beginPath();g.arc(64,64,58,0,7);g.fill();g.lineWidth=10;g.strokeStyle=l.col;g.stroke();g.fillStyle="#13233D";g.font="bold 64px 'Noto Sans KR',sans-serif";g.textAlign="center";g.textBaseline="middle";g.fillText(l.no,64,70);},128,128,2.7);s.position.set(l.x,l.y,l.z);});
+  const tag=(txt,px,py,pz,bg,fg)=>{const c=document.createElement('canvas');const g0=c.getContext('2d');g0.font="bold 48px 'Noto Sans KR',sans-serif";const tw2=Math.ceil(g0.measureText(txt).width);c.width=tw2+56;c.height=88;const g=c.getContext('2d');g.font="bold 48px 'Noto Sans KR',sans-serif";g.fillStyle=bg;g.beginPath();if(g.roundRect)g.roundRect(0,0,c.width,88,44);else g.rect(0,0,c.width,88);g.fill();g.fillStyle=fg;g.textBaseline="middle";g.fillText(txt,28,46);const t=new T.CanvasTexture(c);const sp=new T.Sprite(new T.SpriteMaterial({map:t,depthTest:false,transparent:true}));const hh=2.8;sp.scale.set(hh*c.width/88,hh,1);sp.center.set(0,0.5);sp.renderOrder=11;sp.position.set(px,py,pz);grp.add(sp);};
+  tag("1층",-11,H1*0.5,D,"#13233D","#fff");
+  if(up.length)tag("2층 이상",-13,H1+EX+H2*0.5,D,"#13233D","#fff");
+  tag(TYPE_NM[x.type]+" 상부",-15,topY+tH*0.5,D,"rgba(19,35,61,.12)","#13233D");
+  tag("도로·역 방향 →",L*0.3,0.3,D+5.4,"#B08D57","#fff");
+  // 카메라(아이소메트릭)
+  const cx=L/2,cy=(topY+tH)/2,cz=D/2+2;const span=Math.max(L+18,topY+tH+6)*0.62;
+  const cam=new T.OrthographicCamera(-span,span,span*Hh/W,-span*Hh/W,-200,400);
+  let ang=Math.PI/4;
+  const place=()=>{const r=60;cam.position.set(cx+r*Math.sin(ang),cy+r*0.82,cz+r*Math.cos(ang));cam.lookAt(cx,cy,cz);rd.render(sc,cam);};
+  place();setTimeout(place,300);
+  let drag=null;const el=rd.domElement;
+  el.addEventListener('pointerdown',e=>{drag=e.clientX;el.setPointerCapture(e.pointerId);});
+  el.addEventListener('pointermove',e=>{if(drag===null)return;ang-= (e.clientX-drag)*0.008;ang=Math.max(0.05,Math.min(Math.PI/2-0.05,ang));drag=e.clientX;place();});
+  el.addEventListener('pointerup',()=>{drag=null;});
+  if(iso3)try{iso3.dispose()}catch(e){}iso3=rd;
+  return true;
+  }catch(err){console.log(err);return false;}
 }
 function renderTime(out){
   const picks=out.filter(o=>o.pick);
@@ -440,7 +517,7 @@ $('f').addEventListener('submit',e=>{
     $('rPlan').innerHTML='<ol class="rec">'+out.map((o,i)=>`<li><b>${i===0?"대표 호실":"호실 "+(i+1)} · ${POSNM[o.r.pos]}${o.r.area!==null?" "+o.r.area+"㎡":""}${o.r.rent!==null?" · 호가 "+o.r.rent+"만":""}</b><div>${o.pick?o.pick.n+(o.pick.d&&x.duct===""?' <span class="tag w">배기 확인</span>':''):"F&B 과밀 → 비F&B·분할·통합 임대 검토"}</div>${o.pick?`<div class="ex">${o.pick.w} · 필요 설비: ${o.pick.eq}${o.alt?" · 2안: "+o.alt.n:""}</div>`:""}</li>`).join("")+'</ol><p class="note" style="margin-top:0">1층 전면 칸부터 앵커 업종을 배정하고, 같은 손님을 나눠 갖는 업종은 한 건물에 하나만 넣었습니다.</p><h2 style="margin-top:14px">대표 호실 업종 후보</h2>';
     planText="\n\n[호실별 배치안]\n"+out.map((o,i)=>`${i===0?"대표":"호실"+(i+1)} ${POSNM[o.r.pos]} ${o.r.area??"?"}㎡ → ${o.pick?o.pick.n:"비F&B·분할 검토"}`).join("\n");
   }
-  renderIso(out,x);renderTime(out);
+  if(!renderIso3D(out,x))renderIso(out,x);renderTime(out);
   $('rDate').textContent=new Date().toLocaleDateString('ko-KR');
 
   // 임대 조건
