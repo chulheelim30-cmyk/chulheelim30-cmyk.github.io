@@ -121,13 +121,25 @@ nav.tabs button.on{color:var(--acc);font-weight:700}
 .nut td{padding:5px 0;border-top:1px solid var(--line);text-align:right}
 .nut td:first-child{text-align:left;color:var(--sub)}
 details.more summary{cursor:pointer;color:var(--sub);font-size:13px;margin-top:10px}
+.av{border-radius:50%;object-fit:cover;flex:none;display:inline-grid;place-items:center;background:#F1E8DE;overflow:hidden;line-height:1}
+.pets{display:flex;gap:14px;overflow-x:auto;scrollbar-width:none;margin:-4px -16px 12px;padding:4px 16px 2px}
+.pets::-webkit-scrollbar{display:none}
+.pets button{border:0;background:none;padding:0;display:flex;flex-direction:column;align-items:center;gap:4px;font-size:13px;color:var(--sub);cursor:pointer;flex:none;width:64px}
+.pets button .av{box-shadow:0 0 0 2px var(--bg),0 0 0 4px transparent}
+.pets button.on{color:var(--ink);font-weight:700}
+.pets button.on .av{box-shadow:0 0 0 2px var(--bg),0 0 0 4px var(--acc)}
+.pets button .nm{max-width:64px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pets .add .av{background:transparent;border:2px dashed #D9D0C5;color:var(--sub)}
+.photo-row{display:flex;gap:14px;align-items:center;margin:4px 0 6px}
+header.top .brand{display:flex;align-items:center;gap:10px}
+#hdrAv:empty{display:none}
 .five{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:6px}
 </style>
 </head>
 <body>
 <div class="wrap">
   <header class="top">
-    <div class="brand"><span id="hdrName">아이곁</span><small id="hdrSub">아픈 아이 케어 기록</small></div>
+    <div class="brand"><span id="hdrAv"></span><div><span id="hdrName">아이곁</span><small id="hdrSub">아픈 아이 케어 기록</small></div></div>
     <span id="sync" class="pill">연결 중…</span>
   </header>
   <div id="petsbar"></div>
@@ -140,6 +152,7 @@ details.more summary{cursor:pointer;color:var(--sub);font-size:13px;margin-top:1
 <div class="sheet-bg" id="sheetBg"></div>
 <div class="sheet" id="sheet"></div>
 <div class="toast" id="toast"></div>
+<input type="file" accept="image/*" id="photoIn" hidden>
 
 <script>
 /* ---------- helpers ---------- */
@@ -255,7 +268,7 @@ async function rpc(fn, body) {
   try { r = await fetch(`${SB}/rest/v1/rpc/${fn}`, { method: 'POST', headers: { apikey: SBKEY, 'Content-Type': 'application/json' }, body: JSON.stringify(body || {}) }); }
   catch (e) { throw { code: 'offline' }; }
   const txt = await r.text();
-  if (!r.ok) throw { code: /no_family/.test(txt) ? 'no_family' : /full/.test(txt) ? 'full' : 'http', message: txt };
+  if (!r.ok) throw { code: /no_family/.test(txt) ? 'no_family' : /too_large/.test(txt) ? 'too_large' : /full/.test(txt) ? 'full' : 'http', message: txt };
   return txt ? JSON.parse(txt) : null;
 }
 function sbBackend(code) {
@@ -348,7 +361,8 @@ async function write(fn) {
   try { await fn(); return true; }
   catch (e) {
     console.warn(e);
-    if (e?.code === 'full') toast('저장 공간이 가득 찼어요. 오래된 기록을 지워주세요');
+    if (e?.code === 'too_large') toast('아이 정보가 너무 커서 저장하지 못했어요. 다른 아이 사진을 지우거나 사료 목록을 줄여주세요');
+    else if (e?.code === 'full') toast('저장 공간이 가득 찼어요. 오래된 기록을 지워주세요');
     else if (e?.code === 'offline') toast('인터넷 연결을 확인해주세요');
     else toast('저장하지 못했어요. 잠시 후 다시 시도해주세요');
     backend?.refresh?.();
@@ -415,11 +429,12 @@ function render(force) {
   const a = document.activeElement;
   if (!force && a && $('#main').contains(a) && /INPUT|SELECT|TEXTAREA/.test(a.tagName)) { pendingRender = true; return; }
   pendingRender = false;
-  if (S.mode === 'nofamily' || S.mode === 'nofamily-bad') { $('#petsbar').innerHTML = ''; $('#main').innerHTML = vLanding(); document.querySelector('nav.tabs').classList.add('hidden'); return; }
+  if (S.mode === 'nofamily' || S.mode === 'nofamily-bad') { $('#petsbar').innerHTML = ''; $('#hdrAv').innerHTML = ''; $('#main').innerHTML = vLanding(); document.querySelector('nav.tabs').classList.add('hidden'); return; }
   document.querySelector('nav.tabs').classList.remove('hidden');
   $('#petsbar').innerHTML = petsBar();
   const p = S.pet;
   $('#hdrName').textContent = p?.name ? p.name + '의 케어 기록' : '아이곁';
+  $('#hdrAv').innerHTML = p?.photo ? avatar(p, 44) : '';
   $('#hdrSub').textContent = p?.weightKg ? `${p.species === 'dog' ? '강아지' : '고양이'} · ${p.weightKg}kg${p.condition ? ' · ' + p.condition : ''}` : '아픈 아이 케어 기록';
   const v = { today: vToday, er: vEr, calc: vCalc, logs: vLogs, vet: vVet, set: vSet }[S.tab];
   $('#main').innerHTML = v();
@@ -487,7 +502,8 @@ function vToday() {
 // 처음 만든 직후: 이름·종류·체중만 넣고 바로 시작 (나머지는 나중에 설정에서)
 function quickSetup() {
   return `<div class="card" style="padding:20px 16px"><h3 style="font-size:18px;margin-bottom:4px">우리 아이를 알려주세요</h3>
-    <p class="muted" style="margin:0 0 4px">이 세 가지만 넣으면 바로 기록할 수 있어요. 나머지는 나중에 설정에서 넣어도 돼요.</p>
+    <p class="muted" style="margin:0 0 8px">이름만 넣어도 바로 기록할 수 있어요. 나머지는 나중에 설정에서 넣어도 돼요.</p>
+    ${photoPicker({ photo: S.qsPhoto, species: S.qsSpecies }, 'qs')}
     <label class="f">이름</label><input type="text" id="qs-name" placeholder="예: 나비" autocomplete="off">
     <label class="f">종류</label><div class="two"><button class="chip ${S.qsSpecies !== 'dog' ? 'on' : ''}" data-act="qs-sp" data-v="cat" style="padding:10px">🐱 고양이</button><button class="chip ${S.qsSpecies === 'dog' ? 'on' : ''}" data-act="qs-sp" data-v="dog" style="padding:10px">🐶 강아지</button></div>
     <label class="f">체중 (kg, 모르면 비워두세요)</label><input type="number" step="0.01" inputmode="decimal" id="qs-weight" placeholder="예: 3.8">
@@ -989,7 +1005,7 @@ $('#main').addEventListener('input', e => {
 function vSet() {
   const p = S.pet || {};
   const foods = p.foods || [], tasks = p.tasks || [];
-  return `<div class="card"><h3>아이 정보</h3>
+  return `<div class="card"><h3>아이 정보</h3>${photoPicker(p, 'pet')}
     <div class="two"><div><label class="f">이름</label><input type="text" id="s-name" value="${esc(p.name || '')}" placeholder="예: 나비"></div>
     <div><label class="f">종류</label><select id="s-species"><option value="cat" ${p.species !== 'dog' ? 'selected' : ''}>고양이</option><option value="dog" ${p.species === 'dog' ? 'selected' : ''}>강아지</option></select></div></div>
     <div class="two"><div><label class="f">체중 (kg)</label><input type="number" step="0.01" inputmode="decimal" id="s-weight" value="${esc(p.weightKg ?? '')}"></div>
@@ -1055,8 +1071,40 @@ const putPet = p => { const fam = famWith(p); return backend.savePet(fam).then((
 function petsBar() {
   const pets = S.family?.pets || [];
   if (!pets.length) return '';
-  return `<div class="chips" style="margin:-4px 0 12px">${pets.map(x => `<button class="chip ${x.id === S.pet?.id ? 'on' : ''}" data-act="pet" data-id="${esc(x.id)}">${x.species === 'dog' ? '🐶' : '🐱'} ${esc(x.name || '이름 없음')}</button>`).join('')}<button class="chip" data-act="pet-add">+ 아이 추가</button></div>`;
+  return `<div class="pets">${pets.map(x => `<button class="${x.id === S.pet?.id ? 'on' : ''}" data-act="pet" data-id="${esc(x.id)}">${avatar(x, 56)}<span class="nm">${esc(x.name || '이름 없음')}</span></button>`).join('')}<button class="add" data-act="pet-add"><span class="av" style="width:56px;height:56px;font-size:24px">+</span><span class="nm">아이 추가</span></button></div>`;
 }
+// 사진: 휴대폰에서 정사각형으로 잘라 작게 줄인 뒤(약 6~9천 자) 아이 정보에 같이 저장. 가족 모두에게 보여요.
+function avatar(x, size) {
+  const st = `width:${size}px;height:${size}px`;
+  return x?.photo ? `<img class="av" src="${esc(x.photo)}" alt="${esc(x.name || '')}" style="${st}">`
+    : `<span class="av" style="${st};font-size:${Math.round(size * 0.5)}px">${x?.species === 'dog' ? '🐶' : '🐱'}</span>`;
+}
+async function shrinkPhoto(file) {
+  const url = URL.createObjectURL(file);
+  try {
+    const img = await new Promise((ok, no) => { const i = new Image(); i.onload = () => ok(i); i.onerror = no; i.src = url; });
+    const side = Math.min(img.naturalWidth, img.naturalHeight), N = 160;
+    const c = document.createElement('canvas'); c.width = c.height = N;
+    const g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, N, N);
+    g.drawImage(img, (img.naturalWidth - side) / 2, (img.naturalHeight - side) / 2, side, side, 0, 0, N, N);
+    let q = 0.8, out = c.toDataURL('image/jpeg', q);
+    while (out.length > 9000 && q > 0.35) { q -= 0.1; out = c.toDataURL('image/jpeg', q); }
+    if (out.length > 9000) { const c2 = document.createElement('canvas'); c2.width = c2.height = 112; c2.getContext('2d').drawImage(c, 0, 0, 112, 112); out = c2.toDataURL('image/jpeg', 0.6); }
+    return out;
+  } finally { URL.revokeObjectURL(url); }
+}
+function photoPicker(x, who) {
+  return `<div class="photo-row">${avatar(x, 72)}<div style="display:flex;flex-direction:column;gap:6px;align-items:flex-start"><button class="btn ghost sm" data-act="photo" data-for="${who}">📷 ${x?.photo ? '사진 바꾸기' : '사진 넣기'}</button>${x?.photo ? `<button class="x" data-act="photo-del" data-for="${who}" style="border:0;background:none;color:var(--sub);font-size:13px;padding:2px 0">사진 지우기</button>` : '<span class="muted" style="font-size:12px">아이 얼굴이 보이게 찍은 사진이 좋아요</span>'}</div></div>`;
+}
+$('#photoIn').addEventListener('change', async e => {
+  const file = e.target.files && e.target.files[0]; e.target.value = ''; if (!file) return;
+  let ph; try { ph = await shrinkPhoto(file); } catch (err) { return toast('이 사진은 열 수 없어요. 다른 사진을 골라주세요'); }
+  if (S.photoFor === 'qs' || !S.pet) {
+    const keep = { n: $('#qs-name')?.value, w: $('#qs-weight')?.value, t: $('#qs-tasks')?.checked };
+    S.qsPhoto = ph; render(true);
+    if ($('#qs-name')) $('#qs-name').value = keep.n || ''; if ($('#qs-weight')) $('#qs-weight').value = keep.w || ''; if ($('#qs-tasks') && keep.t === false) $('#qs-tasks').checked = false;
+  } else if (S.pet) { const p = petBase(); p.photo = ph; savePet(p, '사진을 넣었어요'); }
+});
 function petBase() { return JSON.parse(JSON.stringify(S.pet || { species: 'cat', meals: 4, foods: [], tasks: [] })); }
 async function savePet(p, msg) { if (await write(() => putPet(p))) { toast(msg || '저장했어요'); render(true); } }
 
@@ -1423,14 +1471,16 @@ document.addEventListener('click', async e => {
     if (await write(() => backend.savePet(fam))) { S.family = fam; switchPet(fam.pets[0].id); toast('목록에서 뺐어요'); }
   }
   else if (a === 'create') createFamily(b);
+  else if (a === 'photo') { S.photoFor = b.dataset.for; $('#photoIn').click(); }
+  else if (a === 'photo-del') { if (b.dataset.for === 'qs') { S.qsPhoto = null; const n = $('#qs-name')?.value, w = $('#qs-weight')?.value; render(true); if ($('#qs-name')) $('#qs-name').value = n || ''; if ($('#qs-weight')) $('#qs-weight').value = w || ''; } else if (S.pet) { const p = petBase(); delete p.photo; savePet(p, '사진을 지웠어요'); } }
   else if (a === 'qs-sp') { const n = $('#qs-name')?.value, w = $('#qs-weight')?.value; S.qsSpecies = b.dataset.v; render(true); if ($('#qs-name')) $('#qs-name').value = n || ''; if ($('#qs-weight')) $('#qs-weight').value = w || ''; }
   else if (a === 'qs-go') {
     const name = ($('#qs-name')?.value || '').trim(); if (!name) { $('#qs-name')?.focus(); return toast('아이 이름을 넣어주세요'); }
-    const p = petBase(); p.name = name.slice(0, 20); p.species = S.qsSpecies === 'dog' ? 'dog' : 'cat';
+    const p = petBase(); p.name = name.slice(0, 20); p.species = S.qsSpecies === 'dog' ? 'dog' : 'cat'; if (S.qsPhoto) p.photo = S.qsPhoto;
     const w = num($('#qs-weight')?.value); if (w && w > 0 && w < 150) p.weightKg = w;
     if ($('#qs-tasks')?.checked && !(p.tasks || []).length) p.tasks = DEFAULT_TASKS.map(l => ({ id: uid(), label: l }));
     b.disabled = true; b.textContent = '저장하는 중…';
-    if (await write(() => putPet(p))) { C = null; toast(`${name} 케어 기록을 시작했어요`); render(true); window.scrollTo(0, 0); }
+    if (await write(() => putPet(p))) { C = null; S.qsPhoto = null; toast(`${name} 케어 기록을 시작했어요`); render(true); window.scrollTo(0, 0); }
     else { b.disabled = false; b.textContent = '시작하기'; }
   }
   else if (a === 'fail-retry') backend?.retryFailed?.();
