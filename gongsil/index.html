@@ -10,6 +10,9 @@
 <style>
 :root{--navy:#13233D;--gold:#B08D57;--ivory:#F6F3EC;--stone:#E9E3D6;--ink:#1d2533;--muted:#6b7280;--ok:#2f6b4f;--warn:#9a5b13;--bad:#9b2c2c}
 *{box-sizing:border-box}
+html,body{overflow-x:hidden}
+.row>div{min-width:0}
+input,select{min-width:0;max-width:100%}
 body{margin:0;background:var(--ivory);color:var(--ink);font-family:'Noto Sans KR',system-ui,sans-serif;font-size:16px;line-height:1.55}
 .wrap{max-width:560px;margin:0 auto;padding:0 16px 48px}
 header{background:var(--navy);color:#fff;padding:22px 16px 20px}
@@ -64,6 +67,12 @@ ul.chk{padding-left:18px;margin:6px 0}
 .path span{font-family:'Noto Serif KR',serif;font-weight:700;font-size:20px;width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;background:var(--stone);color:var(--navy)}
 .path span.on{background:var(--gold);color:#fff}
 .path i{color:var(--muted);font-style:normal}
+.perks{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px}
+.perks span{font-size:13px;border:1px solid rgba(255,255,255,.35);border-radius:999px;padding:3px 10px;color:#e6e9ef}
+.start{display:block;text-align:center;background:var(--gold);color:#fff;text-decoration:none;font-weight:700;border-radius:12px;padding:13px;font-size:16px}
+.how{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;text-align:center;font-size:13px}
+.how div{background:var(--ivory);border-radius:10px;padding:10px 6px}
+.how b{display:block;font-size:20px;color:var(--gold);font-family:'Noto Serif KR',serif}
 .sample{padding:12px}
 .sample img{width:100%;border-radius:10px;display:block}
 .kick2{font-size:12px;letter-spacing:2px;color:var(--gold);margin:2px 2px 8px;font-weight:700}
@@ -101,25 +110,29 @@ footer{font-size:12px;color:var(--muted);text-align:center;margin-top:24px}
 <body>
 <header><div class="in">
   <div class="logo">0<b>실</b>0 공실공</div>
-  <h1>상가 공실 간이진단</h1>
-  <p style="color:var(--gold);margin:0 0 4px;font-size:14px">등급을 매기는 게 아니라, 등급을 올립니다. D급 공실도 A급으로.</p>
-  <p>꼬마빌딩부터 오피스텔·지식산업센터 상가까지. 주소와 아는 값만 넣고, 모르는 건 비워 두세요. 3분이면 끝납니다.</p>
+  <h1 style="font-size:23px;line-height:1.4">우리 건물 빈 상가,<br>무엇으로 채울까요?</h1>
+  <p style="color:var(--gold);margin:6px 0 10px;font-size:15px">등급만 매기지 않습니다. 등급을 올리는 방법까지 알려 드립니다.</p>
+  <div class="perks"><span>무료</span><span>가입 없음</span><span>3분</span><span>모르는 칸은 비워도 OK</span></div>
+  <a href="#f" class="start">무료 진단 시작하기</a>
 </div></header>
 
 <div class="wrap">
+<div class="card">
+  <div class="how"><div><b>1</b>건물 정보 입력</div><div><b>2</b>등급·맞는 업종</div><div><b>3</b>등급 올리는 방법</div></div>
+</div>
 <div class="card sample">
-  <div class="kick2">정식 MD 리포트 샘플</div>
-  <img src="img/md-sample.jpg" alt="지식산업센터 1층 공실 4칸 MD 예시 렌더" loading="lazy">
+  <div class="kick2">정식 리포트에서는 이렇게 보여 드려요</div>
+  <img src="img/md-sample.jpg" alt="1층 공실 4칸 업종 배치 예시 그림" loading="lazy">
   <div class="slg"><span><b>1</b>버거·치킨</span><span><b>2</b>도시락</span><span><b>3</b>아침 토스트</span><span><b>4</b>샐러드</span></div>
-  <p class="note" style="margin-top:6px">부천 지식산업센터 1층 공실 4칸 MD 예시. 간이진단으로 업종을 정하면 정식 리포트에서 이런 그림으로 보여 드립니다. 예시 이미지이며 실제 인테리어는 입점 업체 기준입니다.</p>
+  <p class="note" style="margin-top:6px">역세권 건물 1층 빈 칸 4개를 채운 예시입니다. 실제 인테리어는 들어오는 업체 기준입니다.</p>
 </div>
 <form id="f">
   <div class="card">
-    <h2>1. 현장</h2>
+    <h2>1. 건물 <small style="font-weight:400;color:var(--muted)">1/4</small></h2>
     <div id="recentBox" style="display:none;margin-bottom:6px"><div style="font-size:13px;color:var(--muted);margin-bottom:6px">최근 진단한 현장 (이 휴대폰에만 저장)</div><div class="chips" id="recent"></div></div>
-    <label style="margin-top:0">현장명 / 주소</label>
+    <label style="margin-top:0">건물 이름 또는 주소</label>
     <input type="text" id="name" placeholder="예: OO동 123-4 OO타워">
-    <details style="margin-top:10px;font-size:14px"><summary style="cursor:pointer;color:var(--muted)">예시 현장으로 채워 보기</summary>
+    <details id="pilotBox" style="margin-top:10px;font-size:14px;display:none"><summary style="cursor:pointer;color:var(--muted)">예시 현장으로 채워 보기</summary>
       <div class="presets" style="margin-top:8px">
         <button type="button" data-p="chunui">부천 춘의</button>
         <button type="button" data-p="siheung">시흥 대야</button>
@@ -127,11 +140,11 @@ footer{font-size:12px;color:var(--muted);text-align:center;margin-top:24px}
       </div></details>
     <label>건물 유형</label>
     <select id="type">
+      <option value="small">꼬마빌딩 · 동네 상가 건물</option>
       <option value="officetel">오피스텔 (저층부 상가)</option>
       <option value="jisan">지식산업센터</option>
       <option value="mixed">주상복합 · 아파트 단지 상가</option>
       <option value="retail">근린상가 · 상가 전용 건물</option>
-      <option value="small">꼬마빌딩 · 소형 근린건물 (상가 1~10칸)</option>
     </select>
     <label>가장 가까운 역까지 걸어서</label>
     <select id="walk">
@@ -141,25 +154,25 @@ footer{font-size:12px;color:var(--muted);text-align:center;margin-top:24px}
       <option value="20">13분 이상 / 역 없음</option>
       <option value="" selected>모름</option>
     </select>
-    <label>또는 역까지 거리 m <small>(네이버지도 도보 거리, 있으면 이 값을 씀)</small></label>
+    <label>또는 역까지 거리 m <small>(지도 앱 도보 거리)</small></label>
     <input type="number" id="walkm" inputmode="numeric" placeholder="예: 250">
   </div>
 
   <div class="card">
-    <h2>2. 배후 (건물 안 사람)</h2>
+    <h2>2. 건물 안 사람 <small style="font-weight:400;color:var(--muted)">2/4</small></h2>
     <div class="row">
-      <div><label>세대 · 실 수 <small>(상가 제외 · 꼬마빌딩은 주변 세대)</small></label><input type="number" id="units" inputmode="numeric" placeholder="예: 300"></div>
-      <div><label>입주율 % <small>(모르면 비움)</small></label><input type="number" id="occ" inputmode="numeric" placeholder="예: 60"></div>
+      <div><label>집·사무실 수 <small>(상가 빼고)</small></label><input type="number" id="units" inputmode="numeric" placeholder="예: 300"></div>
+      <div><label>채워진 비율 % <small>(입주율)</small></label><input type="number" id="occ" inputmode="numeric" placeholder="예: 60"></div>
     </div>
   </div>
 
   <div class="card">
-    <h2>3. 상가 공실</h2>
+    <h2>3. 빈 상가 <small style="font-weight:400;color:var(--muted)">3/4</small></h2>
     <div class="row">
-      <div><label>상가 전체 호실</label><input type="number" id="shops" inputmode="numeric" placeholder="예: 20"></div>
-      <div><label>그중 공실</label><input type="number" id="vac" inputmode="numeric" placeholder="예: 18"></div>
+      <div><label>상가 전체 칸 수</label><input type="number" id="shops" inputmode="numeric" placeholder="예: 20"></div>
+      <div><label>그중 빈 칸</label><input type="number" id="vac" inputmode="numeric" placeholder="예: 18"></div>
     </div>
-    <label>공실 호실 <small>(대표 호실 1개 · 여러 개면 아래 "호실 추가")</small></label>
+    <label>빈 칸 위치 <small>(여러 칸이면 아래 "빈 칸 추가")</small></label>
     <select id="pos">
       <option value="front">1층 전면 (도로·역 방향)</option>
       <option value="inner">1층 안쪽</option>
@@ -170,17 +183,17 @@ footer{font-size:12px;color:var(--muted);text-align:center;margin-top:24px}
       <div><label>호가 월세 <small>(만원)</small></label><input type="number" id="rent" inputmode="numeric" placeholder="예: 250"></div>
     </div>
     <div id="extra"></div>
-    <button type="button" class="ghost" id="addRow" style="margin-top:12px">+ 공실 호실 추가</button>
+    <button type="button" class="ghost" id="addRow" style="margin-top:12px">+ 빈 칸 추가</button>
     <div class="row">
-      <div><label>1층 용도</label>
+      <div><label>1층 용도 <small>(건축물대장)</small></label>
         <select id="use"><option value="1">1종 근생</option><option value="2">2종 근생</option><option value="" selected>모름</option></select></div>
-      <div><label>배기 (주방 덕트)</label>
+      <div><label>음식점 주방 환기 <small>(덕트)</small></label>
         <select id="duct"><option value="y">가능</option><option value="n">불가</option><option value="" selected>모름</option></select></div>
     </div>
   </div>
 
   <div class="card">
-    <h2>4. 이미 영업 중인 업종 <small style="font-weight:400;color:var(--muted)">(건물 안 · 바로 옆)</small></h2>
+    <h2>4. 지금 장사 중인 가게 <small style="font-weight:400;color:var(--muted)">4/4 · 건물 안·바로 옆</small></h2>
     <div class="chips" id="exist">
       <span class="chip" data-k="coffee">커피</span>
       <span class="chip" data-k="cvs">편의점</span>
@@ -264,7 +277,7 @@ footer{font-size:12px;color:var(--muted);text-align:center;margin-top:24px}
   <p class="note" style="text-align:center">공실공은 분석과 문서 작성만 합니다. 임대 알선·계약은 임대인 또는 공인중개사가 진행합니다.</p>
 </div>
 
-<footer>© 공실공 · 간이진단 v4 (2026.11)</footer>
+<footer>© 공실공 · 간이진단 v4.1 (2026.11)</footer>
 </div>
 
 <script>
@@ -433,7 +446,7 @@ function renderTime(out){
 }
 const POSNM={front:"1층 전면",inner:"1층 안쪽",upper:"2층 이상"};
 function addRow(v){v=v||{};const d=document.createElement('div');d.className='urow';
-  d.innerHTML=`<button type="button" class="del">삭제</button><label>추가 호실 위치</label><select class="upos"><option value="front">1층 전면</option><option value="inner">1층 안쪽</option><option value="upper">2층 이상</option></select><div class="row"><div><label>전용면적 ㎡</label><input type="number" class="uarea" inputmode="numeric"></div><div><label>호가 월세 (만원)</label><input type="number" class="urent" inputmode="numeric"></div></div>`;
+  d.innerHTML=`<button type="button" class="del">삭제</button><label>추가 빈 칸 위치</label><select class="upos"><option value="front">1층 전면</option><option value="inner">1층 안쪽</option><option value="upper">2층 이상</option></select><div class="row"><div><label>전용면적 ㎡</label><input type="number" class="uarea" inputmode="numeric"></div><div><label>호가 월세 (만원)</label><input type="number" class="urent" inputmode="numeric"></div></div>`;
   d.querySelector('.upos').value=v.pos||"front";d.querySelector('.uarea').value=v.area??"";d.querySelector('.urent').value=v.rent??"";
   d.querySelector('.del').addEventListener('click',()=>d.remove());$('extra').appendChild(d);}
 $('addRow').addEventListener('click',()=>addRow());
@@ -446,6 +459,7 @@ function saveRecent(o){try{let a=loadRecent().filter(r=>r.name!==o.name);a.unshi
 function renderRecent(){const a=loadRecent();$('recentBox').style.display=a.length?"":"none";$('recent').innerHTML="";
   a.forEach(o=>{const c=document.createElement('span');c.className='chip';c.textContent=(o.name||"이름 없음").slice(0,18);c.addEventListener('click',()=>restore(o));$('recent').appendChild(c);});}
 renderRecent();
+if(location.hash==="#pilot"){$('pilotBox').style.display="";$('pilotBox').open=true;}
 document.querySelectorAll('#exist .chip').forEach(c=>c.addEventListener('click',()=>c.classList.toggle('on')));
 
 // 업종 후보: t=맞는 건물유형, f=층(1/2), d=배기 필요, c=겹치는 기존 업종, a=[최소,최대]면적
@@ -532,7 +546,7 @@ $('f').addEventListener('submit',e=>{
   if(x.shops&&x.vac!==null){vr=x.vac/x.shops;s4=Math.round(16-8*Math.min(1,vr));}else{s4=8;st4="모름";chk.push("상가 전체 호실 수와 공실 수");}
   if(x.rent===null){s4=Math.min(s4,10);st4="호가 모름";chk.push("호실별 호가 (보증금 / 월세 / 관리비)");}
   chk.push("관리규약의 업종 제한(같은 업종 금지) 조항");
-  chk.push("임대 결정 절차 (임대인·신탁사 명의 · 렌트프리·인테리어 지원 범위)");
+  chk.push("임대 조건 결정 (계약 명의 · 렌트프리 · 인테리어 지원 범위)");
   // 입력값은 현장 확인 전이라 '일부 확인' → 만점의 70% 이하
   // 역 도보·입주율·배기·호가는 담당자 추정이라 '일부 확인'(70%) 상한. 세대수·호실·면적·용도는 장부로 확인되는 값
   s1=Math.min(s1,21);if(x.occ!==null)s2=Math.min(s2,24);if(x.duct!=="y"||x.use==="")s3=Math.min(s3,14);s4=Math.min(s4,16);
