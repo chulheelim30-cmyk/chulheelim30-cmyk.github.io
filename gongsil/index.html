@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>공실공 상가 간이진단</title>
+<link rel="icon" type="image/svg+xml" href="logo/favicon.svg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&family=Noto+Serif+KR:wght@700&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js" defer></script>
@@ -110,7 +111,7 @@ footer{font-size:12px;color:var(--muted);text-align:center;margin-top:24px}
 </head>
 <body>
 <header><div class="in">
-  <div class="logo">0<b>실</b>0 공실공</div>
+  <img src="logo/logo-horizontal-white.svg" alt="공실공 · 빈 상가를 0으로" style="height:46px;display:block">
   <h1 style="font-size:23px;line-height:1.4">우리 건물 빈 상가,<br>무엇으로 채울까요?</h1>
   <p style="color:var(--gold);margin:6px 0 10px;font-size:15px">등급만 매기지 않습니다. 등급을 올리는 방법까지 알려 드립니다.</p>
   <div class="perks"><span>무료</span><span>가입 없음</span><span>3분</span><span>모르는 칸은 비워도 OK</span></div>
@@ -284,7 +285,7 @@ footer{font-size:12px;color:var(--muted);text-align:center;margin-top:24px}
   <p class="note" style="text-align:center">공실공은 분석과 문서 작성만 합니다. 임대 알선·계약은 임대인 또는 공인중개사가 진행합니다.</p>
 </div>
 
-<footer>© 공실공 · 간이진단 v5 (2026.11)</footer>
+<footer>© 공실공 · 간이진단 v6 (2026.11)</footer>
 </div>
 
 <script>
@@ -479,26 +480,44 @@ document.querySelectorAll('#exist .chip').forEach(c=>c.addEventListener('click',
 
 // 업종 후보: t=맞는 건물유형, f=층(1/2), d=배기 필요, c=겹치는 기존 업종, a=[최소,최대]면적
 const CANDS=[
- {n:"버거·치킨 (소형 매장)",img:"img/burger.jpg",cat:"fnb",tm:["점심","저녁","주말"],eq:"튀김·그릴 배기 덕트",ex:"15평 안팎 소형 매장 모델로 출점을 늘리는 프랜차이즈 업종",t:["jisan","officetel","mixed","retail","small"],f:["front"],d:true,c:["burger"],a:[40,100],w:"간판 노출이 중요한 앵커 업종. 점심·저녁 모두 수요"},
- {n:"공유키친 (배달 전용)",nw:1,cat:"fnb",tm:["점심","저녁","주말","심야"],eq:"대용량 배기·급배수·전기 증설",ex:"한 칸을 3~6개 배달 브랜드가 나눠 쓰는 공유주방. 창업자는 초기비용을 줄이고 임대인은 여러 임차인에게 받음",cond:x=>x.duct!=="n"&&(x.units===null||x.units>=200),t:["officetel","mixed","jisan","retail","small"],f:["inner","upper"],d:true,c:[],a:[60,330],w:"배후 세대가 많은데 손님이 1층까지 안 오는 건물에 맞음. 노출 없는 안쪽 칸이 오히려 유리"},
- {n:"셀프스토리지 (공유창고)",nw:1,cat:"office",tm:["아침","점심","오후","저녁","주말","심야"],eq:"보안·환기·항온항습",ex:"무인 개인 창고. 장기 공실 칸·지하·2층을 바로 수익 공간으로 바꾸는 포맷",cond:x=>!(x.shops&&x.vac!==null)||x.vac/x.shops>=0.3,t:["officetel","mixed","jisan","retail","small"],f:["inner","upper"],d:false,c:[],a:[30,500],w:"상가가 남아도는 건물의 정리 수단. 1~2인 가구 오피스텔과 궁합이 좋고 관리 인력이 거의 안 듦"},
- {n:"스터디카페·공유 작업실",nw:1,cat:"fit",tm:["아침","오후","저녁","주말","심야"],eq:"방음·냉난방·콘센트",ex:"무인 운영 좌석형 공간. 2층·안쪽 소형 칸을 묶어서 운영",t:["officetel","mixed","small","retail","jisan"],f:["upper","inner"],d:false,c:["academy"],a:[60,330],w:"체류 시간이 길어 건물 안 다른 가게 매출을 끌어올림. 무인이라 임차인 관리 부담 적음"},
- {n:"편의점",cat:"life",tm:["아침","점심","오후","저녁","주말","심야"],eq:"냉장 전력",ex:"1층 출입구·도로변, 24시간 운영",t:["officetel","mixed","retail","small","jisan"],f:["front","inner"],d:false,c:["cvs"],a:[30,120],w:"1인 가구 생활 필수. 밤에도 불 켜진 1층이 건물 인상을 바꿈"},
- {n:"도시락",img:"img/dosirak.jpg",cat:"fnb",tm:["점심"],eq:"소형 조리 배기",ex:"점심 단체주문·포장 중심 소형 매장",t:["jisan","officetel"],f:["front","inner"],d:false,c:["dosirak"],a:[33,80],w:"점심 단체주문·포장. 조리 설비 적음"},
- {n:"아침 토스트",img:"img/toast.jpg",cat:"fnb",tm:["아침","점심"],eq:"철판·소형 배기",ex:"출근길 테이크아웃, 창업비 부담 낮은 소형 업종",t:["jisan","officetel"],f:["front","inner"],d:false,c:[],a:[25,70],w:"출근길 07~10시 수요. 다른 칸과 시간대가 안 겹침"},
- {n:"세탁·코인빨래방",cat:"life",tm:["저녁","주말","심야"],eq:"급배수·전기 증설",ex:"세탁 편의점 또는 무인 코인빨래방",t:["officetel","mixed"],f:["front","inner"],d:false,c:["laundry"],a:[20,90],w:"오피스텔 입주민 고정 수요. 안쪽 칸도 가능"},
- {n:"저가 커피",cat:"fnb",tm:["아침","점심","오후"],eq:"급배수",ex:"테이크아웃 중심 10~15평 매장",t:["officetel","jisan","retail","mixed","small"],f:["front"],d:false,c:["coffee"],a:[20,70],w:"역 출근 동선 테이크아웃. 건물 안에 커피가 이미 있으면 제외"},
- {n:"팝업 순환 칸",nw:1,cat:"retail",tm:["오후","저녁","주말"],eq:"전력·조명",ex:"1층 전면 한 칸을 1~4주 단위 팝업 전용으로 운영. 브랜드가 계속 바뀌어 사람이 드나드는 건물이 됨",cond:x=>!(x.shops&&x.vac!==null)||x.vac>=2,t:["officetel","mixed","retail","small","jisan"],f:["front"],d:false,c:[],a:[20,150],w:"정식 계약 전 공실을 수익과 유동으로 바꿈. 브랜드 점포개발팀에 보여 줄 유동 근거도 쌓임"},
- {n:"무인 매장",cat:"retail",tm:["오후","저녁","주말","심야"],eq:"전력",ex:"아이스크림·밀키트·문구 등 무인 소형 매장",t:["officetel","mixed"],f:["front","inner"],d:false,c:["unmanned"],a:[15,50],w:"인건비 없는 소형 업종. 작은 칸·안쪽 칸 채우기 좋음"},
- {n:"샐러드",img:"img/salad.jpg",cat:"fnb",tm:["점심"],eq:"급배수",ex:"샐러드·포케 등 가벼운 점심 매장",t:["jisan","officetel"],f:["front","inner"],d:false,c:[],a:[30,70],w:"점심 보완. 배기 부담 적음"},
- {n:"의원 + 약국",cat:"med",tm:["점심","오후","주말"],eq:"급배수·의료 전력",ex:"1층 약국 · 2층 의원 조합",t:["officetel","mixed","retail","small"],f:["front","upper"],d:false,c:["pharmacy"],a:[40,330],w:"역세권 주거 배후에 강함. 의원은 2층도 가능"},
- {n:"PT·필라테스",cat:"fit",tm:["아침","저녁","주말"],eq:"방음·바닥 하중",ex:"1:1·소그룹 스튜디오",t:["officetel","mixed","retail","small","jisan"],f:["upper","inner"],d:false,c:["fitness"],a:[50,330],w:"목적 방문 업종이라 2층·안쪽이어도 됨. 저녁 수요"},
- {n:"미용실",cat:"life",tm:["오후","저녁","주말"],eq:"급배수",ex:"1~2인 예약제 소형 살롱",t:["officetel","mixed","retail","small"],f:["inner","upper","front"],d:false,c:["hair"],a:[25,100],w:"예약제라 노출 약한 칸도 가능"},
- {n:"반찬가게·정육",cat:"retail",tm:["오후","저녁"],eq:"냉장 전력",ex:"동네 생활 장보기 업종",t:["officetel","mixed"],f:["front","inner"],d:false,c:["dosirak"],a:[25,70],w:"1~2인 가구 저녁 장보기"},
- {n:"학원",cat:"fit",tm:["오후","저녁"],eq:"방음",ex:"보습·음악·코딩 등",t:["mixed","retail","small"],f:["upper"],d:false,c:["academy"],a:[60,330],w:"아파트 단지 배후일 때"},
- {n:"생활용품·드럭스토어",cat:"retail",tm:["점심","오후","저녁","주말"],eq:"전력",ex:"넓은 1층 전면을 한 번에 채우는 대형 앵커",t:["officetel","mixed","retail","small"],f:["front"],d:false,c:[],a:[100,700],w:"넓은 1층 전면 칸 앵커. 유동이 많아야 함"},
- {n:"대형 카페·베이커리",cat:"fnb",tm:["아침","오후","주말"],eq:"급배수·배기",ex:"좌석형 카페, 베이커리 카페",t:["officetel","mixed","retail","small","jisan"],f:["front"],d:false,c:["coffee"],a:[80,300],w:"넓은 칸에 맞는 체류형 F&B. 주말 수요 확인 필요"},
- {n:"세무·노무·법무 사무소",cat:"office",tm:["점심","오후"],eq:"없음",ex:"입주 기업·건물주 대상 전문 사무소",t:["jisan","small"],f:["inner","upper"],d:false,c:[],a:[25,200],w:"F&B가 넘칠 때 대안. 노출 약한 칸 OK"}
+// n,cat,tm,eq,ex,t,f,d,c,a,w + dem(주거/직장/유동/목적), pay(1~3 임대료 부담력), tr(0 안정·1 성장·2 새 포맷), u2(일반음식점=2종 근생 필요)
+ {n:"버거·치킨 (소형 매장)",img:"img/burger.jpg",cat:"fnb",tm:["점심","저녁","주말"],eq:"튀김·그릴 배기 덕트",ex:"15평 안팎 소형 매장 모델로 출점을 늘리는 프랜차이즈 업종",t:["jisan","officetel","mixed","retail","small"],f:["front"],d:true,c:["burger"],a:[40,100],dem:["직장","유동","주거"],pay:3,tr:1,w:"간판 노출이 중요한 앵커 업종. 점심·저녁 모두 수요"},
+ {n:"편의점",cat:"life",tm:["아침","점심","오후","저녁","주말","심야"],eq:"냉장 전력",ex:"1층 출입구·도로변, 24시간 운영",t:["officetel","mixed","retail","small","jisan"],f:["front","inner"],d:false,c:["cvs"],a:[30,120],dem:["주거","직장","유동"],pay:2,tr:0,w:"1인 가구 생활 필수. 밤에도 불 켜진 1층이 건물 인상을 바꿈"},
+ {n:"도시락",img:"img/dosirak.jpg",cat:"fnb",tm:["점심"],eq:"소형 조리 배기",ex:"점심 단체주문·포장 중심 소형 매장",t:["jisan","officetel"],f:["front","inner"],d:false,c:["dosirak"],a:[33,80],dem:["직장"],pay:2,tr:0,w:"점심 단체주문·포장. 조리 설비 적음"},
+ {n:"아침 토스트",img:"img/toast.jpg",cat:"fnb",tm:["아침","점심"],eq:"철판·소형 배기",ex:"출근길 테이크아웃, 창업비 부담 낮은 소형 업종",t:["jisan","officetel","small"],f:["front","inner"],d:false,c:[],a:[25,70],dem:["직장","유동"],pay:1,tr:0,w:"출근길 07~10시 수요. 다른 칸과 시간대가 안 겹침"},
+ {n:"샐러드·포케",img:"img/salad.jpg",cat:"fnb",tm:["점심"],eq:"급배수",ex:"가벼운 점심 매장",t:["jisan","officetel"],f:["front","inner"],d:false,c:[],a:[30,70],dem:["직장"],pay:2,tr:1,w:"점심 보완. 배기 부담 적음"},
+ {n:"저가 커피",cat:"fnb",tm:["아침","점심","오후"],eq:"급배수",ex:"테이크아웃 중심 10~15평 매장",t:["officetel","jisan","retail","mixed","small"],f:["front"],d:false,c:["coffee"],a:[20,70],dem:["직장","유동","주거"],pay:2,tr:0,w:"역 출근 동선 테이크아웃. 건물 안에 커피가 이미 있으면 제외"},
+ {n:"베이글·디저트 테이크아웃",cat:"fnb",tm:["아침","오후","주말"],eq:"오븐 전력",ex:"줄 서는 소형 베이커리·디저트",t:["officetel","mixed","retail","small"],f:["front"],d:false,c:[],a:[25,70],dem:["유동","주거"],pay:2,tr:1,w:"SNS로 외부 손님을 끌어오는 목적형 F&B"},
+ {n:"대형 카페·베이커리",cat:"fnb",tm:["아침","오후","주말"],eq:"급배수·배기",ex:"좌석형 카페, 베이커리 카페",t:["officetel","mixed","retail","small","jisan"],f:["front"],d:false,c:["coffee"],a:[80,300],dem:["유동","주거"],pay:2,tr:0,w:"넓은 칸에 맞는 체류형 F&B. 주말 수요 확인 필요"},
+ {n:"1인 식당 (국밥·덮밥)",cat:"fnb",tm:["점심","저녁"],eq:"배기·가스",ex:"혼밥 좌석형 식사 매장",t:["officetel","jisan","small","retail"],f:["front","inner"],d:true,u2:1,c:["dosirak"],a:[33,100],dem:["직장","주거"],pay:2,tr:0,w:"점심·저녁 식사 수요를 함께 받음. 일반음식점 용도 필요"},
+ {n:"분식·떡볶이",cat:"fnb",tm:["점심","오후","저녁"],eq:"소형 조리 배기",ex:"포장·배달 겸용 분식",t:["officetel","mixed","small"],f:["front","inner"],d:false,c:["kimbap"],a:[20,60],dem:["주거","유동"],pay:1,tr:0,w:"학생·1인 가구 간식·식사"},
+ {n:"치킨호프·포차",cat:"fnb",tm:["저녁","주말","심야"],eq:"배기·가스",ex:"저녁 주류 매장",t:["officetel","mixed","small","retail"],f:["front","inner"],d:true,u2:1,c:["burger"],a:[50,150],dem:["주거","유동"],pay:2,tr:0,w:"저녁·심야를 채움. 일반음식점 용도 필요, 소음 민원 주의"},
+ {n:"공유키친 (배달 전용)",nw:1,cat:"fnb",tm:["점심","저녁","주말","심야"],eq:"대용량 배기·급배수·전기 증설",ex:"한 칸을 3~6개 배달 브랜드가 나눠 쓰는 공유주방",cond:x=>x.duct!=="n"&&(x.units===null||x.units>=200),t:["officetel","mixed","jisan","retail","small"],f:["inner","upper"],d:true,c:[],a:[60,330],dem:["주거"],pay:2,tr:2,w:"배후 세대가 많은데 손님이 1층까지 안 오는 건물에 맞음. 노출 없는 칸이 오히려 유리"},
+ {n:"세탁·코인빨래방",cat:"life",tm:["저녁","주말","심야"],eq:"급배수·전기 증설",ex:"세탁 편의점 또는 무인 코인빨래방",t:["officetel","mixed","small"],f:["front","inner"],d:false,c:["laundry"],a:[20,90],dem:["주거"],pay:1,tr:1,w:"1인 가구 고정 수요. 무인이라 관리 부담 적음"},
+ {n:"미용실",cat:"life",tm:["오후","저녁","주말"],eq:"급배수",ex:"1~2인 예약제 소형 살롱",t:["officetel","mixed","retail","small"],f:["inner","upper","front"],d:false,c:["hair"],a:[25,100],dem:["주거"],pay:2,tr:0,w:"예약제라 노출 약한 칸도 가능"},
+ {n:"네일·속눈썹 1인 샵",cat:"life",tm:["오후","저녁","주말"],eq:"환기",ex:"1인 예약제 뷰티 샵",t:["officetel","mixed","retail","small"],f:["upper","inner"],d:false,c:[],a:[15,50],dem:["주거","목적"],pay:1,tr:1,w:"작은 칸에 맞는 목적형 업종. 2층도 무리 없음"},
+ {n:"무인 사진관",fill:1,nw:1,cat:"life",tm:["오후","저녁","주말","심야"],eq:"전력·조명",ex:"셀프 포토 부스 매장",t:["officetel","mixed","retail","small"],f:["front","inner"],d:false,c:[],a:[15,50],dem:["유동","목적"],pay:1,tr:1,w:"10~20대 유동을 끌어오는 무인 업종. 저녁·주말 강함"},
+ {n:"반려동물 미용·호텔",cat:"life",tm:["오후","저녁","주말"],eq:"급배수·방음·환기",ex:"펫 미용·데이케어",t:["officetel","mixed","small"],f:["inner","upper","front"],d:false,c:[],a:[30,120],dem:["주거","목적"],pay:2,tr:1,w:"반려 가구가 많은 주거 배후에서 예약 수요가 꾸준함"},
+ {n:"생활수리 (휴대폰·수선·열쇠)",fill:1,cat:"life",tm:["오후","저녁","주말"],eq:"없음",ex:"수선·수리 소형 매장",t:["officetel","mixed","small","retail"],f:["inner","front"],d:false,c:[],a:[10,35],dem:["주거"],pay:1,tr:0,w:"아주 작은 칸 채우기용"},
+ {n:"부동산 중개사무소",fill:1,cat:"office",tm:["점심","오후","주말"],eq:"없음",ex:"단지·건물 전담 중개",t:["officetel","mixed","small","retail","jisan"],f:["front","inner"],d:false,c:[],a:[20,60],dem:["주거","직장"],pay:2,tr:0,w:"신축 건물 초기에 항상 수요. 오래 머무는 임차인은 아님"},
+ {n:"의원 + 약국",cat:"med",tm:["점심","오후","주말"],eq:"급배수·의료 전력",ex:"1층 약국 · 2층 의원 조합",t:["officetel","mixed","retail","small"],f:["front","upper"],d:false,c:["pharmacy"],a:[40,330],dem:["주거","직장"],pay:3,tr:0,w:"주거 배후에 강하고 임대료 부담력이 높음. 의원은 2층도 가능"},
+ {n:"치과·한의원",cat:"med",tm:["오후","저녁","주말"],eq:"급배수·의료 전력",ex:"2층 이상 예약제 진료",t:["officetel","mixed","retail","small"],f:["upper"],d:false,c:[],a:[66,330],dem:["주거","목적"],pay:3,tr:0,w:"2층 이상 큰 칸을 장기 임차로 채우는 대표 업종"},
+ {n:"동물병원",cat:"med",tm:["오후","저녁","주말"],eq:"급배수·의료 전력",ex:"반려동물 진료",t:["officetel","mixed","small"],f:["front","inner","upper"],d:false,c:[],a:[50,200],dem:["주거","목적"],pay:3,tr:1,w:"반려 가구 주거 배후. 장기 임차"},
+ {n:"PT·필라테스",cat:"fit",tm:["아침","저녁","주말"],eq:"방음·바닥 하중",ex:"1:1·소그룹 스튜디오",t:["officetel","mixed","retail","small","jisan"],f:["upper","inner"],d:false,c:["fitness"],a:[50,330],dem:["주거","직장","목적"],pay:2,tr:0,w:"목적 방문 업종이라 2층·안쪽이어도 됨. 출근 전·퇴근 후 수요"},
+ {n:"스크린골프·실내 스포츠",cat:"fit",tm:["저녁","주말","심야"],eq:"층고·방음·전력",ex:"스크린골프·실내 클라이밍 등",t:["officetel","mixed","retail","jisan","small"],f:["upper"],d:false,c:["fitness"],a:[150,700],dem:["직장","주거","목적"],pay:2,tr:1,w:"2층 이상 대형 칸 앵커. 저녁·주말 외부 손님"},
+ {n:"학원",cat:"fit",tm:["오후","저녁"],eq:"방음",ex:"보습·음악·코딩 등",t:["mixed","retail","small"],f:["upper"],d:false,c:["academy"],a:[60,330],dem:["주거"],pay:2,tr:0,w:"아파트 단지 배후일 때"},
+ {n:"키즈카페·실내 놀이",cat:"fit",tm:["오후","주말"],eq:"층고·안전",ex:"아이 동반 체류형 공간",t:["mixed","retail"],f:["upper"],d:false,c:[],a:[150,600],dem:["주거","목적"],pay:1,tr:0,w:"가족 단지 배후의 주말 앵커"},
+ {n:"스터디카페·공유 작업실",nw:1,cat:"fit",tm:["아침","오후","저녁","주말","심야"],eq:"방음·냉난방·콘센트",ex:"무인 운영 좌석형 공간",t:["officetel","mixed","small","retail","jisan"],f:["upper","inner"],d:false,c:["academy"],a:[60,330],dem:["주거","목적"],pay:1,tr:1,w:"체류 시간이 길어 건물 안 다른 가게 매출을 끌어올림. 무인 운영"},
+ {n:"시니어 주간보호",nw:1,cat:"med",tm:["아침","점심","오후"],eq:"엘리베이터·화장실·안전",ex:"어르신 낮 돌봄 시설",t:["mixed","retail","small"],f:["upper","inner"],d:false,c:[],a:[100,400],dem:["주거"],pay:2,tr:1,w:"고령 인구가 많은 주거 배후의 장기 임차. 노유자시설 용도 확인 필요"},
+ {n:"무인 매장",fill:1,cat:"retail",tm:["오후","저녁","주말","심야"],eq:"전력",ex:"아이스크림·밀키트·문구 등 무인 소형 매장",t:["officetel","mixed","small"],f:["front","inner"],d:false,c:["unmanned"],a:[15,50],dem:["주거"],pay:1,tr:1,w:"인건비 없는 소형 업종. 작은 칸·안쪽 칸 채우기 좋음"},
+ {n:"반찬·밀키트·정육",cat:"retail",tm:["오후","저녁"],eq:"냉장 전력",ex:"동네 생활 장보기 업종",t:["officetel","mixed","small"],f:["front","inner"],d:false,c:[],a:[25,70],dem:["주거"],pay:1,tr:0,w:"1~2인 가구 저녁 장보기"},
+ {n:"소형 마트·청과",cat:"retail",tm:["아침","오후","저녁","주말"],eq:"냉장 전력·하역",ex:"단지 앞 식료품",t:["mixed","small","retail"],f:["front"],d:false,c:["cvs"],a:[60,250],dem:["주거"],pay:2,tr:0,w:"가족 단지 배후의 생활 앵커"},
+ {n:"생활용품·드럭스토어",cat:"retail",tm:["점심","오후","저녁","주말"],eq:"전력",ex:"넓은 1층 전면을 한 번에 채우는 대형 앵커",t:["officetel","mixed","retail","small"],f:["front"],d:false,c:[],a:[100,700],dem:["유동","주거"],pay:3,tr:0,w:"넓은 1층 전면 칸 앵커. 유동이 많아야 함"},
+ {n:"팝업 순환 칸",nw:1,cat:"retail",tm:["오후","저녁","주말"],eq:"전력·조명",ex:"1층 전면 한 칸을 1~4주 단위 팝업 전용으로 운영",cond:x=>!(x.shops&&x.vac!==null)||x.vac>=2,t:["officetel","mixed","retail","small","jisan"],f:["front"],d:false,c:[],a:[20,150],dem:["유동","목적"],pay:2,tr:2,w:"정식 계약 전 공실을 수익과 유동으로 바꿈"},
+ {n:"세무·노무·법무 사무소",cat:"office",tm:["점심","오후"],eq:"없음",ex:"입주 기업·건물주 대상 전문 사무소",t:["jisan","small","officetel"],f:["inner","upper"],d:false,c:[],a:[25,200],dem:["직장"],pay:2,tr:0,w:"F&B가 넘칠 때 대안. 노출 약한 칸 OK"},
+ {n:"공유오피스·소호",nw:1,cat:"office",tm:["아침","점심","오후","저녁"],eq:"냉난방·통신",ex:"1인 사업자 좌석·소형 사무실",t:["officetel","jisan","mixed","small"],f:["upper","inner"],d:false,c:[],a:[66,500],dem:["직장","목적"],pay:1,tr:1,w:"2층 이상 큰 칸을 쪼개 여러 임차인에게"},
+ {n:"라이브커머스·촬영 스튜디오",nw:1,cat:"office",tm:["오후","저녁"],eq:"방음·조명·전력",ex:"시간제 대여 촬영 공간",t:["officetel","jisan","mixed","small"],f:["upper","inner"],d:false,c:[],a:[30,150],dem:["목적","직장"],pay:1,tr:2,w:"노출이 필요 없는 안쪽·2층 칸을 시간 단위 수익으로"},
+ {n:"셀프스토리지 (공유창고)",nw:1,cat:"office",tm:["아침","점심","오후","저녁","주말","심야"],eq:"보안·환기·항온항습",ex:"무인 개인 창고. 장기 공실 칸·지하·2층을 수익 공간으로",cond:x=>!(x.shops&&x.vac!==null)||x.vac/x.shops>=0.3,t:["officetel","mixed","jisan","retail","small"],f:["inner","upper"],d:false,c:[],a:[30,500],dem:["주거","직장"],pay:1,tr:2,w:"상가가 남아도는 건물의 정리 수단. 관리 인력이 거의 안 듦"}
 ];
 const TYPE_NM={small:"꼬마빌딩·소형 근린",officetel:"오피스텔",jisan:"지식산업센터",mixed:"주상복합·단지 상가",retail:"근린상가"};
 const num=v=>v===""||v==null||isNaN(+v)?null:+v;
@@ -532,6 +551,28 @@ function rangeOf(x){
     return {k:NM[k],cut:Math.round(w-sw/C[k].length)};}).filter(d=>d.cut>0).sort((a,b)=>b.cut-a.cut);
   return {lo:Math.round(lo),hi:Math.round(hi),drv};
 }
+
+// MD 적합도 점수: 배후·층·면적·시간대 공백·임대료 부담력·성장성·업종 중복을 함께 봄 (공실공 기준표 v1)
+const DEM={officetel:["주거"],mixed:["주거"],jisan:["직장"],retail:["유동"],small:["주거","유동"]};
+const EXCAT={coffee:"fnb",kimbap:"fnb",dosirak:"fnb",burger:"fnb",cvs:"life",laundry:"life",hair:"life",unmanned:"retail",pharmacy:"med",fitness:"fit",academy:"fit"};
+function fitScore(c,r,x,st){
+  let s=0;const why=[];const prim=DEM[x.type]||["주거"];
+  if(c.dem.some(d=>prim.includes(d))){s+=3;why.push(`${prim.join("·")} 배후와 맞음`);}else s-=2;
+  if(c.dem.includes("목적")&&r.pos!=="front"){s+=1.5;why.push("찾아오는 업종이라 위치 약점이 없음");}
+  s+=c.f[0]===r.pos?2:1;
+  s+=r.area!==null&&r.area>=c.a[0]&&r.area<=c.a[1]?2:r.area===null?1:0.5;
+  const gaps=c.tm.filter(t=>!st.times.has(t)).length;s+=c.tm.reduce((a,t)=>a+((st.tc[t]||0)===0?0.6:(st.tc[t]||0)===1?0.3:0),0);if(gaps>=2&&st.times.size)why.push(`비어 있던 ${c.tm.filter(t=>!st.times.has(t)).slice(0,2).join("·")} 시간대를 채움`);
+  if(r.rent!==null&&r.area){const per=r.rent/r.area,cap={1:4.5,2:7,3:10}[c.pay];if(per>cap)s-=Math.min(3,(per-cap)/cap*3);else s+=1;}
+  if(r.pos==="front"){s+=c.pay*0.7;if(!st.front&&(c.tr===2||c.fill))s-=3;if(c.fill)s-=1.8;if(c.pay===3)why.push("1층 전면 임대료를 감당할 부담력");}
+  s+=c.tr*0.7;if(c.tr===2)why.push("요즘 공실을 채우는 새 포맷");else if(c.tr===1)why.push("출점이 늘어나는 업종");
+  s-=(st.cats[c.cat]||0)*0.8;
+  if(c.d&&x.duct==="")s-=0.7;if(c.u2&&x.use==="")s-=0.7;
+  if(r.pos!=="front"&&x.type!=="small"&&x.shops&&x.units&&x.units/x.shops<10){if(c.cat==="fnb")s-=1;if(c.tr===2||c.cat==="office"){s+=1.2;why.push("상가 과잉 건물에서 손님을 나눠 갖지 않음");}}
+  return {s,why};
+}
+function candFor(r,x,used){let c=CANDS.filter(c=>(!c.cond||c.cond(x))&&c.t.includes(x.type)&&c.f.includes(r.pos)&&!used.n.has(c.n)&&!c.c.some(k=>used.c.has(k)));
+  if(x.duct==="n")c=c.filter(c=>!c.d);if(x.use==="1")c=c.filter(c=>!c.u2);
+  if(r.area!==null)c=c.filter(c=>r.area>=c.a[0]*0.85&&r.area<=c.a[1]*1.2);return c;}
 $('f').addEventListener('submit',e=>{
   e.preventDefault();
   const x={m:null,name:$('name').value.trim()||"(현장명 미입력)",type:$('type').value,walk:num($('walk').value),units:num($('units').value),occ:num($('occ').value),
@@ -586,9 +627,8 @@ $('f').addEventListener('submit',e=>{
   $('rBars').innerHTML=bars.map(b=>`<div class="sc"><span>${b[0]}${b[3]!=="입력"?'':''}</span><div class="bar"><i style="width:${b[1]/b[2]*100}%"></i></div><span>${b[1]}/${b[2]}</span></div>${b[3]!=="입력"?`<div style="font-size:12px;color:var(--warn);margin:-4px 0 4px 80px">${b[3]} → 보수 채점</div>`:''}`).join("");
 
   // 추천
-  let recs=CANDS.filter(c=>(!c.cond||c.cond(x))&&c.t.includes(x.type)&&c.f.includes(x.pos)&&!c.c.some(k=>x.exist.includes(k)));
-  if(x.duct==="n")recs=recs.filter(c=>!c.d);
-  if(x.area!==null)recs=recs.filter(c=>x.area>=c.a[0]*0.85&&x.area<=c.a[1]*1.2);
+  const st0={times:new Set(),cats:{},tc:{}};x.exist.forEach(k=>{const ct=EXCAT[k];if(ct)st0.cats[ct]=(st0.cats[ct]||0)+0.5;});
+  let recs=candFor({pos:x.pos,area:x.area,rent:x.rent},x,{c:new Set(x.exist),n:new Set()}).map(c=>({c,s:fitScore(c,{pos:x.pos,area:x.area,rent:x.rent},x,st0).s})).sort((a,b)=>b.s-a.s).map(o=>o.c);
   let split=false;
   if(recs.length<2&&x.area!==null&&x.area>=100){
     let r2=CANDS.filter(c=>(!c.cond||c.cond(x))&&c.t.includes(x.type)&&c.f.includes(x.pos)&&!c.c.some(k=>x.exist.includes(k)));
@@ -603,17 +643,17 @@ $('f').addEventListener('submit',e=>{
   const rows=[{pos:x.pos,area:x.area,rent:x.rent}].concat([...document.querySelectorAll('#extra .urow')].map(r=>({pos:r.querySelector('.upos').value,area:num(r.querySelector('.uarea').value),rent:num(r.querySelector('.urent').value)})));
   let planText="";let out=[];
   if(rows.length>=1){
-    const usedC=new Set(x.exist),usedN=new Set(),order=rows.map((r,i)=>({...r,i})).sort((a,b)=>({front:0,inner:1,upper:2}[a.pos])-({front:0,inner:1,upper:2}[b.pos]));
+    const used={c:new Set(x.exist),n:new Set()},st={times:new Set(),cats:{},tc:{}};x.exist.forEach(k=>{const ct=EXCAT[k];if(ct)st.cats[ct]=(st.cats[ct]||0)+0.5;});
+    const order=rows.map((r,i)=>({...r,i})).sort((a,b)=>({front:0,inner:1,upper:2}[a.pos])-({front:0,inner:1,upper:2}[b.pos])||(b.area||0)-(a.area||0));
     out=[];
     for(const r of order){
-      let c=CANDS.filter(c=>(!c.cond||c.cond(x))&&c.t.includes(x.type)&&c.f.includes(r.pos)&&!usedN.has(c.n)&&!c.c.some(k=>usedC.has(k)));
-      if(x.duct==="n")c=c.filter(c=>!c.d);
-      if(r.area!==null)c=c.filter(c=>r.area>=c.a[0]*0.85&&r.area<=c.a[1]*1.2);
-      const pick=c[0];if(pick){usedN.add(pick.n);pick.c.forEach(k=>usedC.add(k));}
-      out[r.i]={r,pick,alt:c[1]};
+      const sc=candFor(r,x,used).map(c=>({c,...fitScore(c,r,x,st)})).sort((a,b)=>b.s-a.s);
+      const pick=sc[0]?sc[0].c:null;
+      if(pick){used.n.add(pick.n);pick.c.forEach(k=>used.c.add(k));pick.tm.forEach(t=>{st.times.add(t);st.tc[t]=(st.tc[t]||0)+1;});if(r.pos==="front")st.front=(st.front||0)+1;st.cats[pick.cat]=(st.cats[pick.cat]||0)+1;}
+      out[r.i]={r,pick,alt:sc[1]?sc[1].c:null,why:sc[0]?sc[0].why:[],sc:sc[0]?sc[0].s:0};
     }
     $('recTitle').textContent=rows.length>1?"호실별 MD 배치안":"MD 제안";
-    $('rPlan').innerHTML='<ol class="rec">'+out.map((o,i)=>`<li><b>${i===0?"대표 호실":"호실 "+(i+1)} · ${POSNM[o.r.pos]}${o.r.area!==null?" "+o.r.area+"㎡":""}${o.r.rent!==null?" · 호가 "+o.r.rent+"만":""}</b><div>${o.pick?o.pick.n+(o.pick.nw?' <span class="tag new">새 포맷</span>':'')+(o.pick.d&&x.duct===""?' <span class="tag w">배기 확인</span>':''):"F&B 과밀 → 비F&B·분할·통합 임대 검토"}</div>${o.pick?`<div class="ex">${o.pick.w} · 필요 설비: ${o.pick.eq}${o.alt?" · 2안: "+o.alt.n:""}</div>`:""}</li>`).join("")+'</ol><p class="note" style="margin-top:0">1층 전면 칸부터 앵커 업종을 배정하고, 같은 손님을 나눠 갖는 업종은 한 건물에 하나만 넣었습니다.</p><h2 style="margin-top:14px">대표 호실 업종 후보</h2>';
+    $('rPlan').innerHTML='<ol class="rec">'+out.map((o,i)=>`<li><b>${i===0?"대표 호실":"호실 "+(i+1)} · ${POSNM[o.r.pos]}${o.r.area!==null?" "+o.r.area+"㎡":""}${o.r.rent!==null?" · 호가 "+o.r.rent+"만":""}</b><div>${o.pick?o.pick.n+(o.pick.nw?' <span class="tag new">새 포맷</span>':'')+(o.pick.d&&x.duct===""?' <span class="tag w">배기 확인</span>':''):"F&B 과밀 → 비F&B·분할·통합 임대 검토"}</div>${o.pick?`<div class="ex">${o.why.length?"선정 이유: "+o.why.slice(0,3).join(", ")+" · ":""}필요 설비: ${o.pick.eq}${o.alt?" · 2안: "+o.alt.n:""}</div>`:""}</li>`).join("")+'</ol><p class="note" style="margin-top:0">1층 전면 칸부터 앵커 업종을 배정하고, 같은 손님을 나눠 갖는 업종은 한 건물에 하나만 넣었습니다.</p><h2 style="margin-top:14px">대표 호실 업종 후보</h2>';
     planText="\n\n[호실별 배치안]\n"+out.map((o,i)=>`${i===0?"대표":"호실"+(i+1)} ${POSNM[o.r.pos]} ${o.r.area??"?"}㎡ → ${o.pick?o.pick.n:"비F&B·분할 검토"}`).join("\n");
   }
   {const PL=planUp(x,rows,tot);
