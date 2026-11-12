@@ -466,18 +466,46 @@ function writeCard() {
   } else if (P) h += `<p class="muted" style="margin-top:10px">정리할 내용을 찾지 못했어요. 조금 더 자세히 적어주세요.</p>`;
   return h + '</div>';
 }
+/* ----- 하루 영양성분 합계 ----- */
+function gramsOf(f, amt, unit) {
+  amt = num(amt); if (!f || amt == null) return null; unit = unit || f.unit;
+  if (unit === 'g' || unit === 'ml') return amt;
+  const gw = num(f.gw); return gw ? amt * gw : null;
+}
+function dayNut(k) {
+  const foods = S.pet?.foods || [];
+  const o = { protein: 0, fat: 0, phosphorus: 0, sodium: 0, water: 0, has: {}, n: 0, miss: 0 };
+  S.logs.filter(l => l.type === 'feed' && dkey(l.t) === k).forEach(l => {
+    const f = foods.find(x => x.name === l.food), g = f ? gramsOf(f, l.amount, l.unit) : null;
+    if (!f?.nut || g == null) { o.miss++; return; }
+    o.n++;
+    [['protein', 1], ['fat', 1], ['phosphorus', 1000], ['sodium', 1000], ['moisture', 1]].forEach(([key, mul]) => {
+      const v = num(f.nut[key]); if (v == null) return;
+      const out = key === 'moisture' ? 'water' : key; o[out] += g * v / 100 * mul; o.has[out] = true;
+    });
+  });
+  return o.n ? o : null;
+}
+function nutDayLine(o) {
+  return [o.has.protein && `단백질 ${r1(o.protein)}g`, o.has.fat && `지방 ${r1(o.fat)}g`, o.has.phosphorus && `인 ${r0(o.phosphorus)}mg`, o.has.sodium && `나트륨 ${r0(o.sodium)}mg`, o.has.water && `사료 속 수분 ${r0(o.water)}ml`].filter(Boolean).join(' · ');
+}
+function nutTodayHtml() {
+  const o = dayNut(today()); if (!o) return '';
+  return `<div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--line)"><div class="muted" style="color:var(--ink);font-weight:700;font-size:13px">오늘 먹은 영양성분</div><div class="muted">${nutDayLine(o)}</div>${o.miss ? `<div class="muted" style="font-size:12px">성분 정보가 없는 급여 ${o.miss}건은 빼고 계산했어요.</div>` : ''}</div>`;
+}
+
 function kcalCard() {
   const p = S.pet, k = today();
   const tgt = targetFor(p, k);
   const eaten = S.logs.filter(l => l.type === 'feed' && dkey(l.t) === k).reduce((s, l) => s + (num(l.kcal) || 0), 0);
-  if (tgt == null) return `<div class="card"><h3>오늘 먹은 양</h3><p class="muted">체중을 넣으면 하루 목표 칼로리를 계산해 드려요.</p></div>`;
+  if (tgt == null) return `<div class="card"><h3>오늘 먹은 양</h3><p class="muted">체중을 넣으면 하루 목표 칼로리를 계산해 드려요.</p>${nutTodayHtml()}</div>`;
   const pct = Math.min(100, eaten / tgt * 100);
   const di = p.plan?.ramp ? dayIndex(p, k) : null;
   const ramp = di && di >= 1 && di <= 2 ? `<span class="pill" style="background:var(--acc-soft);color:var(--acc)">늘려가기 ${di}일차 · 목표의 ${di === 1 ? '1/3' : '2/3'}</span>` : '';
   return `<div class="card"><div class="row between"><h3 style="margin:0">오늘 먹은 양</h3>${ramp}</div>
     <div class="row" style="align-items:baseline;gap:6px;margin-top:8px"><span class="big">${r0(eaten)}</span><span class="muted">/ ${r0(tgt)} kcal</span></div>
     <div class="bar"><i style="width:${pct}%;${pct >= 100 ? '' : pct < 50 ? 'background:var(--acc)' : ''}"></i></div>
-    <div class="muted">${eaten >= tgt ? '오늘 목표를 채웠어요.' : `남은 양 약 ${r0(tgt - eaten)} kcal`}</div></div>`;
+    <div class="muted">${eaten >= tgt ? '오늘 목표를 채웠어요.' : `남은 양 약 ${r0(tgt - eaten)} kcal`}</div>${nutTodayHtml()}</div>`;
 }
 function quickCard() {
   return `<div class="card"><h3>하나씩 골라서 기록하기</h3><div class="grid4">${Object.entries(TYPES).map(([k, t]) => `<button class="qbtn" data-act="new" data-type="${k}"><span class="ic">${t.ic}</span>${t.name}</button>`).join('')}</div><p class="muted" style="margin:8px 2px 0">기록을 누르면 고칠 수 있어요.</p></div>`;
@@ -710,7 +738,7 @@ function buildSummary(days) {
   const dk = Object.keys(byDay).sort();
   if (dk.length) {
     lines.push('', '■ 하루 섭취 칼로리' + (ft ? ` (목표 ${r0(ft)}kcal)` : ''));
-    dk.forEach(k => lines.push(`${k.slice(5)}  ${r0(byDay[k])}kcal`));
+    dk.forEach(k => { const o = dayNut(k); lines.push(`${k.slice(5)}  ${r0(byDay[k])}kcal${o ? ' · ' + nutDayLine(o) : ''}`); });
     const methods = [...new Set(L.filter(l => l.type === 'feed' && l.method).map(l => l.method))];
     if (methods.length) lines.push('급여 방식: ' + methods.join(', '));
   }
