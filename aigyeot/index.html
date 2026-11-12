@@ -126,6 +126,7 @@ const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt
 const num = v => { const n = parseFloat(String(v).replace(',', '.')); return isFinite(n) ? n : null; };
 const r1 = n => Math.round(n * 10) / 10;
 const r0 = n => Math.round(n);
+const r2 = n => Math.round(n * 100) / 100;
 const pad = n => String(n).padStart(2, '0');
 const dkey = d => { d = new Date(d); return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); };
 const today = () => dkey(Date.now());
@@ -351,7 +352,7 @@ setTimeout(boot);
 const who = by => by || '';
 
 /* ---------- render ---------- */
-const TABS = [['today', '🏠', '오늘'], ['er', '🚨', '응급'], ['calc', '🥄', '급여 계산'], ['logs', '📋', '기록'], ['vet', '🏥', '병원 요약'], ['set', '⚙️', '설정']];
+const TABS = [['today', '🏠', '오늘'], ['calc', '🥄', '급여 계산'], ['logs', '📋', '기록'], ['vet', '🏥', '병원 요약'], ['er', '🚨', '응급'], ['set', '⚙️', '설정']];
 function renderTabs() {
   $('#tabs').innerHTML = TABS.map(([k, ic, n]) => `<button data-tab="${k}" class="${S.tab === k ? 'on' : ''}"><span class="ic">${ic}</span>${n}</button>`).join('');
 }
@@ -406,6 +407,20 @@ function vLanding() {
     <p class="muted" style="margin:4px 0 8px">가족에게 받은 링크를 열거나, 여기에 붙여넣어 주세요.</p>
     <div class="row"><input type="text" id="join" placeholder="링크 붙여넣기"><button class="btn ghost sm" data-act="join" style="white-space:nowrap">들어가기</button></div></div></div>`;
 }
+function startGuide() {
+  if (ls.get('aigyeot-guide-done-' + familyCode())) return '';
+  const p = S.pet || {};
+  const steps = [
+    ['아이 이름·체중 넣기', !!(p.name && num(p.weightKg)), 'set'],
+    ['사료 칼로리 등록하기', !!(p.foods || []).length, 'set'],
+    ['매일 할 일 정하기', !!(p.tasks || []).length, 'set'],
+    ['가족에게 링크 보내기', !!ls.get('aigyeot-shared-' + familyCode()), 'set'],
+  ];
+  if (steps.every(s => s[1])) return '';
+  const n = steps.filter(s => s[1]).length;
+  return `<div class="card" style="border-color:var(--ok)"><div class="row between"><h3 style="margin:0">시작하기 ${n}/4</h3><button class="x" data-act="guide-hide" style="border:0;background:none;color:var(--sub)">닫기</button></div>
+    <div style="margin-top:6px">${steps.map(s => `<div class="check ${s[1] ? 'done' : ''}" data-act="tab" data-to="${s[2]}"><span class="box">${s[1] ? '✓' : ''}</span><span class="lbl">${s[0]}</span>${s[1] ? '' : '<span class="who">설정에서 ›</span>'}</div>`).join('')}</div></div>`;
+}
 function nameCard() {
   if (S.me) return '';
   return `<div class="card" style="border-color:var(--acc)"><h3>누가 기록하는지 알 수 있게 이름을 정해주세요</h3>
@@ -419,7 +434,7 @@ function vToday() {
   const p = S.pet;
   if (!p && S.petLoaded) return `<div class="card"><h3>처음 오셨네요</h3><p class="muted">아이 이름과 체중만 넣으면 바로 시작할 수 있어요.</p><button class="btn acc full" data-act="go-set">아이 정보 넣기</button></div>` + quickCard() + recentCard();
   if (!p) return `<div class="card muted">불러오는 중…</div>`;
-  return nameCard() + installTip() + writeCard() + kcalCard() + checklistCard() + quickCard() + recentCard();
+  return nameCard() + startGuide() + writeCard() + kcalCard() + checklistCard() + quickCard() + recentCard() + installTip();
 }
 function writeCard() {
   const P = S.parsed;
@@ -465,7 +480,8 @@ function checklistCard() {
 }
 function recentCard() {
   const l = S.logs.slice(0, 5);
-  return `<div class="card"><div class="row between"><h3 style="margin:0">최근 기록</h3>${S.logs.length > 5 ? '<button class="btn ghost sm" data-act="tab" data-to="logs">전체 보기</button>' : ''}</div><div style="margin-top:6px">${l.length ? l.map(logRow).join('') : '<p class="muted">아직 기록이 없어요.</p>'}</div></div>`;
+  const row = x => logRow(x).replace('<button class="x" data-act="del"', `<button class="x" data-act="again" data-id="${esc(x.id)}" style="color:var(--ok);font-weight:700">지금 또</button><button class="x" data-act="del"`);
+  return `<div class="card"><div class="row between"><h3 style="margin:0">최근 기록</h3>${S.logs.length > 5 ? '<button class="btn ghost sm" data-act="tab" data-to="logs">전체 보기</button>' : ''}</div><div style="margin-top:6px">${l.length ? l.map(row).join('') + '<p class="muted" style="margin:6px 0 0">"지금 또"를 누르면 같은 내용을 지금 시각으로 한 번 더 기록해요.</p>' : '<p class="muted">아직 기록이 없어요.</p>'}</div></div>`;
 }
 function logText(l) {
   switch (l.type) {
@@ -559,7 +575,7 @@ function calcInit() {
   const p = S.pet || {};
   C = {
     weight: p.weightKg ?? '', factor: p.factor ?? 1, override: p.targetKcal ?? '', meals: p.meals ?? 4,
-    ramp: p.plan?.ramp ?? true, start: p.plan?.start || today(), water: p.water ?? '', syringe: p.syringe ?? 10,
+    ramp: p.plan?.ramp ?? false, start: p.plan?.start || today(), water: p.water ?? '', syringe: p.syringe ?? 10,
     mix: (p.mix && p.mix.length ? p.mix : (p.foods || []).slice(0, 1).map(f => ({ foodId: f.id, pct: 100 }))).map(m => ({ ...m })),
   };
 }
@@ -583,7 +599,7 @@ function quickUpdate(src) {
   else { Q.amt = $('#q-amt').value; const a = num(Q.amt); Q.kcal = a != null && per1 != null ? String(r1(a * per1)) : ''; $('#q-kcal').value = Q.kcal; }
   const k = num(Q.kcal), tgt = targetFor(S.pet || {}, today());
   if (per1 == null) { out.innerHTML = `<span class="muted">이 사료는 ${esc(Q.unit)} 단위로 계산할 수 없어요. 설정에서 1캔(1포) 무게를 넣어주세요.</span>`; return; }
-  out.innerHTML = k == null ? `<span class="muted">1${esc(Q.unit)} = ${r1(per1 * 10) / 10}kcal · 양이나 칼로리를 넣어보세요.</span>`
+  out.innerHTML = k == null ? `<span class="muted">1${esc(Q.unit)} = ${r2(per1)}kcal · 양이나 칼로리를 넣어보세요.</span>`
     : `<div class="row" style="align-items:baseline;gap:6px"><span class="big">${r1(num(Q.amt))}${esc(Q.unit)} = ${r0(k)}</span><span class="muted">kcal</span></div>${tgt ? `<div class="muted">하루 목표 ${r0(tgt)}kcal의 ${r0(k / tgt * 100)}%</div>` : ''}`;
 }
 $('#main').addEventListener('input', e => { if (e.target.id === 'q-amt') quickUpdate('amt'); else if (e.target.id === 'q-kcal') quickUpdate('kcal'); });
@@ -641,7 +657,10 @@ function calcUpdate() {
       if (!perUnit) return;
       const dayAmt = todayK * share / perUnit, mealAmt = dayAmt / meals;
       if (f.unit === 'g' || f.unit === 'ml') vol += mealAmt;
-      rows += `<tr><td>${esc(f.name)}${mix.length > 1 ? ` (${r0(share * 100)}%)` : ''}<br><span class="muted">하루 ${r1(dayAmt)}${esc(f.unit)}</span></td><td>회당 ${r1(mealAmt)}${esc(f.unit)}</td></tr>`;
+      const gPer = kcalOf(f, 1, 'g'), inG = !['g', 'ml'].includes(f.unit) && gPer ? (todayK * share / gPer) : null;
+      const fmtA = (v, u) => `${u === '캔' || u === '포' ? r2(v) : r1(v)}${esc(u)}`;
+      rows += `<tr><td>${esc(f.name)}${mix.length > 1 ? ` (${r0(share * 100)}%)` : ''}<br><span class="muted">하루 ${fmtA(dayAmt, f.unit)}${inG ? ` (약 ${r0(inG)}g)` : ''}</span></td><td>회당 ${inG ? `약 ${r1(inG / meals)}g<br><span class="muted" style="font-weight:400">${fmtA(mealAmt, f.unit)}</span>` : fmtA(mealAmt, f.unit)}</td></tr>`;
+      if (inG) vol += inG / meals;
     });
     if (Math.abs(pctSum - 100) > 0.5) warn = `<div class="muted" style="margin-top:6px">비율 합이 ${r0(pctSum)}%라서 100% 기준으로 맞춰 계산했어요.</div>`;
   }
@@ -818,12 +837,12 @@ function vSet() {
     ${(S.family?.pets || []).length > 1 ? (S.petRmArm ? `<div class="alertbox" style="margin-top:10px"><b>${esc(S.pet?.name || '이 아이')}를 목록에서 뺄까요?</b>기록은 지워지지 않고 보이지만 않아요.<div class="two" style="margin-top:10px"><button class="btn ghost sm" data-act="pet-remove-no">그만두기</button><button class="btn sm" style="background:var(--warn)" data-act="pet-remove-yes">빼기</button></div></div>` : `<button class="btn ghost sm" data-act="pet-remove" style="margin-top:8px">이 아이 목록에서 빼기</button>`) : ''}</div>
 
   <div class="card"><h3>사료·처방식</h3><p class="muted" style="margin:0 0 6px">라벨에 적힌 칼로리를 그대로 넣어주세요. 예: 1캔(156g)에 175kcal → 175kcal / 156g</p>
-    ${foods.map(f => `<div class="edit-row"><div class="grow"><b>${esc(f.name)}</b><div class="muted">${esc(f.kcal)}kcal / ${esc(f.per)}${esc(f.unit)}${num(f.gw) ? ` · 1${['g', 'ml'].includes(f.unit) ? '캔' : esc(f.unit)} ${esc(f.gw)}g` : ''} · 1g ≈ ${(() => { const k = kcalOf(f, 1, 'g'); return k != null ? r1(k * 10) / 10 + 'kcal' : '?'; })()}</div></div><button class="btn ghost sm" data-act="food-del" data-id="${esc(f.id)}">삭제</button></div>`).join('')}
+    ${foods.map(f => `<div class="edit-row"><div class="grow"><b>${esc(f.name)}</b><div class="muted">${esc(f.kcal)}kcal / ${esc(f.per)}${esc(f.unit)}${num(f.gw) ? ` · 1${['g', 'ml'].includes(f.unit) ? '캔' : esc(f.unit)} ${esc(f.gw)}g` : ''} · 1g ≈ ${(() => { const k = kcalOf(f, 1, 'g'); return k != null ? r2(k) + 'kcal' : '?'; })()}</div></div><button class="btn ghost sm" data-act="food-edit" data-id="${esc(f.id)}">고치기</button><button class="btn ghost sm" data-act="food-del" data-id="${esc(f.id)}">삭제</button></div>`).join('')}
     <div style="margin-top:10px"><input type="text" id="f-name" placeholder="사료 이름 (예: 회복기 캔)">
     <div class="three" style="margin-top:6px"><input type="number" inputmode="decimal" id="f-kcal" placeholder="kcal"><input type="number" inputmode="decimal" id="f-per" placeholder="양"><select id="f-unit"><option value="g">g</option><option value="ml">ml</option><option value="캔">캔</option><option value="포">포</option></select></div>
     <input type="number" inputmode="decimal" id="f-gw" placeholder="1캔(1포) 무게 g — 캔·포 단위면 넣어주세요 (선택)" style="margin-top:6px">
     <p class="muted" style="margin:6px 2px 0">예: 건사료 3800kcal/kg → 3800 / 1000 / g · 캔 175kcal(156g) → 175 / 1 / 캔, 무게 156</p>
-    <button class="btn ghost sm" data-act="food-add" style="margin-top:8px">+ 사료 추가</button></div></div>
+    <div class="row" style="margin-top:8px"><button class="btn ${S.foodEdit ? 'acc' : 'ghost'} sm" data-act="food-add">${S.foodEdit ? '고친 내용 저장' : '+ 사료 추가'}</button>${S.foodEdit ? '<button class="btn ghost sm" data-act="food-edit-no">그만두기</button>' : ''}</div></div></div>
 
   <div class="card"><h3>매일 할 일</h3>
     ${tasks.map((t, i) => `<div class="edit-row"><span class="grow">${esc(t.label)}</span><button class="btn ghost sm" data-act="task-up" data-i="${i}" ${i ? '' : 'disabled'}>↑</button><button class="btn ghost sm" data-act="task-del" data-i="${i}">삭제</button></div>`).join('')}
@@ -835,7 +854,7 @@ function vSet() {
   <div class="card"><h3>가족과 같이 쓰기</h3>
     <p class="muted" style="margin:0 0 8px">이 링크를 가족에게 보내면, 가입 없이 바로 같은 기록을 보고 남길 수 있어요.</p>
     <input type="text" readonly value="${esc(shareLink())}" onclick="this.select()" style="font-size:13px">
-    <div class="two" style="margin-top:8px"><button class="btn" data-act="share">카톡·문자로 보내기</button><button class="btn ghost" data-act="copy-link">링크 복사</button></div>
+    <div style="display:grid;grid-template-columns:2fr 1fr;gap:8px;margin-top:8px"><button class="btn" data-act="share" style="white-space:nowrap">💬 가족에게 보내기</button><button class="btn ghost" data-act="copy-link" style="white-space:nowrap">링크 복사</button></div>
     <p class="muted" style="margin:10px 0 0">링크를 아는 사람은 누구나 기록을 보고 쓸 수 있으니, 가족에게만 보내주세요.</p>
     ${S.rotArm ? `<div class="alertbox" style="margin-top:10px"><b>링크를 새로 바꿀까요?</b>옛 링크는 바로 막혀요. 기록은 그대로 옮겨가고, 가족에게는 새 링크를 다시 보내야 해요.<div class="two" style="margin-top:10px"><button class="btn ghost sm" data-act="rotate-no">그만두기</button><button class="btn sm" style="background:var(--warn)" data-act="rotate-yes">새 링크로 바꾸기</button></div></div>` : `<button class="btn ghost sm" data-act="rotate" style="margin-top:8px">링크가 다른 사람에게 갔나요? 새 링크로 바꾸기</button>`}
     <label class="f">내 이름 (기록에 함께 남아요)</label>
@@ -913,6 +932,7 @@ function openSheet(type, E) {
     <label class="f">시간</label><input type="datetime-local" id="n-time" value="${localDT(Date.now())}">
     <div class="two" style="margin-top:16px"><button class="btn ghost" data-act="close">취소</button><button class="btn acc" data-act="save-log">저장</button></div>`;
   $('#sheet').classList.add('open'); $('#sheetBg').classList.add('open');
+  if (type === 'feed' && !E) { const mm = ls.get('aigyeot-method'); if (mm && $('#n-method')) $('#n-method').value = mm; const lastF = S.logs.find(l => l.type === 'feed'); const lf = lastF && (S.pet?.foods || []).find(x => x.name === lastF.food); if (lf && $('#n-food')) $('#n-food').value = lf.id; }
   if (E) fillSheet(E);
   if (type === 'feed') feedUpdate();
 }
@@ -949,7 +969,7 @@ function feedUpdate() {
   const f = curFood();
   $('#n-foodfree')?.classList.toggle('hidden', !!f || !(S.pet?.foods || []).length ? !!f : false);
   const sel = $('#n-unitsel');
-  if (sel) { const us = f ? unitsOf(f) : ['g', 'ml', '캔', '포']; const keep = sel.value; if (sel.dataset.food !== (f?.id || '')) { sel.innerHTML = us.map(u => `<option>${u}</option>`).join(''); sel.dataset.food = f?.id || ''; if (us.includes(keep)) sel.value = keep; } }
+  if (sel) { const us = f ? unitsOf(f) : ['g', 'ml', '캔', '포']; const keep = sel.value; if (sel.dataset.food !== (f?.id || '')) { sel.innerHTML = us.map(u => `<option>${u}</option>`).join(''); sel.dataset.food = f?.id || ''; const mem = ls.get('aigyeot-unit-' + (f?.id || '')); sel.value = us.includes(mem) ? mem : us.includes('g') ? 'g' : us.includes(keep) ? keep : us[0]; } }
   const amt = num($('#n-amount')?.value), k = f && amt != null ? kcalOf(f, amt, sel?.value) : null;
   const tgt = targetFor(S.pet || {}, today()), meals = num(S.pet?.meals) || 4;
   const eaten = S.logs.filter(l => l.type === 'feed' && dkey(l.t) === today() && l.id !== F?.editId).reduce((s, l) => s + (num(l.kcal) || 0), 0);
@@ -970,6 +990,7 @@ async function saveLog() {
     const f = curFood(), amt = num($('#n-amount').value);
     if (amt == null) return toast('먹은 양을 넣어주세요');
     const un = $('#n-unitsel')?.value || (f ? f.unit : '');
+    ls.set('aigyeot-unit-' + (f?.id || ''), un); ls.set('aigyeot-method', $('#n-method').value);
     const kc = f ? kcalOf(f, amt, un) : null;
     Object.assign(d, { food: f ? f.name : ($('#n-foodname')?.value.trim() || '급여'), amount: amt, unit: un, kcal: kc != null ? r1(kc) : null, method: $('#n-method').value });
   } else if (F.type === 'med') {
@@ -1204,8 +1225,8 @@ document.addEventListener('click', async e => {
   }
   else if (a === 'join') { const v = ($('#join')?.value || '').trim(); const m = v.match(/[?&]g=([0-9a-f]{20,64})/i) || v.match(/^([0-9a-f]{20,64})$/i); if (!m) return toast('링크가 맞지 않아요. 가족에게 받은 링크 전체를 붙여넣어 주세요'); history.replaceState(null, '', location.pathname + '?g=' + m[1]); boot(); }
   else if (a === 'setname') { const v = (b.dataset.v || $('#nm')?.value || '').trim().slice(0, 10); if (!v) return toast('이름을 넣어주세요'); S.me = v; ls.set('aigyeot-name', v); toast(v + '(으)로 기록할게요'); render(true); }
-  else if (a === 'share') { const url = shareLink(), text = `${S.pet?.name || '우리 아이'} 케어 기록을 같이 써요. 이 링크로 들어오면 돼요.`; if (navigator.share) { try { await navigator.share({ title: '아이곁', text, url }); } catch (err) {} } else { try { await navigator.clipboard.writeText(text + '\n' + url); toast('복사했어요. 카톡에 붙여넣어 주세요'); } catch (err) { toast('링크를 길게 눌러 복사해주세요'); } } }
-  else if (a === 'copy-link') { try { await navigator.clipboard.writeText(shareLink()); toast('링크를 복사했어요'); } catch (err) { toast('링크를 길게 눌러 복사해주세요'); } }
+  else if (a === 'share') { ls.set('aigyeot-shared-' + familyCode(), '1'); const url = shareLink(), text = `${S.pet?.name || '우리 아이'} 케어 기록을 같이 써요. 이 링크로 들어오면 돼요.`; if (navigator.share) { try { await navigator.share({ title: '아이곁', text, url }); } catch (err) {} } else { try { await navigator.clipboard.writeText(text + '\n' + url); toast('복사했어요. 카톡에 붙여넣어 주세요'); } catch (err) { toast('링크를 길게 눌러 복사해주세요'); } } }
+  else if (a === 'copy-link') { ls.set('aigyeot-shared-' + familyCode(), '1'); try { await navigator.clipboard.writeText(shareLink()); toast('링크를 복사했어요'); } catch (err) { toast('링크를 길게 눌러 복사해주세요'); } }
   else if (a === 'er-check') erCheck();
   else if (a === 'er-area') { const v = $('#er-area').value.trim(); S.area = v; if (S.pet) { const p = petBase(); p.area = v; savePet(p, '동네를 저장했어요'); } else render(true); }
   else if (a === 'copy-call') { const txt = $('#callText').textContent; try { await navigator.clipboard.writeText(txt); toast('복사했어요'); } catch (err) { const r = document.createRange(); r.selectNodeContents($('#callText')); const s = getSelection(); s.removeAllRanges(); s.addRange(r); toast('글자를 길게 눌러 복사해주세요'); } }
@@ -1214,9 +1235,15 @@ document.addEventListener('click', async e => {
   else if (a === 'p-cancel') { S.parsed = null; render(true); $('#w-text')?.focus(); }
   else if (a === 'p-save') saveParsed();
   else if (a === 'new') openSheet(b.dataset.type);
+  else if (a === 'again') {
+    const l = S.logs.find(x => x.id === b.dataset.id); if (!l) return;
+    const d = JSON.parse(JSON.stringify(l)); delete d.id; d.t = Date.now(); d.by = S.me || null; d.petId = S.pet?.id || l.petId || null;
+    if (await write(() => backend.addLog(d))) toast(`${(TYPES[l.type] || TYPES.note).name} 기록을 지금 시각으로 남겼어요`);
+  }
   else if (a === 'edit') { const l = S.logs.find(x => x.id === b.dataset.id); if (l) openSheet(l.type, l); }
   else if (a === 'logview') { S.logView = b.dataset.v; render(true); }
   else if (a === 'install') { if (S.installEvt) { S.installEvt.prompt(); try { await S.installEvt.userChoice; } catch (err) {} S.installEvt = null; render(true); } }
+  else if (a === 'guide-hide') { ls.set('aigyeot-guide-done-' + familyCode(), '1'); render(true); }
   else if (a === 'install-hide') { ls.set('aigyeot-install-hide', '1'); render(true); }
   else if (a === 'close') closeSheet();
   else if (a === 'save-log') saveLog();
@@ -1253,10 +1280,14 @@ document.addEventListener('click', async e => {
     const name = $('#f-name').value.trim(), kcal = num($('#f-kcal').value), per = num($('#f-per').value), unit = $('#f-unit').value;
     if (!name || !kcal || !per) return toast('이름, kcal, 양을 모두 넣어주세요');
     const gw = num($('#f-gw')?.value);
-    const p = petBase(); p.foods = [...(p.foods || []), { id: uid(), name, kcal, per, unit, ...(gw ? { gw } : {}) }];
+    const p = petBase();
+    if (S.foodEdit) { const old = (p.foods || []).find(x => x.id === S.foodEdit); p.foods = (p.foods || []).map(x => x.id === S.foodEdit ? { id: x.id, name, kcal, per, unit, ...(gw ? { gw } : {}) } : x); S.foodEdit = null; C = null; savePet(p, '사료를 고쳤어요'); return; }
+    p.foods = [...(p.foods || []), { id: uid(), name, kcal, per, unit, ...(gw ? { gw } : {}) }];
     if (!p.mix || !p.mix.length) p.mix = [{ foodId: p.foods[0].id, pct: 100 }];
     C = null; savePet(p, '사료를 추가했어요');
   }
+  else if (a === 'food-edit') { const f = (S.pet?.foods || []).find(x => x.id === b.dataset.id); if (!f) return; S.foodEdit = f.id; render(true); const set = (s, v) => { const el = $(s); if (el) el.value = v ?? ''; }; set('#f-name', f.name); set('#f-kcal', f.kcal); set('#f-per', f.per); set('#f-unit', f.unit); set('#f-gw', f.gw); $('#f-name')?.scrollIntoView({ block: 'center' }); }
+  else if (a === 'food-edit-no') { S.foodEdit = null; render(true); }
   else if (a === 'food-del') { const p = petBase(); p.foods = (p.foods || []).filter(f => f.id !== b.dataset.id); p.mix = (p.mix || []).filter(m => m.foodId !== b.dataset.id); C = null; savePet(p, '삭제했어요'); }
   else if (a === 'task-add') { const v = $('#t-label').value.trim(); if (!v) return; const p = petBase(); p.tasks = [...(p.tasks || []), { id: uid(), label: v }]; savePet(p, '추가했어요'); }
   else if (a === 'task-default') { const p = petBase(); p.tasks = DEFAULT_TASKS.map(l => ({ id: uid(), label: l })); savePet(p, '추가했어요. 필요 없는 건 지워주세요'); }
