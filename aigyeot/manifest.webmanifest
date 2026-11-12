@@ -1,7 +1,7 @@
 {
-  "name": "아이곁 — 아픈 아이 케어 기록",
+  "name": "아이곁 — 우리 아이 생활 기록",
   "short_name": "아이곁",
-  "description": "아픈 강아지·고양이 케어 기록을 가족과 함께",
+  "description": "강아지·고양이 생활 기록을 가족과 함께",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
