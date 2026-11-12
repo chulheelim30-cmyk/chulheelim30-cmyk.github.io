@@ -192,6 +192,7 @@ const TYPES = {
   feed:    { ic: '🥄', name: '급여' },
   med:     { ic: '💊', name: '투약' },
   fluid:   { ic: '💧', name: '수액' },
+  resp:    { ic: '🫁', name: '호흡수' },
   symptom: { ic: '🩺', name: '증상' },
   weight:  { ic: '⚖️', name: '체중' },
   potty:   { ic: '🚽', name: '배변·소변' },
@@ -205,7 +206,14 @@ const isDog = p => p?.species === 'dog';
 const WALK_MIN = [10, 20, 30, 45, 60];
 const BATH_KINDS = ['집에서 목욕', '미용실', '발·얼굴만'];
 const typesFor = p => ['feed', ...(isDog(p) ? ['walk', 'bath'] : []), 'potty', 'weight', 'med', 'symptom', 'note'];
-const CARE_TYPES = ['fluid', 'lab'];
+const CARE_TYPES = ['fluid', 'resp', 'lab'];
+// 질환별 기록 틀: 매일 할 일 + 무엇을 남기면 좋은지 안내. 진단·처방 판단은 하지 않아요.
+const CARE_PLANS = {
+  kidney:   { ic: '💧', name: '신부전', cond: '만성 신부전', tasks: ['아침 약', '저녁 약', '피하수액', '물 마신 양 확인', '소변 확인', '체중 재기 (주 1회)'], tip: '수액 양·소변·체중, 병원에서 받은 검사 수치(크레아티닌·SDMA·인)를 꾸준히 남기면 병원 요약에 변화가 함께 나와요.' },
+  heart:    { ic: '🫁', name: '심장병', cond: '심장병', tasks: ['아침 약', '저녁 약', '잘 때 호흡수 세기', '기침 확인', '체중 재기 (주 1회)'], tip: '푹 잠들었을 때 1분 동안 가슴이 오르내리는 횟수를 세서 🫁 호흡수로 남겨주세요(30초 세고 ×2도 돼요). 평소보다 늘면 주치의 선생님이 알려준 기준대로 연락하세요.' },
+  diabetes: { ic: '🩸', name: '당뇨', cond: '당뇨', tasks: ['아침 밥', '아침 인슐린', '저녁 밥', '저녁 인슐린', '물 마신 양 확인', '소변 확인'], tip: '밥을 얼마나 먹었는지와 인슐린 시간·양을 같이 남기세요. 혈당을 쟀다면 🧪 검사에 넣으면 그래프가 생겨요.' },
+  surgery:  { ic: '🩹', name: '수술 후', cond: '수술 후 회복', tasks: ['아침 약', '저녁 약', '상처 확인', '넥카라 확인', '밥 먹었는지 확인', '소변·배변 확인'], tip: '상처 상태(붓기·진물·핥음)를 메모로 남겨두면 재진 때 선생님께 그대로 보여드릴 수 있어요.' },
+};
 const typeName = k => k === 'med' ? '약·영양제' : (TYPES[k] || TYPES.note).name;
 const LABS = [
   { k: 'crea', n: '크레아티닌', u: 'mg/dL', re: /크레아?티닌|크레아틴|creat?i?n?i?n?e?|crea/i },
@@ -675,6 +683,7 @@ function logText(l) {
     case 'feed': return `${esc(shortFood(l.food) || '급여')} ${l.amount ?? ''}${esc(l.unit || '')}${num(l.kcal) ? ` · ${r0(l.kcal)}kcal` : ''}${l.method ? ` · ${esc(l.method)}` : ''}`;
     case 'med': return `${esc(l.name || '약')}${l.dose ? ' · ' + esc(l.dose) : ''}`;
     case 'fluid': return num(l.ml) ? `피하수액 ${l.ml}ml` : '피하수액';
+    case 'resp': return num(l.bpm) ? `호흡수 ${l.bpm}회/분${l.sleep ? ' (잘 때)' : ''}` : '호흡수';
     case 'symptom': return `${esc((l.symptoms || []).join(', ') || '증상')} · ${['', '약함', '중간', '심함'][l.severity || 1]}`;
     case 'weight': return `${l.kg}kg`;
     case 'walk': return [num(l.min) ? l.min + '분' : '', num(l.km) ? l.km + 'km' : '', [l.pee && '소변', l.poop && '대변'].filter(Boolean).join('·')].filter(Boolean).join(' · ');
@@ -751,6 +760,8 @@ function vCharts() {
   const ws = asc.filter(l => l.type === 'weight' && num(l.kg)).map(l => ({ t: l.t, v: num(l.kg) }));
   const dw = ws.length > 1 ? Math.round((ws[ws.length - 1].v - ws[0].v) * 100) / 100 : null;
   h += `<div class="card"><div class="row between"><h3 style="margin:0">체중 <span class="muted" style="font-weight:400">kg</span></h3>${dw != null ? `<span class="muted">처음보다 ${dw >= 0 ? '+' : ''}${dw}kg</span>` : ''}</div>${ws.length ? lineChart(ws.slice(-30), { color: '#E07A5F' }) : '<p class="muted" style="margin:6px 0 0">체중을 기록하면 그래프가 생겨요.</p>'}</div>`;
+  const rs = asc.filter(l => l.type === 'resp' && num(l.bpm)).map(l => ({ t: l.t, v: num(l.bpm) }));
+  if (rs.length || p.carePlan === 'heart') h += `<div class="card"><h3 style="margin:0">호흡수 <span class="muted" style="font-weight:400">회/분</span></h3>${rs.length ? lineChart(rs.slice(-30), { color: '#7A9E7E' }) : '<p class="muted" style="margin:6px 0 0">잘 때 1분 호흡수를 기록하면 그래프가 생겨요.</p>'}</div>`;
   const days = []; for (let i = 13; i >= 0; i--) { const k = dkey(Date.now() - i * 864e5); const d = new Date(k + 'T00:00'); days.push({ k, label: (d.getMonth() + 1) + '/' + d.getDate(), v: 0 }); }
   S.logs.forEach(l => { if (l.type === 'feed' && num(l.kcal)) { const d = days.find(x => x.k === dkey(l.t)); if (d) d.v += num(l.kcal); } });
   const ft = fullTarget(p);
@@ -904,6 +915,8 @@ function buildSummary(days) {
   }
   const fl = L.filter(l => l.type === 'fluid');
   if (fl.length) lines.push('', '■ 피하수액', `${fl.length}회, 총 ${fl.reduce((s, f) => s + (num(f.ml) || 0), 0)}ml (회당 ${[...new Set(fl.map(f => f.ml))].join('/')}ml)`);
+  const rp = L.filter(l => l.type === 'resp' && num(l.bpm));
+  if (rp.length) lines.push('', '■ 호흡수 (1분)', `${rp.length}회 측정 · 평균 ${r0(rp.reduce((s, x) => s + num(x.bpm), 0) / rp.length)} · 최저 ${Math.min(...rp.map(x => num(x.bpm)))} · 최고 ${Math.max(...rp.map(x => num(x.bpm)))}`, rp.slice(-10).map(x => `${dkey(x.t).slice(5)} ${hm(x.t)} ${x.bpm}${x.sleep ? '(잘 때)' : ''}`).join(', '));
   const pt = L.filter(l => l.type === 'potty');
   if (pt.length) { lines.push('', '■ 배변·소변'); pt.slice(-10).forEach(x => lines.push(`${dkey(x.t).slice(5)} ${hm(x.t)}  ${[x.pee && '소변 ' + x.pee, x.poop && '대변 ' + x.poop].filter(Boolean).join(', ')}`)); }
   const wl = L.filter(l => l.type === 'walk');
@@ -1184,7 +1197,10 @@ function vSet() {
   <div class="card"><h3>매일 할 일</h3>
     ${tasks.map((t, i) => `<div class="edit-row"><span class="grow">${esc(t.label)}</span><button class="btn ghost sm" data-act="task-up" data-i="${i}" ${i ? '' : 'disabled'}>↑</button><button class="btn ghost sm" data-act="task-del" data-i="${i}">삭제</button></div>`).join('')}
     <div class="row" style="margin-top:10px"><input type="text" id="t-label" placeholder="${isDog(p) ? '예: 저녁 산책, 양치' : '예: 양치, 사냥놀이'}"><button class="btn ghost sm" data-act="task-add" style="white-space:nowrap">추가</button></div>
-    ${tasks.length ? '' : `<div class="row" style="margin-top:8px;gap:6px;flex-wrap:wrap"><button class="btn ghost sm" data-act="task-default">자주 쓰는 할 일 넣기</button><button class="btn ghost sm" data-act="task-default" data-care="1">치료 중 할 일 넣기 (약·수액)</button></div>`}</div>
+    ${tasks.length ? '' : `<div class="row" style="margin-top:8px;gap:6px;flex-wrap:wrap"><button class="btn ghost sm" data-act="task-default">자주 쓰는 할 일 넣기</button></div>`}
+    <div class="sub">아플 때 · 질환별 기록 틀</div>
+    <div class="row" style="gap:6px;flex-wrap:wrap">${Object.entries(CARE_PLANS).map(([k, c]) => `<button class="chip ${p.carePlan === k ? 'on' : ''}" data-act="care-plan" data-k="${k}">${c.ic} ${c.name}</button>`).join('')}</div>
+    ${CARE_PLANS[p.carePlan] ? `<p class="muted" style="margin:8px 2px 0">${CARE_PLANS[p.carePlan].tip}</p>` : '<p class="muted" style="margin:8px 2px 0">누르면 그 병에 맞는 할 일이 위에 더해져요. 필요 없는 건 지우면 돼요.</p>'}</div>
 
   ${isStandalone() ? '' : `<div class="card"><h3>홈 화면에 앱으로 두기</h3>${installHow()}${isIOS ? '<p class="muted" style="margin:8px 0 0">아이폰은 홈 화면 앱이 처음 열릴 때 가족 링크를 한 번 붙여넣어야 할 수 있어요. 아래 링크를 미리 복사해 두세요.</p>' : ''}</div>`}
   ${(() => { try { return sessionStorage.getItem('aigyeot-rotated'); } catch (e) { return null; } })() ? '<div class="note" style="margin-bottom:12px"><b>새 링크로 바꿨어요.</b> 옛 링크는 이제 열리지 않아요. 아래 버튼으로 가족에게 새 링크를 다시 보내주세요.</div>' : ''}
@@ -1283,6 +1299,10 @@ function openSheet(type, E) {
       <label class="f">용량</label><input type="text" id="n-dose" placeholder="예: 1/4정, 0.5ml">`;
   } else if (type === 'fluid') {
     body = `<label class="f">수액 양 (ml)</label><input type="number" inputmode="decimal" id="n-ml" value="${esc(lastFluid?.ml ?? '')}">`;
+  } else if (type === 'resp') {
+    body = `<label class="f">1분 동안 숨 쉰 횟수</label><input type="number" inputmode="numeric" id="n-bpm" placeholder="예: 24">
+      <p class="muted" style="margin:6px 2px 0">가슴이 한 번 오르내리면 1회예요. 30초 세고 ×2 해도 돼요.</p>
+      <label class="f" style="display:flex;gap:8px;align-items:center;color:var(--ink)"><input type="checkbox" id="n-sleep" checked style="width:20px;height:20px"> 푹 잘 때 셌어요</label>`;
   } else if (type === 'symptom') {
     body = `<label class="f">어떤 증상인가요? (여러 개 선택)</label><div class="chips" id="n-sym">${SYMPTOMS.map(s => `<button class="chip ${URGENT.includes(s) ? 'danger' : ''}" data-act="sym" data-v="${esc(s)}">${esc(s)}</button>`).join('')}</div>
       <div id="n-alert"></div>
@@ -1324,6 +1344,7 @@ function fillSheet(E) {
     feedUpdate(); if (E.unit && $('#n-unitsel') && [...$('#n-unitsel').options].some(o => o.value === E.unit)) $('#n-unitsel').value = E.unit;
   } else if (E.type === 'med') { set('#n-name', E.name); set('#n-dose', E.dose || ''); }
   else if (E.type === 'fluid') set('#n-ml', E.ml);
+  else if (E.type === 'resp') { set('#n-bpm', E.bpm); if ($('#n-sleep')) $('#n-sleep').checked = !!E.sleep; }
   else if (E.type === 'walk') { set('#n-min', E.min); set('#n-km', E.km); F.wpee = !!E.pee; F.wpoop = !!E.poop; document.querySelectorAll('#n-wmin .chip').forEach(c => c.classList.toggle('on', +c.dataset.v === num(E.min))); document.querySelectorAll('#n-wpot .chip').forEach(c => c.classList.toggle('on', c.dataset.v === 'pee' ? F.wpee : F.wpoop)); }
   else if (E.type === 'bath') { F.kind = E.kind || BATH_KINDS[0]; document.querySelectorAll('#n-bk .chip').forEach(c => c.classList.toggle('on', c.dataset.v === F.kind)); }
   else if (E.type === 'weight') { set('#n-kg', E.kg); if ($('#n-upd')) $('#n-upd').checked = false; }
@@ -1384,6 +1405,9 @@ async function saveLog() {
   } else if (F.type === 'fluid') {
     const ml = num($('#n-ml').value); if (ml == null) return toast('수액 양을 넣어주세요');
     d.ml = ml;
+  } else if (F.type === 'resp') {
+    const bpm = num($('#n-bpm').value); if (!bpm) return toast('호흡수를 넣어주세요');
+    Object.assign(d, { bpm: Math.round(bpm), sleep: !!$('#n-sleep')?.checked });
   } else if (F.type === 'symptom') {
     if (!F.symptoms.length) return toast('증상을 하나 이상 골라주세요');
     Object.assign(d, { symptoms: F.symptoms, severity: F.severity, alert: F.symptoms.some(s => URGENT.includes(s)) });
@@ -1462,6 +1486,7 @@ function normEntry(e) {
     o.kcal = kc != null ? r1(kc) : (num(e.kcal) != null ? r1(num(e.kcal)) : null);
   } else if (type === 'med') { o.name = e.name || '약'; o.dose = e.dose || null; }
   else if (type === 'fluid') { o.ml = num(e.ml); }
+  else if (type === 'resp') { o.bpm = num(e.bpm) ? Math.round(num(e.bpm)) : null; o.sleep = e.sleep ? true : null; if (!o.bpm) o.type = 'note'; }
   else if (type === 'walk') { o.min = num(e.min) ? Math.round(num(e.min)) : null; o.km = num(e.km) || null; o.pee = e.pee ? true : null; o.poop = e.poop ? true : null; }
   else if (type === 'bath') { o.kind = BATH_KINDS.includes(e.kind) ? e.kind : BATH_KINDS[0]; }
   else if (type === 'symptom') { o.symptoms = (Array.isArray(e.symptoms) ? e.symptoms : []).map(String).slice(0, 8); if (!o.symptoms.length) o.symptoms = ['기타']; o.severity = [1, 2, 3].includes(+e.severity) ? +e.severity : 1; o.alert = o.symptoms.some(s => URGENT.includes(s)); }
@@ -1472,7 +1497,7 @@ function normEntry(e) {
   return o;
 }
 // 할 일 자동 체크: 할 일 이름에 들어 있는 종류(급여·약·수액·배변·체중)와 때(아침·저녁…)가 기록과 맞으면 체크. 오늘 기록만.
-const TASK_TYPES = [[/급여|밥|사료|강급|먹이/, 'feed'], [/약|투약|안약|연고|영양제/, 'med'], [/수액/, 'fluid'], [/소변|대변|배변|오줌|똥|화장실(?!\s?청소)/, 'potty'], [/체중|몸무게/, 'weight'], [/산책/, 'walk'], [/목욕|샴푸/, 'bath']];
+const TASK_TYPES = [[/급여|밥|사료|강급|먹이/, 'feed'], [/약|투약|안약|연고|영양제|인슐린/, 'med'], [/수액/, 'fluid'], [/호흡/, 'resp'], [/소변|대변|배변|오줌|똥|화장실(?!\s?청소)/, 'potty'], [/체중|몸무게/, 'weight'], [/산책/, 'walk'], [/목욕|샴푸/, 'bath']];
 const TASK_TIMES = [[/아침|오전/, h => h >= 4 && h < 11], [/점심|낮/, h => h >= 11 && h < 15], [/오후/, h => h >= 12 && h < 18], [/저녁/, h => h >= 16 && h < 23], [/밤|자기\s?전/, h => h >= 19 || h < 3]];
 function tasksDoneBy(entries, already) {
   const tasks = S.pet?.tasks || [], k = today(), done = new Set(already);
@@ -1495,13 +1520,14 @@ async function aiParse(text) {
 오늘 할 일 목록: ${JSON.stringify((p.tasks || []).map(t => ({ id: t.id, label: t.label })))}
 
 규칙:
-- 행동 하나당 항목 하나. type은 feed(밥·강급·간식), med(약·영양제), fluid(피하수액), symptom(증상), weight(체중), potty(소변·대변), walk(산책), bath(목욕·미용), note(그 밖의 메모) 중 하나.
+- 행동 하나당 항목 하나. type은 feed(밥·강급·간식), med(약·영양제), fluid(피하수액), resp(1분 호흡수), symptom(증상), weight(체중), potty(소변·대변), walk(산책), bath(목욕·미용), note(그 밖의 메모) 중 하나.
 - walk: min(분 숫자, 모르면 null), km(숫자 또는 null), pee/poop(산책 중 소변·대변을 봤으면 true). 산책 중 배변은 따로 potty로 만들지 마.
 - bath: kind는 "집에서 목욕","미용실","발·얼굴만" 중 하나.
 - time은 24시간 "HH:MM". 오후/저녁/밤은 12를 더하고, "아침"만 있으면 08:00, "점심" 12:00, "저녁" 19:00, "밤" 22:00, "새벽" 03:00처럼 어림해. 시간이 전혀 없으면 null. 어제 일이면 dayOffset -1, 아니면 0. 시간이 바로 앞 문장에서 이어지면 같은 시간을 써.
 - feed: foodId는 등록된 사료와 맞으면 그 id, amount는 숫자, unit은 가능하면 그 사료의 unit으로 환산(예: unit이 g이고 라벨이 156g짜리 캔이면 "반 캔"→78). 환산 못 하면 말한 단위 그대로. method는 "강급","스스로 먹음","일부만 먹음","튜브" 중 하나 또는 null. 사료를 알면 kcal도 라벨로 계산.
 - med: name(약 이름, 이전 이름과 비슷하면 그 표기), dose(예 "1/4정","0.5ml").
 - fluid: ml 숫자.
+- resp: bpm(1분 호흡수 숫자, '30초에 12번'이면 24), sleep(잘 때 쟀으면 true).
 - symptom: symptoms는 다음에서만 골라: ${JSON.stringify(SYMPTOMS)}. severity 1(약함)~3(심함).
 - potty: pee는 "정상","많음","적음","안 봄","피 섞임" 중 하나 또는 null, poop은 "정상","무름","설사","변비","안 봄" 중 하나 또는 null. 토는 potty가 아니라 symptom 구토.
 - weight: kg 숫자.
@@ -1573,6 +1599,7 @@ function ruleParse(text) {
     const numUnit = s.match(/(\d+(?:\.\d+)?)\s*(kg|킬로|ml|mL|cc|미리|g|그램|캔|포|정)/i);
     if ((m = s.match(/(\d+(?:\.\d+)?)\s*(kg|킬로그램|킬로|키로)\s*(\d{1,3})?/i))) { const kg = +m[1] + (m[3] ? +m[3] / (m[3].length === 3 ? 1000 : m[3].length === 2 ? 100 : 10) : 0); out.push({ ...base, type: 'weight', kg: Math.round(kg * 1000) / 1000 }); continue; }
     if (/몸무게|체중/.test(s) && (m = s.match(/(\d+(?:\.\d+)?)\s*(g|그램)/))) { out.push({ ...base, type: 'weight', kg: +m[1] / 1000 }); continue; }
+    if (/호흡\s?수|숨\s?(쉰\s?)?(횟수|수)/.test(s)) { const half = /30\s*초/.test(s), st = s.replace(/(오전|오후|아침|점심|저녁|밤|새벽)?\s*\d{1,2}\s*시(?!간)(\s*\d{1,2}\s*분|\s*반)?|\d{1,2}:\d{2}|30\s*초|60\s*초|1\s*분(?=\s*(동안|에|간))/g, ' '); m = st.match(/(\d{1,3})\s*(회|번)?/); if (m) { out.push({ ...base, type: 'resp', bpm: +m[1] * (half ? 2 : 1), sleep: /잘\s?때|자는|수면|잠/.test(s) }); continue; } }
     if (/수액/.test(s)) { m = s.match(/(\d+(?:\.\d+)?)\s*(ml|cc|미리|씨씨)/i) || s.replace(/\d{1,2}\s*시(\s*\d{1,2}\s*분)?|\d{1,2}:\d{2}/g, '').match(/(\d{2,3})(?!\s*(g|그램|kg|정|알|번))/); out.push({ ...base, type: 'fluid', ml: m ? +m[1] : null }); const sy = symOf(s); if (sy.length) out.push({ ...base, type: 'symptom', symptoms: sy, severity: sevOf(s) }); continue; }
     if (/산책/.test(s)) {
       const t2 = s.replace(/(오전|오후|아침|점심|저녁|밤|새벽)?\s*\d{1,2}\s*시(?!간)(\s*\d{1,2}\s*분|\s*반)?|\d{1,2}:\d{2}/g, ' ');
@@ -1814,6 +1841,12 @@ document.addEventListener('click', async e => {
   else if (a === 'food-edit-no') { S.foodEdit = null; render(true); }
   else if (a === 'food-del') { const p = petBase(); p.foods = (p.foods || []).filter(f => f.id !== b.dataset.id); p.mix = (p.mix || []).filter(m => m.foodId !== b.dataset.id); C = null; savePet(p, '삭제했어요'); }
   else if (a === 'task-add') { const v = $('#t-label').value.trim(); if (!v) return; const p = petBase(); p.tasks = [...(p.tasks || []), { id: uid(), label: v }]; savePet(p, '추가했어요'); }
+  else if (a === 'care-plan') {
+    const c = CARE_PLANS[b.dataset.k]; if (!c) return; const p = petBase(); p.tasks = p.tasks || [];
+    const have = new Set(p.tasks.map(t => t.label)); c.tasks.filter(l => !have.has(l)).forEach(l => p.tasks.push({ id: uid(), label: l }));
+    p.carePlan = b.dataset.k; if (!p.condition) p.condition = c.cond;
+    savePet(p, `${c.name} 기록 틀을 넣었어요`);
+  }
   else if (a === 'task-default') { const p = petBase(); p.tasks = (b.dataset.care ? DEFAULT_TASKS : tasksFor(p)).map(l => ({ id: uid(), label: l })); savePet(p, '추가했어요. 필요 없는 건 지워주세요'); }
   else if (a === 'task-del') { const p = petBase(); p.tasks.splice(+b.dataset.i, 1); savePet(p, '삭제했어요'); }
   else if (a === 'task-up') { const p = petBase(), i = +b.dataset.i; [p.tasks[i - 1], p.tasks[i]] = [p.tasks[i], p.tasks[i - 1]]; savePet(p, '순서를 바꿨어요'); }
