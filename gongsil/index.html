@@ -25,6 +25,8 @@ input[type=text],input[type=number],select{width:100%;padding:11px 12px;border:1
 .row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .chips{display:flex;flex-wrap:wrap;gap:8px}
 .chip{border:1px solid #d6cfbf;background:#fff;border-radius:999px;padding:8px 12px;font-size:14px;cursor:pointer;user-select:none}
+.urow{border-top:1px dashed var(--stone);margin-top:14px;padding-top:6px}
+.urow .del{float:right;border:0;background:none;color:var(--muted);font-size:13px;cursor:pointer}
 .chip.on{background:var(--navy);color:#fff;border-color:var(--navy)}
 .presets{display:flex;gap:8px;flex-wrap:wrap}
 .presets button{flex:1 1 30%;min-width:100px;border:1px solid var(--gold);background:#fff;color:var(--navy);border-radius:10px;padding:10px 6px;font:inherit;font-size:14px;cursor:pointer}
@@ -58,20 +60,22 @@ footer{font-size:12px;color:var(--muted);text-align:center;margin-top:24px}
 <header><div class="in">
   <div class="logo">0<b>실</b>0 공실공</div>
   <h1>상가 공실 간이진단</h1>
-  <p>3분이면 됩니다. 아는 것만 입력하고, 모르는 건 "모름"으로 두세요.</p>
+  <p>어떤 상가든 됩니다. 주소와 아는 값만 넣고, 모르는 건 비워 두세요. 3분이면 끝납니다.</p>
 </div></header>
 
 <div class="wrap">
 <form id="f">
   <div class="card">
     <h2>1. 현장</h2>
-    <div class="presets">
-      <button type="button" data-p="chunui">부천 춘의</button>
-      <button type="button" data-p="siheung">시흥 대야</button>
-      <button type="button" data-p="ganseok">인천 간석</button>
-    </div>
-    <label>현장명 / 주소</label>
-    <input type="text" id="name" placeholder="예: 시흥시 대야동 653-1">
+    <div id="recentBox" style="display:none;margin-bottom:6px"><div style="font-size:13px;color:var(--muted);margin-bottom:6px">최근 진단한 현장 (이 휴대폰에만 저장)</div><div class="chips" id="recent"></div></div>
+    <label style="margin-top:0">현장명 / 주소</label>
+    <input type="text" id="name" placeholder="예: OO동 123-4 OO타워">
+    <details style="margin-top:10px;font-size:14px"><summary style="cursor:pointer;color:var(--muted)">예시 현장으로 채워 보기</summary>
+      <div class="presets" style="margin-top:8px">
+        <button type="button" data-p="chunui">부천 춘의</button>
+        <button type="button" data-p="siheung">시흥 대야</button>
+        <button type="button" data-p="ganseok">인천 간석</button>
+      </div></details>
     <label>건물 유형</label>
     <select id="type">
       <option value="officetel">오피스텔 (저층부 상가)</option>
@@ -105,7 +109,7 @@ footer{font-size:12px;color:var(--muted);text-align:center;margin-top:24px}
       <div><label>상가 전체 호실</label><input type="number" id="shops" inputmode="numeric" placeholder="예: 20"></div>
       <div><label>그중 공실</label><input type="number" id="vac" inputmode="numeric" placeholder="예: 18"></div>
     </div>
-    <label>진단할 공실 위치</label>
+    <label>공실 호실 <small>(대표 호실 1개 · 여러 개면 아래 "호실 추가")</small></label>
     <select id="pos">
       <option value="front">1층 전면 (도로·역 방향)</option>
       <option value="inner">1층 안쪽</option>
@@ -115,6 +119,8 @@ footer{font-size:12px;color:var(--muted);text-align:center;margin-top:24px}
       <div><label>전용면적 ㎡</label><input type="number" id="area" inputmode="numeric" placeholder="예: 50"></div>
       <div><label>호가 월세 <small>(만원)</small></label><input type="number" id="rent" inputmode="numeric" placeholder="예: 250"></div>
     </div>
+    <div id="extra"></div>
+    <button type="button" class="ghost" id="addRow" style="margin-top:12px">+ 공실 호실 추가</button>
     <div class="row">
       <div><label>1층 용도</label>
         <select id="use"><option value="1">1종 근생</option><option value="2">2종 근생</option><option value="" selected>모름</option></select></div>
@@ -156,7 +162,8 @@ footer{font-size:12px;color:var(--muted);text-align:center;margin-top:24px}
   </div>
 
   <div class="card">
-    <h2>이 공실에 맞는 업종</h2>
+    <h2 id="recTitle">이 공실에 맞는 업종</h2>
+    <div id="rPlan"></div>
     <ol class="rec" id="rRec"></ol>
     <p class="note">이미 영업 중인 업종은 뺐습니다. 기존 임차인 매출을 지키는 것이 건물 가치를 지킵니다.</p>
   </div>
@@ -176,7 +183,7 @@ footer{font-size:12px;color:var(--muted);text-align:center;margin-top:24px}
   </div>
 
   <div class="card">
-    <h2>정식 진단 받기 (무료 파일럿)</h2>
+    <h2>정식 진단 받기</h2>
     <p style="margin:0;font-size:14px">아래 버튼으로 결과를 복사해 카카오톡으로 보내 주세요. 공실공이 현장 확인 후 <b>층별 MD 배치안과 브랜드별 입점 제안서</b>를 만들어 드립니다.</p>
     <button class="go" type="button" id="copyBtn">결과 복사하기</button>
     <div id="copied">복사했습니다. 카카오톡에 붙여넣어 주세요.</div>
@@ -186,7 +193,7 @@ footer{font-size:12px;color:var(--muted);text-align:center;margin-top:24px}
   <p class="note" style="text-align:center">공실공은 분석과 문서 작성만 합니다. 임대 알선·계약은 임대인 또는 공인중개사가 진행합니다.</p>
 </div>
 
-<footer>© 공실공 · 간이진단 v1 (2026.11)</footer>
+<footer>© 공실공 · 간이진단 v2 (2026.11)</footer>
 </div>
 
 <script>
@@ -201,7 +208,23 @@ document.querySelectorAll('.presets button').forEach(b=>b.addEventListener('clic
   const p=PRESETS[b.dataset.p];
   ["name","type","walk","units","occ","shops","vac","pos","area","rent","use","duct","walkm"].forEach(k=>{$(k).value=p[k]??""});
   document.querySelectorAll('#exist .chip').forEach(c=>c.classList.toggle('on',p.exist.includes(c.dataset.k)));
+  $('extra').innerHTML="";
 }));
+const POSNM={front:"1층 전면",inner:"1층 안쪽",upper:"2층 이상"};
+function addRow(v){v=v||{};const d=document.createElement('div');d.className='urow';
+  d.innerHTML=`<button type="button" class="del">삭제</button><label>추가 호실 위치</label><select class="upos"><option value="front">1층 전면</option><option value="inner">1층 안쪽</option><option value="upper">2층 이상</option></select><div class="row"><div><label>전용면적 ㎡</label><input type="number" class="uarea" inputmode="numeric"></div><div><label>호가 월세 (만원)</label><input type="number" class="urent" inputmode="numeric"></div></div>`;
+  d.querySelector('.upos').value=v.pos||"front";d.querySelector('.uarea').value=v.area??"";d.querySelector('.urent').value=v.rent??"";
+  d.querySelector('.del').addEventListener('click',()=>d.remove());$('extra').appendChild(d);}
+$('addRow').addEventListener('click',()=>addRow());
+const FIELDS=["name","type","walk","walkm","units","occ","shops","vac","pos","area","rent","use","duct"];
+function snapshot(){const o={};FIELDS.forEach(k=>o[k]=$(k).value);o.exist=[...document.querySelectorAll('#exist .chip.on')].map(c=>c.dataset.k);
+  o.rows=[...document.querySelectorAll('#extra .urow')].map(r=>({pos:r.querySelector('.upos').value,area:r.querySelector('.uarea').value,rent:r.querySelector('.urent').value}));return o;}
+function restore(o){FIELDS.forEach(k=>$(k).value=o[k]??"");document.querySelectorAll('#exist .chip').forEach(c=>c.classList.toggle('on',(o.exist||[]).includes(c.dataset.k)));$('extra').innerHTML="";(o.rows||[]).forEach(addRow);}
+function loadRecent(){try{return JSON.parse(localStorage.getItem('gsg_recent')||"[]")}catch(e){return []}}
+function saveRecent(o){try{let a=loadRecent().filter(r=>r.name!==o.name);a.unshift(o);localStorage.setItem('gsg_recent',JSON.stringify(a.slice(0,6)));}catch(e){}}
+function renderRecent(){const a=loadRecent();$('recentBox').style.display=a.length?"":"none";$('recent').innerHTML="";
+  a.forEach(o=>{const c=document.createElement('span');c.className='chip';c.textContent=(o.name||"이름 없음").slice(0,18);c.addEventListener('click',()=>restore(o));$('recent').appendChild(c);});}
+renderRecent();
 document.querySelectorAll('#exist .chip').forEach(c=>c.addEventListener('click',()=>c.classList.toggle('on')));
 
 // 업종 후보: t=맞는 건물유형, f=층(1/2), d=배기 필요, c=겹치는 기존 업종, a=[최소,최대]면적
@@ -210,7 +233,7 @@ const CANDS=[
  {n:"편의점",ex:"예: CU, GS25, 세븐일레븐",t:["officetel","mixed","retail","jisan"],f:["front","inner"],d:false,c:["cvs"],a:[30,120],w:"1인 가구 생활 필수. 24시간 불 켜진 1층이 건물 인상을 바꿈"},
  {n:"도시락",ex:"예: 한솥도시락",t:["jisan","officetel"],f:["front","inner"],d:false,c:["dosirak"],a:[33,80],w:"점심 단체주문·포장. 조리 설비 적음"},
  {n:"아침 토스트",ex:"예: 이삭토스트 — 가맹비 없음",t:["jisan","officetel"],f:["front","inner"],d:false,c:[],a:[25,70],w:"출근길 07~10시 수요. 다른 칸과 시간대가 안 겹침"},
- {n:"세탁·코인빨래방",ex:"예: 크린토피아",t:["officetel","mixed"],f:["front","inner","upper"],d:false,c:["laundry"],a:[20,90],w:"오피스텔 입주민 고정 수요. 2층·안쪽도 가능"},
+ {n:"세탁·코인빨래방",ex:"예: 크린토피아",t:["officetel","mixed"],f:["front","inner"],d:false,c:["laundry"],a:[20,90],w:"오피스텔 입주민 고정 수요. 안쪽 칸도 가능"},
  {n:"저가 커피",ex:"예: 메가MGC, 컴포즈, 빽다방",t:["officetel","jisan","retail","mixed"],f:["front"],d:false,c:["coffee"],a:[20,70],w:"역 출근 동선 테이크아웃. 건물 안에 커피가 이미 있으면 제외"},
  {n:"무인 매장 (아이스크림·밀키트·문구)",ex:"인건비 없는 소형 업종",t:["officetel","mixed"],f:["front","inner"],d:false,c:["unmanned"],a:[15,50],w:"작은 칸·안쪽 칸 채우기 좋음"},
  {n:"샐러드",ex:"예: 샐러디",t:["jisan","officetel"],f:["front","inner"],d:false,c:[],a:[30,70],w:"점심 보완. 배기 부담 적음"},
@@ -287,7 +310,7 @@ $('f').addEventListener('submit',e=>{
   if(x.shops&&x.vac!==null){vr=x.vac/x.shops;s4=Math.round(16-8*Math.min(1,vr));}else{s4=8;st4="모름";chk.push("상가 전체 호실 수와 공실 수");}
   if(x.rent===null){s4=Math.min(s4,10);st4="호가 모름";chk.push("호실별 호가 (보증금 / 월세 / 관리비)");}
   chk.push("관리규약의 업종 제한(같은 업종 금지) 조항");
-  chk.push("임대 결정 절차 (신탁사 명의 · 렌트프리·인테리어 지원 범위)");
+  chk.push("임대 결정 절차 (임대인·신탁사 명의 · 렌트프리·인테리어 지원 범위)");
   // 입력값은 현장 확인 전이라 '일부 확인' → 만점의 70% 이하
   // 역 도보·입주율·배기·호가는 담당자 추정이라 '일부 확인'(70%) 상한. 세대수·호실·면적·용도는 장부로 확인되는 값
   s1=Math.min(s1,21);if(x.occ!==null)s2=Math.min(s2,24);if(x.duct!=="y"||x.use==="")s3=Math.min(s3,14);s4=Math.min(s4,16);
@@ -321,6 +344,24 @@ $('f').addEventListener('submit',e=>{
   recs=recs.slice(0,5);
   $('rRec').innerHTML=(split?`<p style="margin:0 0 6px;font-size:14px"><b>${x.area}㎡는 한 업종으로 채우기 큽니다.</b> 2칸(각 약 ${Math.round(x.area/2)}㎡)으로 나누면 아래 업종이 가능합니다.</p>`:"")+(recs.length?recs.map(c=>`<li><b>${c.n}</b>${c.d&&x.duct===""?'<span class="tag w">배기 확인 필요</span>':''}<div>${c.w}</div><div class="ex">${c.ex}</div></li>`).join(""):"<li>입력한 조건에 맞는 업종이 적습니다. 공실공이 분할·업종 전환안을 따로 검토해 드립니다.</li>");
 
+  // 호실별 배치안 (여러 호실일 때 업종 안 겹치게)
+  const rows=[{pos:x.pos,area:x.area,rent:x.rent}].concat([...document.querySelectorAll('#extra .urow')].map(r=>({pos:r.querySelector('.upos').value,area:num(r.querySelector('.uarea').value),rent:num(r.querySelector('.urent').value)})));
+  let planText="";
+  if(rows.length>1){
+    const usedC=new Set(x.exist),usedN=new Set(),order=rows.map((r,i)=>({...r,i})).sort((a,b)=>({front:0,inner:1,upper:2}[a.pos])-({front:0,inner:1,upper:2}[b.pos]));
+    const out=[];
+    for(const r of order){
+      let c=CANDS.filter(c=>c.t.includes(x.type)&&c.f.includes(r.pos)&&!usedN.has(c.n)&&!c.c.some(k=>usedC.has(k)));
+      if(x.duct==="n")c=c.filter(c=>!c.d);
+      if(r.area!==null)c=c.filter(c=>r.area>=c.a[0]*0.85&&r.area<=c.a[1]*1.2);
+      const pick=c[0];if(pick){usedN.add(pick.n);pick.c.forEach(k=>usedC.add(k));}
+      out[r.i]={r,pick,alt:c[1]};
+    }
+    $('recTitle').textContent="호실별 배치안 (업종 안 겹치게)";
+    $('rPlan').innerHTML='<ol class="rec">'+out.map((o,i)=>`<li><b>${i===0?"대표 호실":"호실 "+(i+1)} · ${POSNM[o.r.pos]}${o.r.area!==null?" "+o.r.area+"㎡":""}${o.r.rent!==null?" · 호가 "+o.r.rent+"만":""}</b><div>${o.pick?o.pick.n+(o.pick.d&&x.duct===""?' <span class="tag w">배기 확인</span>':''):"F&B 과밀 → 비F&B·분할·통합 임대 검토"}</div>${o.pick?`<div class="ex">${o.pick.ex}${o.alt?" / 2안: "+o.alt.n:""}</div>`:""}</li>`).join("")+'</ol><p class="note" style="margin-top:0">앞쪽(1층 전면) 칸부터 앵커 업종을 배정하고, 같은 손님을 나눠 먹는 업종은 한 건물에 하나만 넣었습니다.</p><h2 style="margin-top:14px">대표 호실에 맞는 업종 (전체 후보)</h2>';
+    planText="\n\n[호실별 배치안]\n"+out.map((o,i)=>`${i===0?"대표":"호실"+(i+1)} ${POSNM[o.r.pos]} ${o.r.area??"?"}㎡ → ${o.pick?o.pick.n:"비F&B·분할 검토"}`).join("\n");
+  }else{$('recTitle').textContent="이 공실에 맞는 업종";$('rPlan').innerHTML="";}
+
   // 임대 조건
   let mText="";
   if(x.rent!==null){
@@ -338,7 +379,8 @@ $('f').addEventListener('submit',e=>{
 
   const ex=x.exist.length?[...document.querySelectorAll('#exist .chip.on')].map(c=>c.textContent).join(", "):"없음/미입력";
   const posNm={front:"1층 전면",inner:"1층 안쪽",upper:"2층 이상"}[x.pos];
-  $('copybox').value=`[공실공 간이진단]\n현장: ${x.name} (${TYPE_NM[x.type]})\n예비 등급: ${g} (${tot}/100, 보수 채점)\n확인되면: ${nUnk?RG.lo+"~"+RG.hi+"점, 오차 줄이려면 "+RG.drv.slice(0,3).map(d=>d.k).join("·")+" 확인":"없음"}\n- 입지 ${s1}/30, 배후 ${s2}/30, 공실 조건 ${s3}/20, 경제성 ${s4}/20\n입력: 역까지 ${x.m===null?"모름":x.m+"m"}, 세대·실 ${x.units??"모름"}, 입주율 ${x.occ??"모름"}%, 상가 ${x.shops??"?"}실 중 공실 ${x.vac??"?"}, ${posNm} ${x.area??"?"}㎡, 호가 월세 ${x.rent??"?"}만, 용도 ${x.use?x.use+"종 근생":"모름"}, 배기 ${x.duct==="y"?"가능":x.duct==="n"?"불가":"모름"}\n기존 업종: ${ex}\n\n[맞는 업종]${split?" (2칸 분할 시)":""}\n${recs.map((c,i)=>(i+1)+". "+c.n).join("\n")}${mText}\n\n[확인 필요]\n${chk.map(c=>"- "+c).join("\n")}`;
+  $('copybox').value=`[공실공 간이진단]\n현장: ${x.name} (${TYPE_NM[x.type]})\n예비 등급: ${g} (${tot}/100, 보수 채점)\n확인되면: ${nUnk?RG.lo+"~"+RG.hi+"점, 오차 줄이려면 "+RG.drv.slice(0,3).map(d=>d.k).join("·")+" 확인":"없음"}\n- 입지 ${s1}/30, 배후 ${s2}/30, 공실 조건 ${s3}/20, 경제성 ${s4}/20\n입력: 역까지 ${x.m===null?"모름":x.m+"m"}, 세대·실 ${x.units??"모름"}, 입주율 ${x.occ??"모름"}%, 상가 ${x.shops??"?"}실 중 공실 ${x.vac??"?"}, ${posNm} ${x.area??"?"}㎡, 호가 월세 ${x.rent??"?"}만, 용도 ${x.use?x.use+"종 근생":"모름"}, 배기 ${x.duct==="y"?"가능":x.duct==="n"?"불가":"모름"}\n기존 업종: ${ex}\n\n[맞는 업종]${split?" (2칸 분할 시)":""}\n${recs.map((c,i)=>(i+1)+". "+c.n).join("\n")}${mText}\n\n[확인 필요]\n${chk.map(c=>"- "+c).join("\n")}`+planText;
+  saveRecent(snapshot());renderRecent();
   $('f').style.display="none";$('result').style.display="block";$('copied').style.display="none";$('copybox').style.display="none";
   window.scrollTo(0,0);
 });
