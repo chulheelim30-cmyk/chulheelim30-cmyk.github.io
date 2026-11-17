@@ -1768,9 +1768,10 @@ function LandLookup({ f, setF }) {
   }));
   const fmt0 = v => Math.round(v).toLocaleString('ko-KR');
   return React.createElement("div", { className: "col-span-2 rounded-lg p-3 space-y-2", style: { background: '#13171D', border: '1px solid #2E3541', borderRadius: 12 } },
-    React.createElement("p", { className: "text-[11px] font-bold", style: { color: '#B0B7C1' } },
+    React.createElement("p", { className: "font-bold", style: { color: '#E8EAED', fontSize: 16, letterSpacing: '-0.01em' } }, "지번으로 시작하기"),
+    React.createElement("p", { className: "text-[11px]", style: { color: '#9AA3AF', marginTop: 2 } },
       React.createElement("span", { className: "inline-block rounded px-1 text-[10px] font-bold", style: { marginRight: 4, background: 'rgba(96,165,250,.12)', color: '#93C5FD', border: '1px solid rgba(96,165,250,.35)' } }, "공공"),
-      "주소로 불러오기 · 대지면적·용도지역·공시지가 (국토교통부 브이월드)"),
+      "대지면적·용도지역·공시지가를 불러와 공사비·사업수지를 바로 계산합니다 (국토교통부 브이월드)"),
     React.createElement("textarea", {
       className: "w-full rounded-md px-2.5 py-2 text-[13px]",
       style: { background: '#12161C', border: '1px solid #2E3541', color: '#E8EAED', borderRadius: 10, minHeight: 64, fontSize: 15 },
@@ -1807,7 +1808,8 @@ function LandLookup({ f, setF }) {
           mainZone, "은 이 도구의 용도지역 목록에 없습니다. 용적률을 직접 입력하세요."),
         React.createElement("button", {
           onClick: apply,
-          className: "w-full py-2 rounded-md bg-slate-900 text-white text-xs font-bold"
+          className: "sel w-full py-2 rounded-md bg-slate-900 text-white text-xs font-bold",
+          style: { minHeight: 44, fontSize: 14 }
         }, "입력에 반영 (지역·대지면적", zoneId ? '·용도지역' : '', ")"),
         React.createElement("p", { className: "text-[10px] text-slate-500" },
           "면적은 연속지적도 도형으로 계산한 값이라 토지대장 면적과 조금 다를 수 있습니다. 지구단위계획·도로 저촉 등은 토지이음에서 확인하세요.")))
@@ -1907,6 +1909,7 @@ function App() {
     unit: t.unit,
     c: f.tier === i + 1 ? '#10b981' : TIER_COLORS[i]
   }));
+  const isExample = f.sitePy === DEFAULT.sitePy && f.zone === DEFAULT.zone && f.landEok === DEFAULT.landEok && !f.gfaManual;
   const dbUnit = useMemo(() => analyze({
     ...f,
     costMode: 'db'
@@ -2037,7 +2040,7 @@ function App() {
   }))), /*#__PURE__*/React.createElement("main", {
     className: "max-w-4xl mx-auto px-4 py-4 space-y-3",
     style: { paddingBottom: 96 }
-  }, /*#__PURE__*/React.createElement("div", {
+  }, (sheet === 'cost' || sheet === 'pf') && vwOn() && React.createElement(LandLookup, { f, setF }), /*#__PURE__*/React.createElement("div", {
     className: "grid grid-cols-2 gap-2 text-center"
   }, /*#__PURE__*/React.createElement("button", {
     onClick: () => go('cost'),
@@ -2046,10 +2049,14 @@ function App() {
   }, /*#__PURE__*/React.createElement("p", {
     className: "text-[10px] text-slate-500",
     style: { fontSize: 12 }
-  }, "\uC608\uC0C1 ", "\uACF5\uC0AC\uBE44 (", f.costMode === 'db' ? 'DB' : f.costMode === 'manual' ? '직접' : sel.n, ")"), /*#__PURE__*/React.createElement("p", {
+  }, "\uC608\uC0C1 ", "\uACF5\uC0AC\uBE44 (", f.costMode === 'db' ? 'DB' : f.costMode === 'manual' ? '직접' : sel.n, ")", isExample && /*#__PURE__*/React.createElement("span", {
+    style: { marginLeft: 6, fontSize: 11, fontWeight: 700, padding: '2px 7px', borderRadius: 999, border: '1px solid #3A4250', color: '#B0B7C1' }
+  }, "\uC608\uC2DC")), /*#__PURE__*/React.createElement("p", {
     className: "text-sm font-extrabold tabular-nums",
-    style: { fontSize: 38, lineHeight: 1.1, marginTop: 4, letterSpacing: '-0.03em', color: '#FFFFFF' }
-  }, eok(buildNow))), /*#__PURE__*/React.createElement("button", {
+    style: { fontSize: 38, lineHeight: 1.1, marginTop: 4, letterSpacing: '-0.03em', color: isExample ? '#7D8692' : '#FFFFFF' }
+  }, eok(buildNow)), isExample && /*#__PURE__*/React.createElement("p", {
+    style: { fontSize: 12, color: '#9AA3AF', marginTop: 6 }
+  }, "\uB300\uC9C0 1,000\uD3C9 \xB7 \uC900\uC8FC\uAC70 \uAE30\uC900 \uC608\uC2DC\uC608\uC694. \uC9C0\uBC88\uC774\uB098 \uB300\uC9C0\uBA74\uC801\uC744 \uB123\uC73C\uBA74 \uB0B4 \uC0AC\uC5C5\uC73C\uB85C \uBC14\uB01D\uB2C8\uB2E4.")), /*#__PURE__*/React.createElement("button", {
     onClick: () => go('pf'),
     className: "bg-white rounded-lg border border-slate-200 py-2"
   }, /*#__PURE__*/React.createElement("p", {
@@ -2318,7 +2325,7 @@ function App() {
     className: "text-[11px] text-slate-500"
   }, "\uB300\uC9C0\uBA74\uC801\xB7\uC6A9\uB3C4\uC9C0\uC5ED\uC73C\uB85C \uC6A9\uC801\uB960\uACFC \uC5F0\uBA74\uC801\xB7\uC138\uB300\uC218\uB97C \uC7A1\uACE0, \uB098\uBA38\uC9C0 \uBE44\uC6A9\uC740 \uC2E4\uBB34 \uC218\uC9C0\uD45C \uBE44\uC728\uB85C \uC790\uB3D9 \uC0B0\uCD9C\uD569\uB2C8\uB2E4.")), /*#__PURE__*/React.createElement("div", {
     className: "grid grid-cols-2 gap-2.5"
-  }, vwOn() && React.createElement(LandLookup, { f, setF }), /*#__PURE__*/React.createElement("label", {
+  }, /*#__PURE__*/React.createElement("label", {
     className: "block col-span-2"
   }, /*#__PURE__*/React.createElement("span", {
     className: "block text-[11px] font-bold text-slate-600 mb-1"
