@@ -1728,6 +1728,8 @@ async function vwLookup(addr) {
 }
 function LandLookup({ f, setF }) {
   const [txt, setTxt] = useState('');
+  const [applied, setApplied] = useState(false);
+  const [landDraft, setLandDraft] = useState(null);
   const [rows, setRows] = useState([]);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState('');
@@ -1759,13 +1761,14 @@ function LandLookup({ f, setF }) {
   const mainZone = Object.keys(byZone).sort((a, b) => byZone[b] - byZone[a])[0] || '';
   const zoneId = ZONE_BY_NAME[mainZone];
   const city = ok[0] ? cityFromAddr(ok[0].addr) : '';
-  const apply = () => setF(o => ({
+  const apply = () => (setApplied(true), setF(o => ({
     ...o,
     city: city || o.city,
     region: (CITIES.find(c => c.id === (city || o.city)) || {}).reg || o.region,
     sitePy: Math.round(py),
     zone: zoneId || o.zone
-  }));
+  })));
+  const landIsExample = f.landEok === DEFAULT.landEok;
   const fmt0 = v => Math.round(v).toLocaleString('ko-KR');
   return React.createElement("div", { className: "col-span-2 rounded-lg p-3 space-y-2", style: { background: '#13171D', border: '1px solid #2E3541', borderRadius: 12 } },
     React.createElement("p", { className: "font-bold", style: { color: '#E8EAED', fontSize: 16, letterSpacing: '-0.01em' } }, "지번으로 시작하기"),
@@ -1810,7 +1813,23 @@ function LandLookup({ f, setF }) {
           onClick: apply,
           className: "sel w-full py-2 rounded-md bg-slate-900 text-white text-xs font-bold",
           style: { minHeight: 44, fontSize: 14 }
-        }, "입력에 반영 (지역·대지면적", zoneId ? '·용도지역' : '', ")"),
+        }, applied ? "반영됨 ✓ 다시 반영" : "입력에 반영 (지역·대지면적" + (zoneId ? '·용도지역' : '') + ")"),
+        applied && React.createElement("div", { style: { marginTop: 8, padding: 12, borderRadius: 10, border: landIsExample ? '2px solid #C5F04A' : '1px solid #2E3541', background: '#12161C' } },
+          React.createElement("label", { style: { display: 'block' } },
+            React.createElement("span", { style: { display: 'block', fontSize: 14, fontWeight: 800, color: '#E8EAED', marginBottom: 6 } }, landIsExample ? "다음: 토지비(매입가)를 넣어 주세요" : "토지비(매입가)"),
+            React.createElement("div", { style: { display: 'flex', alignItems: 'center', gap: 8 } },
+              React.createElement("input", {
+                type: "number", inputMode: "decimal", step: 1,
+                value: landDraft !== null ? landDraft : landIsExample ? '' : f.landEok,
+                placeholder: "실제 매입가",
+                onChange: e => { const t = e.target.value; setLandDraft(t); const v = parseFloat(t); if (v > 0) setF(o => ({ ...o, landEok: v })); },
+                onBlur: () => setLandDraft(null),
+                className: "tabular-nums",
+                style: { flex: 1, minWidth: 0, height: 44, borderRadius: 10, border: '1px solid #2E3541', background: '#0E1116', color: '#E8EAED', padding: '0 12px', fontSize: 16, textAlign: 'right' }
+              }),
+              React.createElement("span", { style: { fontSize: 14, color: '#9AA3AF' } }, "억"))),
+          React.createElement("p", { style: { fontSize: 11, color: '#9AA3AF', marginTop: 6 } },
+            "공시지가 합계 ", jigaEok.toFixed(1), "억", landIsExample ? '' : ` · 입력값은 공시지가의 ${(f.landEok / (jigaEok || 1)).toFixed(2)}배`, ". 실제 매입가(계약가)를 넣어야 사업수지가 맞습니다.")),
         React.createElement("p", { className: "text-[10px] text-slate-500" },
           "면적은 연속지적도 도형으로 계산한 값이라 토지대장 면적과 조금 다를 수 있습니다. 지구단위계획·도로 저촉 등은 토지이음에서 확인하세요.")))
   );
@@ -1910,6 +1929,7 @@ function App() {
     c: f.tier === i + 1 ? '#10b981' : TIER_COLORS[i]
   }));
   const isExample = f.sitePy === DEFAULT.sitePy && f.zone === DEFAULT.zone && f.landEok === DEFAULT.landEok && !f.gfaManual;
+  const landExample = !isExample && f.landEok === DEFAULT.landEok;
   const dbUnit = useMemo(() => analyze({
     ...f,
     costMode: 'db'
@@ -2056,7 +2076,9 @@ function App() {
     style: { fontSize: 38, lineHeight: 1.1, marginTop: 4, letterSpacing: '-0.03em', color: isExample ? '#7D8692' : '#FFFFFF' }
   }, eok(buildNow)), isExample && /*#__PURE__*/React.createElement("p", {
     style: { fontSize: 12, color: '#9AA3AF', marginTop: 6 }
-  }, "\uB300\uC9C0 1,000\uD3C9 \xB7 \uC900\uC8FC\uAC70 \uAE30\uC900 \uC608\uC2DC\uC608\uC694. \uC9C0\uBC88\uC774\uB098 \uB300\uC9C0\uBA74\uC801\uC744 \uB123\uC73C\uBA74 \uB0B4 \uC0AC\uC5C5\uC73C\uB85C \uBC14\uB01D\uB2C8\uB2E4.")), /*#__PURE__*/React.createElement("button", {
+  }, "\uB300\uC9C0 1,000\uD3C9 \xB7 \uC900\uC8FC\uAC70 \uAE30\uC900 \uC608\uC2DC\uC608\uC694. \uC9C0\uBC88\uC774\uB098 \uB300\uC9C0\uBA74\uC801\uC744 \uB123\uC73C\uBA74 \uB0B4 \uC0AC\uC5C5\uC73C\uB85C \uBC14\uB01D\uB2C8\uB2E4."), landExample && /*#__PURE__*/React.createElement("p", {
+    style: { fontSize: 12, color: '#FDBA74', marginTop: 6, fontWeight: 700 }
+  }, "\uD1A0\uC9C0\uBE44\uAC00 \uC544\uC9C1 \uC608\uC2DC\uAC12(300\uC5B5)\uC774\uC5D0\uC694. \uC2E4\uC81C \uB9E4\uC785\uAC00\uB97C \uB123\uC5B4 \uC8FC\uC138\uC694.")), /*#__PURE__*/React.createElement("button", {
     onClick: () => go('pf'),
     className: "bg-white rounded-lg border border-slate-200 py-2"
   }, /*#__PURE__*/React.createElement("p", {
