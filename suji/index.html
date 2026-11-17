@@ -1477,7 +1477,7 @@ const vwOn = () => {
   }
 };
 let vwSeq = 0;
-function vwJsonp(base, params, ms = 9000) {
+function vwJsonp(base, params, ms = 7000) {
   return new Promise((res, rej) => {
     const cb = '__vw' + Date.now() + vwSeq++;
     const q = new URLSearchParams({
@@ -1496,7 +1496,7 @@ function vwJsonp(base, params, ms = 9000) {
     };
     t = setTimeout(() => {
       done();
-      rej(new Error('브이월드 응답 시간 초과'));
+      rej(new Error('브이월드 응답 없음(' + (params.data || params.request) + ') — 인증키 승인 전이거나 서비스 URL 불일치일 수 있습니다'));
     }, ms);
     window[cb] = d => {
       done();
@@ -1557,7 +1557,9 @@ function geomArea(g) {
   }
   return a;
 }
+let vwStep = () => {};
 async function vwLookup(addr) {
+  vwStep('① 주소 → 좌표 찾는 중');
   let pt = null,
     refined = addr;
   for (const type of ['parcel', 'road']) {
@@ -1581,6 +1583,7 @@ async function vwLookup(addr) {
   }
   if (!pt) throw new Error('주소를 찾지 못했습니다');
   const P = `POINT(${pt.x} ${pt.y})`;
+  vwStep('② 필지 도형·공시지가 찾는 중');
   const lp = await vwJsonp('https://api.vworld.kr/req/data', {
     service: 'data',
     request: 'GetFeature',
@@ -1595,6 +1598,7 @@ async function vwLookup(addr) {
   if (!ft) throw new Error('필지(연속지적도)를 찾지 못했습니다');
   const pr = ft.properties || {};
   let zoneName = '';
+  vwStep('③ 용도지역 찾는 중');
   for (const layer of ['LT_C_UQ111', 'LT_C_UQ112', 'LT_C_UQ113']) {
     const z = await vwJsonp('https://api.vworld.kr/req/data', {
       service: 'data',
@@ -1628,7 +1632,9 @@ function LandLookup({ f, setF }) {
   const [rows, setRows] = useState([]);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState('');
+  const [step, setStep] = useState('');
   const run = async () => {
+    vwStep = setStep;
     const list = txt.split(/\n|;/).map(s => s.trim()).filter(Boolean).slice(0, 20);
     if (!list.length) return setMsg('주소를 한 줄에 하나씩 넣어 주세요.');
     setBusy(true);
@@ -1643,6 +1649,7 @@ function LandLookup({ f, setF }) {
       setRows([...out]);
     }
     setBusy(false);
+    setStep('');
   };
   const ok = rows.filter(r => !r.err);
   const m2 = ok.reduce((a, r) => a + r.m2, 0);
@@ -1677,6 +1684,7 @@ function LandLookup({ f, setF }) {
       disabled: busy,
       className: "w-full py-2 rounded-md bg-blue-700 text-white text-xs font-bold disabled:opacity-50"
     }, busy ? '조회 중…' : '필지 정보 불러오기'),
+    busy && step && React.createElement("p", { className: "text-[11px] text-blue-800" }, step),
     msg && React.createElement("p", { className: "text-[11px] text-red-600" }, msg),
     rows.length > 0 && React.createElement("div", { className: "space-y-1 text-[11px]" },
       rows.map((r, i) => React.createElement("div", { key: i, className: "bg-white rounded border border-slate-200 px-2 py-1.5" },
