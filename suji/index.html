@@ -9,6 +9,83 @@ var ua=navigator.userAgent||"",src=/KAKAOTALK/i.test(ua)?"kakao":/NAVER/.test(ua
 window.peTrack=function(ev,meta){if(off)return;try{fetch(U,{method:"POST",keepalive:true,headers:{"apikey":K,"Content-Type":"application/json","Prefer":"return=minimal"},body:JSON.stringify({site:S,event:ev,vid:vid,src:src,mobile:/Mobi|Android|iPhone/.test(ua),meta:meta||null})}).catch(function(){});}catch(e){}};
 peTrack("visit");})();
 </script>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<style id="theme-c">/* C안 프로 다크 (2026-11-17) */
+html{color-scheme:dark;background:#0E1116}body{background:#0E1116}
+html body .min-h-screen{background:#0E1116;color:#E8EAED}
+html body .tabular-nums{font-family:'Space Grotesk','Noto Sans KR',sans-serif}
+html body input,html body select,html body textarea{background-color:#12161C;color:#E8EAED;border-color:#2E3541}
+html body input::placeholder,html body textarea::placeholder{color:#7D8692}
+html body option,html body optgroup{background:#171B22;color:#E8EAED}
+html body .accent-emerald-600{accent-color:#C5F04A}
+html body .sel{background-color:#C5F04A!important;color:#0E1116!important;border-color:#C5F04A!important}
+html body .sel *{color:#0E1116!important;opacity:1!important}
+html body .sel-tab{color:#C5F04A!important}
+html body details,html body summary{color:inherit}
+html body .shadow-lg,html body .shadow-sm,html body .shadow{box-shadow:none}
+html body .recharts-tooltip-wrapper .recharts-default-tooltip{background:#171B22!important;border-color:#2E3541!important;color:#E8EAED}
+html body .bg-white{background-color:#171B22}
+html body .bg-slate-50{background-color:#13171D}
+html body .bg-slate-100{background-color:#1E232B}
+html body .bg-slate-200{background-color:#2E3541}
+html body .bg-slate-700{background-color:#2E3541}
+html body .bg-slate-900{background-color:#12161C}
+html body .bg-emerald-50{background-color:rgba(197,240,74,.08)}
+html body .bg-emerald-100{background-color:rgba(197,240,74,.14)}
+html body .bg-emerald-200{background-color:rgba(197,240,74,.22)}
+html body .bg-emerald-500{background-color:#C5F04A;color:#0E1116}
+html body .bg-emerald-600{background-color:#C5F04A;color:#0E1116}
+html body .hover\:bg-emerald-400:hover{background-color:#D4F76B}
+html body .bg-amber-50{background-color:rgba(253,186,116,.08)}
+html body .bg-amber-200{background-color:rgba(253,186,116,.22)}
+html body .bg-red-50{background-color:rgba(248,113,113,.08)}
+html body .bg-blue-50{background-color:rgba(96,165,250,.08)}
+html body .bg-blue-600{background-color:#C5F04A;color:#0E1116}
+html body .disabled\:bg-slate-100:disabled{background-color:#1E232B}
+html body .text-slate-900{color:#E8EAED}
+html body .text-slate-800{color:#DDE1E6}
+html body .text-slate-700{color:#C9CED6}
+html body .text-slate-600{color:#B0B7C1}
+html body .text-slate-500{color:#9AA3AF}
+html body .text-slate-400{color:#7D8692}
+html body .text-slate-300{color:#8A93A0}
+html body .text-emerald-300{color:#C5F04A}
+html body .text-emerald-600{color:#C5F04A}
+html body .text-emerald-700{color:#C5F04A}
+html body .text-emerald-800{color:#D4F76B}
+html body .text-emerald-900{color:#DDF98A}
+html body .text-emerald-900\/80{color:rgba(221,249,138,.85)}
+html body .text-amber-300{color:#FCD34D}
+html body .text-amber-700{color:#FDBA74}
+html body .text-amber-800{color:#FCC48C}
+html body .text-amber-900{color:#FDD3A6}
+html body .text-red-600{color:#F87171}
+html body .text-red-700{color:#FCA5A5}
+html body .text-red-900{color:#FECACA}
+html body .text-blue-700{color:#93C5FD}
+html body .border-slate-100{border-color:#262C36}
+html body .border-slate-200{border-color:#262C36}
+html body .border-slate-300{border-color:#2E3541}
+html body .border-slate-900{border-color:#3A4250}
+html body .border-emerald-100{border-color:rgba(197,240,74,.2)}
+html body .border-emerald-200{border-color:rgba(197,240,74,.3)}
+html body .border-emerald-500{border-color:#C5F04A}
+html body .border-emerald-600{border-color:#C5F04A}
+html body .border-emerald-600\/40{border-color:rgba(197,240,74,.4)}
+html body .border-amber-200{border-color:rgba(253,186,116,.35)}
+html body .border-red-200{border-color:rgba(248,113,113,.35)}
+html body .border-blue-100{border-color:rgba(96,165,250,.25)}
+html body .bg-amber-100{background-color:rgba(250,204,21,.16)}
+html body .bg-orange-200{background-color:rgba(251,146,60,.30)}
+html body .bg-red-500{background-color:#B42318;color:#FFFFFF}
+html body .bg-emerald-50\/60{background-color:rgba(197,240,74,.06)}
+html body .hover\:bg-emerald-700:hover{background-color:#B5E03A}
+html body .text-amber-600{color:#FDBA74}
+html body .text-blue-600{color:#93C5FD}
+html body .text-orange-900{color:#FED7AA}
+html body .ring-slate-900{--tw-ring-color:#C5F04A}
+html body .focus\:ring-emerald-600:focus{--tw-ring-color:#C5F04A}
+html body .divide-slate-100>:not([hidden])~:not([hidden]){border-color:#262C36}</style>
 </head><body><div id="root"></div>
 <script>/**
  * @license React
@@ -1458,9 +1535,9 @@ const KIND_NOTE = {
   lh: 'LH 신축매입약정: 2026.3 매입공고부터 매입가는 감정평가형으로 일원화됐고, 2026.7 제도개선(2026년 공고분 소급)으로 착공~준공 동안 매매대금 90% 이내를 공정률에 따라 3개월 단위로 받습니다. 그래서 분양경비가 거의 없고 PF 60%·인출 30%로 계산합니다. 결과는 감정평가로 받아야 할 최소 평당 매입가입니다.'
 };
 const TAG_STYLE = {
-  '공공': { background: '#eff6ff', color: '#1e40af', borderColor: '#bfdbfe' },
-  '실사업': { background: '#ecfdf5', color: '#065f46', borderColor: '#a7f3d0' },
-  '추정': { background: '#fffbeb', color: '#92400e', borderColor: '#fde68a' }
+  '공공': { background: 'rgba(96,165,250,.12)', color: '#93C5FD', borderColor: 'rgba(96,165,250,.35)' },
+  '실사업': { background: 'rgba(197,240,74,.12)', color: '#C5F04A', borderColor: 'rgba(197,240,74,.35)' },
+  '추정': { background: 'rgba(253,186,116,.12)', color: '#FDBA74', borderColor: 'rgba(253,186,116,.35)' }
 };
 function Tagged({ t }) {
   const parts = String(t).split(/(\[(?:공공|실사업|추정)[^\]]*\])/);
@@ -1749,7 +1826,7 @@ function SizeInput({ f, set, live }) {
       onChange: e => { const t = e.target.value; setDraft(t); const v = parseFloat(t); if (v >= 10) set('size')(v); },
       onBlur: () => setDraft(null),
       className: "text-sm text-right rounded-lg outline-none",
-      style: { width: 96, padding: '6px 8px', border: custom ? '2px solid #0f172a' : '1px solid #cbd5e1', background: '#fff' }
+      style: { width: 96, padding: '6px 8px', border: custom ? '2px solid #C5F04A' : '1px solid #2E3541', background: '#12161C', color: '#E8EAED' }
     }),
     React.createElement("span", { className: "text-[11px] text-slate-500", style: { whiteSpace: 'nowrap' } }, draft !== null && draft !== '' && parseFloat(draft) < 10 ? "10㎡ 이상 입력" : ["㎡ = ", ((shownNum || 0) / 3.3058).toFixed(1), "평", custom ? ' (직접)' : ''].join('')));
 }
@@ -1830,6 +1907,20 @@ function App() {
     unit: t.unit,
     c: f.tier === i + 1 ? '#10b981' : TIER_COLORS[i]
   }));
+  const dbUnit = useMemo(() => analyze({
+    ...f,
+    costMode: 'db'
+  }).unit, [f]);
+  const dist = (() => {
+    const d = DB_SUMMARY[f.product];
+    if (!d || d.max <= d.min) return null;
+    const pos = v => Math.max(0, Math.min(100, (v - d.min) / (d.max - d.min) * 100));
+    return {
+      ...d,
+      medPos: pos(d.med),
+      curPos: pos(live.unit)
+    };
+  })();
 
   // 3.민감도
   const PRICE_STEPS = [-10, -5, 0, 5, 10];
@@ -1890,7 +1981,7 @@ function App() {
     className: "text-xs text-slate-500 mt-1"
   }, "2.\uC0AC\uC5C5\uC218\uC9C0 \uC2DC\uD2B8\uC5D0\uC11C \"\uC0AC\uC5C5\uC218\uC9C0 \uBD84\uC11D\uD558\uAE30\"\uB97C \uBA3C\uC800 \uB20C\uB7EC \uC8FC\uC138\uC694."), /*#__PURE__*/React.createElement("button", {
     onClick: () => go('pf'),
-    className: "mt-3 px-4 py-2 bg-slate-900 text-white text-xs font-bold rounded-lg"
+    className: "sel mt-3 px-4 py-2 bg-slate-900 text-white text-xs font-bold rounded-lg"
   }, "2.\uC0AC\uC5C5\uC218\uC9C0\uB85C \uC774\uB3D9"));
   return /*#__PURE__*/React.createElement("div", {
     className: "min-h-screen bg-slate-50 text-slate-900",
@@ -1898,51 +1989,66 @@ function App() {
       fontFamily: "'Pretendard','Noto Sans KR',system-ui,sans-serif"
     }
   }, /*#__PURE__*/React.createElement("header", {
-    className: "bg-slate-900 text-white"
+    className: "bg-slate-900 text-white",
+    style: { borderBottom: '1px solid #262C36' }
   }, /*#__PURE__*/React.createElement("div", {
     className: "max-w-4xl mx-auto px-4 py-3.5 flex items-center justify-between gap-3"
   }, /*#__PURE__*/React.createElement("div", {
     className: "flex items-center gap-2.5"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "w-9 h-9 rounded-lg bg-blue-600 flex items-center justify-center"
+    className: "w-9 h-9 rounded-lg bg-blue-600 flex items-center justify-center",
+    style: { background: '#C5F04A', color: '#0E1116' }
   }, /*#__PURE__*/React.createElement(Building2, {
     size: 18
-  })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("p", {
-    className: "text-[11px] text-slate-400"
-  }, "\uC2DC\uD589\uC0AC\uC6A9"), /*#__PURE__*/React.createElement("h1", {
-    className: "text-base sm:text-lg font-bold leading-tight"
-  }, "\uC0AC\uC5C5\uC218\uC9C0 \xB7 \uACF5\uC0AC\uBE44"))), BETA_OPEN ? /*#__PURE__*/React.createElement("span", {
-    className: "text-[11px] px-2 py-1 rounded font-bold bg-emerald-600"
-  }, "베타 · 무제한 무료") : usage.owner ? /*#__PURE__*/React.createElement("button", {
+  })), /*#__PURE__*/React.createElement("div", {
+    style: { display: 'flex', flexDirection: 'column' }
+  }, /*#__PURE__*/React.createElement("p", {
+    className: "text-[11px] text-slate-400",
+    style: { order: 2 }
+  }, "\uC2DC\uD589\uC0AC\uC6A9 \uC0AC\uC5C5\uC218\uC9C0 \xB7 \uACF5\uC0AC\uBE44"), /*#__PURE__*/React.createElement("h1", {
+    className: "text-base sm:text-lg font-bold leading-tight",
+    style: { fontSize: 18, letterSpacing: '-0.02em' }
+  }, "\uC218\uC9C0\uB4E4"))), BETA_OPEN ? /*#__PURE__*/React.createElement("span", {
+    className: "text-[11px] px-2 py-1 rounded font-bold",
+    style: { border: '1px solid #2E3541', color: '#9AA3AF', borderRadius: 999 }
+  }, "베타 · 무료") : usage.owner ? /*#__PURE__*/React.createElement("button", {
     onClick: () => setAdmin(!admin),
     className: `text-[11px] px-2 py-1 rounded font-bold ${admin ? 'bg-amber-500 text-slate-900' : 'bg-slate-700'}`
   }, admin ? '관리자 모드 ON' : '관리자') : /*#__PURE__*/React.createElement("span", {
     className: `text-[11px] px-2 py-1 rounded font-bold ${usage.left ? 'bg-slate-700' : 'bg-red-600'}`
   }, "\uBB34\uB8CC \uBD84\uC11D ", usage.left, "/", FREE_LIMIT, "\uD68C"))), /*#__PURE__*/React.createElement("nav", {
-    className: "sticky top-0 z-20 bg-slate-100 border-b border-slate-300"
+    className: "z-20",
+    style: { position: 'fixed', left: 0, right: 0, bottom: 0, background: '#12161C', borderTop: '1px solid #262C36', paddingBottom: 'env(safe-area-inset-bottom)' }
   }, /*#__PURE__*/React.createElement("div", {
-    className: "max-w-4xl mx-auto px-2 flex overflow-x-auto"
+    className: "max-w-4xl mx-auto",
+    style: { display: 'grid', gridTemplateColumns: 'repeat(' + SHEETS.length + ', minmax(0, 1fr))' }
   }, SHEETS.map(s => {
     const I = s.icon;
     const on = sheet === s.id;
     return /*#__PURE__*/React.createElement("button", {
       key: s.id,
       onClick: () => go(s.id),
-      className: `shrink-0 flex items-center gap-1.5 px-3.5 py-2.5 text-xs font-bold border-b-2 ${on ? 'border-emerald-600 text-slate-900 bg-white' : 'border-transparent text-slate-500'}`
+      "aria-current": on ? 'page' : undefined,
+      className: `flex flex-col items-center justify-center ${on ? 'sel-tab' : 'text-slate-500'}`,
+      style: { display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: 62, gap: 4, fontSize: 11, fontWeight: on ? 800 : 500, borderTop: on ? '2px solid #C5F04A' : '2px solid transparent', whiteSpace: 'nowrap' }
     }, /*#__PURE__*/React.createElement(I, {
-      size: 14
-    }), s.n);
+      size: 19
+    }), s.n.replace(/^\d\./, ''));
   }))), /*#__PURE__*/React.createElement("main", {
-    className: "max-w-4xl mx-auto px-4 py-4 space-y-3"
+    className: "max-w-4xl mx-auto px-4 py-4 space-y-3",
+    style: { paddingBottom: 96 }
   }, /*#__PURE__*/React.createElement("div", {
-    className: "grid grid-cols-3 gap-2 text-center"
+    className: "grid grid-cols-2 gap-2 text-center"
   }, /*#__PURE__*/React.createElement("button", {
     onClick: () => go('cost'),
-    className: "bg-white rounded-lg border border-slate-200 py-2"
+    className: "bg-white rounded-lg border border-slate-200 py-2",
+    style: { gridColumn: '1 / -1', textAlign: 'left', padding: '18px 18px 16px', borderRadius: 16, borderColor: '#2E3541' }
   }, /*#__PURE__*/React.createElement("p", {
-    className: "text-[10px] text-slate-500"
-  }, "\uACF5\uC0AC\uBE44 (", f.costMode === 'db' ? 'DB' : f.costMode === 'manual' ? '직접' : sel.n, ")"), /*#__PURE__*/React.createElement("p", {
-    className: "text-sm font-extrabold tabular-nums"
+    className: "text-[10px] text-slate-500",
+    style: { fontSize: 12 }
+  }, "\uC608\uC0C1 ", "\uACF5\uC0AC\uBE44 (", f.costMode === 'db' ? 'DB' : f.costMode === 'manual' ? '직접' : sel.n, ")"), /*#__PURE__*/React.createElement("p", {
+    className: "text-sm font-extrabold tabular-nums",
+    style: { fontSize: 38, lineHeight: 1.1, marginTop: 4, letterSpacing: '-0.03em', color: '#FFFFFF' }
   }, eok(buildNow))), /*#__PURE__*/React.createElement("button", {
     onClick: () => go('pf'),
     className: "bg-white rounded-lg border border-slate-200 py-2"
@@ -1963,7 +2069,7 @@ function App() {
     className: "bg-white rounded-xl border border-slate-200 p-4 space-y-3"
   }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("h2", {
     className: "text-sm font-extrabold"
-  }, "\uC2DC\uACF5\uC0AC \uB4F1\uAE09\uBCC4 \uACF5\uC0AC\uBE44"), /*#__PURE__*/React.createElement("p", {
+  }, "\uACF5\uC0AC\uBE44 \uC870\uAC74"), /*#__PURE__*/React.createElement("p", {
     className: "text-[11px] text-slate-500"
   }, "\uB3C4\uAE09\uC21C\uC704(1~5\uAD70) \xD7 \uC0C1\uD488\uBCC4 \uD3C9\uB2E8\uAC00 \xB7 \uB9CC\uC6D0/3.3\u33A1 \xB7 VAT \uBCC4\uB3C4 \xB7 \uC5EC\uAE30\uC11C \uACE0\uB978 \uAC12\uC774 2.\uC0AC\uC5C5\uC218\uC9C0\uC5D0 \uADF8\uB300\uB85C \uB4E4\uC5B4\uAC11\uB2C8\uB2E4")), /*#__PURE__*/React.createElement("div", {
     className: "grid grid-cols-2 gap-2.5"
@@ -2012,73 +2118,73 @@ function App() {
     step: 100,
     onChange: set('gfaManual')
   }))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("p", {
-    className: "text-[11px] font-bold text-slate-600 mb-1"
-  }, "\uC2DC\uACF5\uC0AC \uB4F1\uAE09"), /*#__PURE__*/React.createElement("div", {
-    className: "grid grid-cols-5 gap-1.5"
-  }, tiers.map((t, i) => /*#__PURE__*/React.createElement("button", {
+    className: "text-[11px] font-bold text-slate-600 mb-1",
+    style: { fontSize: 13 }
+  }, "\uD3C9\uB2E8\uAC00 \uAE30\uC900 ", /*#__PURE__*/React.createElement("span", {
+    className: "font-normal text-slate-500"
+  }, "\xB7 \uB9CC\uC6D0/3.3\u33A1")), /*#__PURE__*/React.createElement("div", {
+    className: "grid gap-1.5",
+    style: { gridTemplateColumns: 'repeat(3, minmax(0, 1fr))' }
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: () => set('costMode')('db'),
+    "aria-pressed": f.costMode === 'db',
+    className: `rounded-lg border px-1 py-2 ${f.costMode === 'db' ? 'sel bg-slate-900 text-white border-slate-900' : 'bg-white border-slate-200 text-slate-700'}`,
+    style: { minHeight: 60 }
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "block text-sm font-extrabold"
+  }, "\uC2E4\uC0AC\uC5C5"), /*#__PURE__*/React.createElement("span", {
+    className: "block text-[10px] opacity-70 tabular-nums",
+    style: { fontSize: 15, fontWeight: 700 }
+  }, fmt(dbUnit), "\uB9CC")), tiers.map((t, i) => /*#__PURE__*/React.createElement("button", {
     key: t.n,
     onClick: () => setF(p => ({
       ...p,
       tier: i + 1,
       costMode: 'auto'
     })),
-    className: `rounded-lg border px-1 py-2 ${f.costMode === 'auto' && f.tier === i + 1 ? 'bg-slate-900 text-white border-slate-900' : 'bg-white border-slate-200 text-slate-700'}`
+    "aria-pressed": f.costMode === 'auto' && f.tier === i + 1,
+    className: `rounded-lg border px-1 py-2 ${f.costMode === 'auto' && f.tier === i + 1 ? 'sel bg-slate-900 text-white border-slate-900' : 'bg-white border-slate-200 text-slate-700'}`,
+    style: { minHeight: 60 }
   }, /*#__PURE__*/React.createElement("span", {
     className: "block text-sm font-extrabold"
   }, t.n), /*#__PURE__*/React.createElement("span", {
-    className: "block text-[10px] opacity-70"
+    className: "block text-[10px] opacity-70 tabular-nums",
+    style: { fontSize: 15, fontWeight: 700 }
   }, fmt(t.unit), "\uB9CC")))), /*#__PURE__*/React.createElement("p", {
-    className: "text-[11px] text-slate-500 mt-1.5"
-  }, sel.rank, " \xB7 ", sel.note)), /*#__PURE__*/React.createElement("div", {
-    className: "h-[200px]"
-  }, /*#__PURE__*/React.createElement(ResponsiveContainer, {
-    width: "100%",
-    height: "100%"
-  }, /*#__PURE__*/React.createElement(BarChart, {
-    data: chart,
-    margin: {
-      top: 22,
-      right: 4,
-      left: 4,
-      bottom: 0
-    }
-  }, /*#__PURE__*/React.createElement(XAxis, {
-    dataKey: "name",
-    tick: {
-      fontSize: 12,
-      fill: '#334155',
-      fontWeight: 700
-    },
-    axisLine: false,
-    tickLine: false
-  }), /*#__PURE__*/React.createElement(YAxis, {
-    hide: true,
-    domain: [0, 'dataMax']
-  }), /*#__PURE__*/React.createElement(Tooltip, {
-    cursor: {
-      fill: '#f1f5f9'
-    },
-    contentStyle: {
-      fontSize: 12,
-      borderRadius: 8
-    },
-    formatter: (v, n, p) => [`${v.toFixed(1)}억 (평당 ${fmt(p.payload.unit)}만원)`, '총 공사비']
-  }), /*#__PURE__*/React.createElement(Bar, {
-    dataKey: "v",
-    radius: [6, 6, 0, 0]
-  }, chart.map(d => /*#__PURE__*/React.createElement(Cell, {
-    key: d.name,
-    fill: d.c
-  })), /*#__PURE__*/React.createElement(LabelList, {
-    dataKey: "v",
-    position: "top",
-    formatter: v => `${v.toFixed(0)}억`,
-    style: {
-      fontSize: 11,
-      fontWeight: 700,
-      fill: '#0f172a'
-    }
-  }))))), /*#__PURE__*/React.createElement("div", {
+    className: "text-[11px] text-slate-500 mt-1.5",
+    style: { fontSize: 12, lineHeight: 1.5 }
+  }, f.costMode === 'db' ? '실사업 수지표 기준 기본값 (2026.9 건설공사비지수로 환산)' : f.costMode === 'manual' ? '직접 입력한 평단가를 씁니다' : `${sel.n} · ${sel.rank} · ${sel.note}`)), /*#__PURE__*/React.createElement("div", {
+    style: { display: dist ? 'block' : 'none' }
+  }, dist && /*#__PURE__*/React.createElement("div", {
+    className: "rounded-lg border border-slate-200 px-3 py-3",
+    style: { borderRadius: 14 }
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex justify-between items-center text-xs"
+  }, /*#__PURE__*/React.createElement("b", null, "\uC2E4\uC0AC\uC5C5 \uB2E8\uAC00 \uBD84\uD3EC \xB7 ", product.name), /*#__PURE__*/React.createElement("span", {
+    className: "text-slate-500",
+    style: { fontSize: 11, border: '1px solid #2E3541', borderRadius: 999, padding: '2px 8px' }
+  }, "\uC2E4\uC0AC\uC5C5 ", dist.n, "\uAC74")), /*#__PURE__*/React.createElement("div", {
+    style: { position: 'relative', height: 58, margin: '6px 8px 0' }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: { position: 'absolute', left: 0, right: 0, top: 34, height: 8, borderRadius: 4, background: '#4A5A22' }
+  }), /*#__PURE__*/React.createElement("div", {
+    style: { position: 'absolute', left: dist.medPos + '%', top: 30, width: 2, height: 16, background: '#E8EAED' }
+  }), /*#__PURE__*/React.createElement("div", {
+    style: { position: 'absolute', top: 0, left: dist.curPos + '%', transform: 'translateX(-50%)', display: 'flex', flexDirection: 'column', alignItems: 'center' }
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "tabular-nums",
+    style: { fontSize: 11, fontWeight: 700, padding: '2px 6px', borderRadius: 6, background: '#C5F04A', color: '#0E1116', whiteSpace: 'nowrap' }
+  }, "\uD604\uC7AC ", fmt(live.unit)), /*#__PURE__*/React.createElement("div", {
+    style: { width: 2, height: 12, background: '#C5F04A' }
+  }), /*#__PURE__*/React.createElement("div", {
+    style: { width: 12, height: 12, borderRadius: 6, background: '#C5F04A', border: '2px solid #171B22', marginTop: -2 }
+  }))), /*#__PURE__*/React.createElement("div", {
+    className: "flex justify-between text-slate-500 tabular-nums",
+    style: { fontSize: 12 }
+  }, /*#__PURE__*/React.createElement("span", null, "\uCD5C\uC800 ", fmt(dist.min)), /*#__PURE__*/React.createElement("span", null, "\uC911\uC559 ", fmt(dist.med)), /*#__PURE__*/React.createElement("span", null, "\uCD5C\uACE0 ", fmt(dist.max))), /*#__PURE__*/React.createElement("p", {
+    className: "text-slate-500",
+    style: { fontSize: 11, marginTop: 6 }
+  }, "2026.9 \uAC74\uC124\uACF5\uC0AC\uBE44\uC9C0\uC218 \uD658\uC0B0 \xB7 \uC218\uB3C4\uAD8C \uAE30\uC900 (\uC11C\uC6B8 \xD71.08 \xB7 \uC9C0\uBC29 \xD70.98)"))), /*#__PURE__*/React.createElement("div", {
     className: "rounded-lg bg-slate-50 border border-slate-200 px-3 py-2.5 text-xs space-y-1.5"
   }, /*#__PURE__*/React.createElement("div", {
     className: "flex justify-between items-center"
@@ -2089,7 +2195,7 @@ function App() {
   }, [['db', '실사업 기준'], ['auto', '등급표'], ['manual', '직접']].map(([k, l]) => /*#__PURE__*/React.createElement("button", {
     key: k,
     onClick: () => set('costMode')(k),
-    className: `px-2 py-1 ${f.costMode === k ? 'bg-slate-900 text-white' : 'bg-white text-slate-600'}`
+    className: `px-2 py-1 ${f.costMode === k ? 'sel bg-slate-900 text-white' : 'bg-white text-slate-600'}`
   }, l)))), f.costMode === 'manual' && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement(Num, {
     label: "\uD3C9\uB2E8\uAC00(\uC5F0\uBA74\uC801 \uAE30\uC900)",
     unit: "\uB9CC/\uD3C9",
@@ -2105,7 +2211,8 @@ function App() {
   }, r.n, " ", r.v, "\uB9CC")))), /*#__PURE__*/React.createElement("p", {
     className: "flex justify-between"
   }, /*#__PURE__*/React.createElement("span", null, product.name, " \xB7 ", region.n, " \xB7 ", fmt(live.sc.gfa), "\uD3C9"), /*#__PURE__*/React.createElement("b", null, "\uD3C9\uB2F9 ", fmt(live.unit), "\uB9CC \u2192 ", eok(buildNow)))), pro ? /*#__PURE__*/React.createElement("div", {
-    className: "rounded-lg border border-slate-200 p-3 text-xs space-y-1.5"
+    className: "rounded-lg border border-slate-200 p-3 text-xs space-y-1.5",
+    style: { display: dist ? 'none' : undefined }
   }, /*#__PURE__*/React.createElement("p", {
     className: "font-bold"
   }, "\uC2E4\uC0AC\uC5C5 \uB2E8\uAC00 \uBD84\uD3EC \xB7 ", product.name, " ", /*#__PURE__*/React.createElement("span", {
@@ -2196,8 +2303,9 @@ function App() {
     key: p.id
   }, "\xB7 ", p.name, ": ", React.createElement(Tagged, { t: BASIS[p.id] }))), /*#__PURE__*/React.createElement("li", null, React.createElement(Tagged, { t: "\xB7 [\uCD94\uC815] \uB4F1\uAE09\uD45C \uD3C9\uB2E8\uAC00\uC640 \uB4F1\uAE09 \uACC4\uC218\uB294 \uACF5\uACF5 \uD1B5\uACC4\uAC00 \uC5C6\uB294 \uC2E4\uBB34 \uCD94\uC815\uAC12\uC785\uB2C8\uB2E4. \uAE30\uBCF8 \uACC4\uC0B0\uC740 [\uC2E4\uC0AC\uC5C5] \uB2E8\uAC00(1.\uACF5\uC0AC\uBE44 '\uC2E4\uC0AC\uC5C5 \uAE30\uC900')\uB97C \uC4F0\uC138\uC694. \uCC38\uACE0: \uD55C\uAD6D\uBD80\uB3D9\uC0B0\uC6D0 \uBC1C\uD45C 2025\uB144 \uC804\uAD6D \uC815\uBE44\uC0AC\uC5C5 \uD3C9\uADE0 \uACF5\uC0AC\uBE44 3.3\u33A1\uB2F9 807\uB9CC\uC6D0(\uC11C\uC6B8 890\uB9CC\uC6D0\xB7\uC9C0\uBC29 681\uB9CC\uC6D0)" })), /*#__PURE__*/React.createElement("li", null, "\xB7 \uC2E4\uC0AC\uC5C5 \uB3C4\uAE09 \uD3C9\uB2E8\uAC00(\uC218\uB3C4\uAD8C \uC678\uACFD \uBBFC\uAC04\uC784\uB300 560~680\uB9CC)\uB294 \uC774 \uD45C\uBCF4\uB2E4 \uB0AE\uC74C \u2014 \uC0AC\uC5C5\uC9C0\uC5D0 \uB9DE\uAC8C \uC218\uC815\uD558\uC138\uC694")))), /*#__PURE__*/React.createElement("button", {
     onClick: () => go('pf'),
-    className: "w-full py-3 rounded-xl bg-slate-900 text-white text-sm font-bold"
-  }, "2.\uC0AC\uC5C5\uC218\uC9C0 \uC2DC\uD2B8\uB85C \u2192")), sheet === 'pf' && /*#__PURE__*/React.createElement("section", {
+    className: "sel w-full py-3 rounded-xl bg-slate-900 text-white text-sm font-bold",
+    style: { minHeight: 52, fontSize: 15 }
+  }, "\uC774 \uACF5\uC0AC\uBE44\uB85C \uC0AC\uC5C5\uC218\uC9C0 \uBCF4\uAE30 \u2192")), sheet === 'pf' && /*#__PURE__*/React.createElement("section", {
     className: "space-y-3"
   }, /*#__PURE__*/React.createElement("div", {
     className: "bg-white rounded-xl border-2 border-emerald-600/40 p-4 space-y-3"
@@ -2267,7 +2375,7 @@ function App() {
   }, React.createElement(SizeInput, { f, set, live }), live.p.sizes.map(s => /*#__PURE__*/React.createElement("button", {
     key: s,
     onClick: () => set('size')(s),
-    className: `py-2 rounded-md text-xs font-bold border ${f.size === s ? 'bg-slate-900 text-white border-slate-900' : 'bg-white border-slate-300 text-slate-600'}`
+    className: `py-2 rounded-md text-xs font-bold border ${f.size === s ? 'sel bg-slate-900 text-white border-slate-900' : 'bg-white border-slate-300 text-slate-600'}`
   }, s, "\u33A1", /*#__PURE__*/React.createElement("span", {
     className: "block text-[10px] font-normal opacity-70"
   }, (s / 3.3058).toFixed(1), "\uD3C9")))))), /*#__PURE__*/React.createElement("div", {
@@ -2313,7 +2421,7 @@ function App() {
     key: k,
     disabled: !v,
     onClick: () => set('dguFar')(v),
-    className: `py-1.5 rounded-md text-[11px] font-bold border ${f.dguFar === v && v ? 'bg-slate-900 text-white border-slate-900' : 'bg-white border-slate-300 text-slate-600 disabled:opacity-40'}`
+    className: `py-1.5 rounded-md text-[11px] font-bold border ${f.dguFar === v && v ? 'sel bg-slate-900 text-white border-slate-900' : 'bg-white border-slate-300 text-slate-600 disabled:opacity-40'}`
   }, k, " \uC801\uC6A9"))), /*#__PURE__*/React.createElement("p", {
     className: "text-[11px] text-slate-500 leading-relaxed"
   }, "\uC9C0\uAD6C\uB2E8\uC704\uACC4\uD68D \uACB0\uC815\uB3C4\xB7\uC2DC\uD589\uC9C0\uCE68\uC758 \uD68D\uC9C0\uBCC4 \uC6A9\uC801\uB960\uC744 \uB123\uC73C\uC138\uC694. \uD5C8\uC6A9\uC740 \uC778\uC13C\uD2F0\uBE0C(\uACF5\uAC1C\uACF5\uC9C0\xB7\uCE5C\uD658\uACBD \uB4F1), \uC0C1\uD55C\uC740 \uACF5\uACF5\uAE30\uC5EC(\uAE30\uBD80\uCC44\uB0A9\xB7\uC784\uB300\uC8FC\uD0DD \uB4F1) \uC870\uAC74\uC785\uB2C8\uB2E4. ", /*#__PURE__*/React.createElement("a", {
@@ -2575,7 +2683,8 @@ function App() {
   }, /*#__PURE__*/React.createElement(RotateCcw, {
     size: 12
   }), "\uC694\uC728\uC744 \uAE30\uBCF8\uAC12\uC73C\uB85C"))), /*#__PURE__*/React.createElement("div", {
-    className: "sticky bottom-3 z-10 pt-1"
+    className: "sticky bottom-3 z-10 pt-1",
+    style: { bottom: 'calc(76px + env(safe-area-inset-bottom))' }
   }, /*#__PURE__*/React.createElement("button", {
     onClick: run,
     className: `w-full py-3.5 rounded-xl text-sm font-extrabold shadow-lg flex items-center justify-center gap-2 ${usage.locked ? 'bg-slate-700 text-white' : 'bg-emerald-600 hover:bg-emerald-700 text-white'}`
