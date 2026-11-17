@@ -1767,13 +1767,13 @@ function LandLookup({ f, setF }) {
     zone: zoneId || o.zone
   }));
   const fmt0 = v => Math.round(v).toLocaleString('ko-KR');
-  return React.createElement("div", { className: "col-span-2 rounded-lg p-3 space-y-2", style: { background: 'rgba(96,165,250,.08)', border: '1px solid rgba(96,165,250,.35)' } },
-    React.createElement("p", { className: "text-[11px] font-bold", style: { color: '#93C5FD' } },
+  return React.createElement("div", { className: "col-span-2 rounded-lg p-3 space-y-2", style: { background: '#13171D', border: '1px solid #2E3541', borderRadius: 12 } },
+    React.createElement("p", { className: "text-[11px] font-bold", style: { color: '#B0B7C1' } },
       React.createElement("span", { className: "inline-block rounded px-1 text-[10px] font-bold", style: { marginRight: 4, background: 'rgba(96,165,250,.12)', color: '#93C5FD', border: '1px solid rgba(96,165,250,.35)' } }, "공공"),
       "주소로 불러오기 · 대지면적·용도지역·공시지가 (국토교통부 브이월드)"),
     React.createElement("textarea", {
       className: "w-full rounded-md px-2.5 py-2 text-[13px]",
-      style: { background: '#12161C', border: '1px solid #3A4250', color: '#E8EAED' },
+      style: { background: '#12161C', border: '1px solid #2E3541', color: '#E8EAED', borderRadius: 10, minHeight: 64, fontSize: 15 },
       rows: 2,
       placeholder: "예) 경기도 용인시 수지구 풍덕천동 1167\n여러 필지는 한 줄에 하나씩",
       value: txt,
@@ -1785,7 +1785,7 @@ function LandLookup({ f, setF }) {
       className: "w-full py-2.5 rounded-md text-white text-xs font-bold",
       style: { background: '#C5F04A', color: '#0E1116', opacity: busy ? 0.6 : 1 }
     }, busy ? '조회 중…' : '필지 정보 불러오기'),
-    busy && step && React.createElement("p", { className: "text-[11px]", style: { color: '#93C5FD' } }, step),
+    busy && step && React.createElement("p", { className: "text-[11px]", style: { color: '#B0B7C1' } }, step),
     msg && React.createElement("p", { className: "text-[11px] text-red-600" }, msg),
     rows.length > 0 && React.createElement("div", { className: "space-y-1 text-[11px]" },
       rows.map((r, i) => React.createElement("div", { key: i, className: "bg-white rounded border border-slate-200 px-2 py-1.5" },
@@ -1795,7 +1795,7 @@ function LandLookup({ f, setF }) {
             React.createElement("p", { className: "text-slate-600 tabular-nums" },
               fmt0(r.m2), "㎡(", fmt0(r.m2 / 3.3058), "평) · ", r.zoneName || '용도지역 미확인',
               r.jiga ? ` · 공시지가 ${fmt0(r.jiga)}원/㎡${r.jigaYear ? '(' + r.jigaYear + ')' : ''}` : '')))),
-      ok.length > 0 && React.createElement("div", { className: "rounded bg-white px-2 py-2 space-y-1", style: { border: '1px solid rgba(96,165,250,.35)' } },
+      ok.length > 0 && React.createElement("div", { className: "rounded bg-white px-2 py-2 space-y-1", style: { border: '1px solid #2E3541' } },
         React.createElement("p", { className: "font-extrabold text-slate-900 tabular-nums" },
           "합계 ", ok.length, "필지 · ", fmt0(m2), "㎡ = ", fmt0(py), "평 · ", mainZone || '용도지역 미확인',
           jigaEok > 0 ? ` · 공시지가 합계 ${jigaEok.toFixed(1)}억` : ''),
