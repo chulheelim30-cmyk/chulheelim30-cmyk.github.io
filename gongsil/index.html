@@ -108,6 +108,16 @@ ol.rec img{width:100%;max-width:300px;border-radius:8px;margin-top:6px;display:b
 textarea#copybox{display:none;width:100%;height:160px;margin-top:8px;font:inherit;font-size:13px}
 footer{font-size:12px;color:var(--muted);text-align:center;margin-top:24px}
 </style>
+<script>
+/* 익명 이용 통계: 방문·실행·복사 횟수만 기록. 입력값·개인정보·IP는 저장하지 않음. ?me=1 로 열면 이 기기는 집계에서 빠짐 */
+(function(){var U="https://guwnuaeainixryxdxids.supabase.co/rest/v1/page_events",K="sb_publishable_hv3vbXs_oAme0P-Dbcus2Q_1p5u90SN",S="gongsil";
+var off=false;try{if(/[?&]me=1/.test(location.search))localStorage.setItem("pe_me","1");off=localStorage.getItem("pe_me")==="1";}catch(e){}
+if(!/\.github\.io$/.test(location.hostname))off=true;
+var vid;try{vid=localStorage.getItem("pe_vid");if(!vid){vid=Math.random().toString(36).slice(2)+Date.now().toString(36);localStorage.setItem("pe_vid",vid);}}catch(e){vid=null}
+var ua=navigator.userAgent||"",src=/KAKAOTALK/i.test(ua)?"kakao":/NAVER/.test(ua)?"naver":/Instagram/.test(ua)?"instagram":(document.referrer?(function(){try{return new URL(document.referrer).hostname}catch(e){return "ref"}})():"direct");
+window.peTrack=function(ev,meta){if(off)return;try{fetch(U,{method:"POST",keepalive:true,headers:{"apikey":K,"Content-Type":"application/json","Prefer":"return=minimal"},body:JSON.stringify({site:S,event:ev,vid:vid,src:src,mobile:/Mobi|Android|iPhone/.test(ua),meta:meta||null})}).catch(function(){});}catch(e){}};
+peTrack("visit");})();
+</script>
 </head>
 <body>
 <header><div class="in">
@@ -147,6 +157,13 @@ footer{font-size:12px;color:var(--muted);text-align:center;margin-top:24px}
       <option value="jisan">지식산업센터</option>
       <option value="mixed">주상복합 · 아파트 단지 상가</option>
       <option value="retail">근린상가 · 상가 전용 건물</option>
+    </select>
+    <label>지역 <small>(지역 평균 공실률과 비교)</small></label>
+    <select id="region">
+      <option value="" selected>모름 · 그 외 지역</option>
+      <option value="seoul">서울</option>
+      <option value="gyeonggi">경기</option>
+      <option value="incheon">인천</option>
     </select>
     <label>가장 가까운 역까지 걸어서</label>
     <select id="walk">
@@ -228,6 +245,12 @@ footer{font-size:12px;color:var(--muted);text-align:center;margin-top:24px}
   </div>
 
 
+  <div class="card" id="mkCard">
+    <h2>지역 평균 공실률과 비교 <span class="tag">공공 통계</span></h2>
+    <div id="rMarket"></div>
+    <p class="note" id="rMarketNote"></p>
+  </div>
+
   <div class="card plan">
     <h2>등급 올리기 기획 플랜</h2>
     <div class="path" id="pPath"></div>
@@ -285,20 +308,20 @@ footer{font-size:12px;color:var(--muted);text-align:center;margin-top:24px}
   <p class="note" style="text-align:center">공실공은 분석과 문서 작성만 합니다. 임대 알선·계약은 임대인 또는 공인중개사가 진행합니다.</p>
 </div>
 
-<footer>© 공실공 · 간이진단 v6 (2026.11)</footer>
+<footer>익명 이용 통계(방문·진단 횟수)만 집계하며 입력한 내용은 저장하지 않습니다.<br>© 공실공 · 간이진단 v7 (2026.11) · 공실률 통계 2026년 3분기</footer>
 </div>
 
 <script>
 (function(){
 const $=id=>document.getElementById(id);
 const PRESETS={
-  chunui:{name:"부천 춘의디아크원 (원미구 춘의동 73-1)",type:"jisan",walk:"",walkm:154,units:251,occ:"",shops:37,vac:4,pos:"front",area:50,rent:250,use:"1",duct:"",exist:["coffee","cvs","kimbap"]},
-  siheung:{name:"시흥 대야동 653-1 (은계중앙로 370)",type:"officetel",walk:"",walkm:251,units:"",occ:"",shops:"",vac:"",pos:"front",area:"",rent:"",use:"1",duct:"",exist:[]},
-  ganseok:{name:"인천 남동구 간석동 174-5 (간석오거리역 월드메르디앙 베네가)",type:"officetel",walk:"",walkm:381,units:153,occ:"",shops:"",vac:"",pos:"front",area:"",rent:"",use:"",duct:"",exist:[]}
+  chunui:{name:"부천 춘의디아크원 (원미구 춘의동 73-1)",type:"jisan",region:"gyeonggi",walk:"",walkm:154,units:251,occ:"",shops:37,vac:4,pos:"front",area:50,rent:250,use:"1",duct:"",exist:["coffee","cvs","kimbap"]},
+  siheung:{name:"시흥 대야동 653-1 (은계중앙로 370)",type:"officetel",region:"gyeonggi",walk:"",walkm:251,units:"",occ:"",shops:"",vac:"",pos:"front",area:"",rent:"",use:"1",duct:"",exist:[]},
+  ganseok:{name:"인천 남동구 간석동 174-5 (간석오거리역 월드메르디앙 베네가)",type:"officetel",region:"incheon",walk:"",walkm:381,units:153,occ:"",shops:"",vac:"",pos:"front",area:"",rent:"",use:"",duct:"",exist:[]}
 };
 document.querySelectorAll('.presets button').forEach(b=>b.addEventListener('click',()=>{
   const p=PRESETS[b.dataset.p];
-  ["name","type","walk","units","occ","shops","vac","pos","area","rent","use","duct","walkm"].forEach(k=>{$(k).value=p[k]??""});
+  ["name","type","region","walk","units","occ","shops","vac","pos","area","rent","use","duct","walkm"].forEach(k=>{$(k).value=p[k]??""});
   document.querySelectorAll('#exist .chip').forEach(c=>c.classList.toggle('on',p.exist.includes(c.dataset.k)));
   $('extra').innerHTML="";
 }));
@@ -466,7 +489,7 @@ function addRow(v){v=v||{};const d=document.createElement('div');d.className='ur
   d.querySelector('.upos').value=v.pos||"front";d.querySelector('.uarea').value=v.area??"";d.querySelector('.urent').value=v.rent??"";
   d.querySelector('.del').addEventListener('click',()=>d.remove());$('extra').appendChild(d);}
 $('addRow').addEventListener('click',()=>addRow());
-const FIELDS=["name","type","walk","walkm","units","occ","shops","vac","pos","area","rent","use","duct"];
+const FIELDS=["name","type","region","walk","walkm","units","occ","shops","vac","pos","area","rent","use","duct"];
 function snapshot(){const o={};FIELDS.forEach(k=>o[k]=$(k).value);o.exist=[...document.querySelectorAll('#exist .chip.on')].map(c=>c.dataset.k);
   o.rows=[...document.querySelectorAll('#extra .urow')].map(r=>({pos:r.querySelector('.upos').value,area:r.querySelector('.uarea').value,rent:r.querySelector('.urent').value}));return o;}
 function restore(o){FIELDS.forEach(k=>$(k).value=o[k]??"");document.querySelectorAll('#exist .chip').forEach(c=>c.classList.toggle('on',(o.exist||[]).includes(c.dataset.k)));$('extra').innerHTML="";(o.rows||[]).forEach(addRow);}
@@ -519,6 +542,29 @@ const CANDS=[
  {n:"라이브커머스·촬영 스튜디오",nw:1,cat:"office",tm:["오후","저녁"],eq:"방음·조명·전력",ex:"시간제 대여 촬영 공간",t:["officetel","jisan","mixed","small"],f:["upper","inner"],d:false,c:[],a:[30,150],dem:["목적","직장"],pay:1,tr:2,w:"노출이 필요 없는 안쪽·2층 칸을 시간 단위 수익으로"},
  {n:"셀프스토리지 (공유창고)",nw:1,cat:"office",tm:["아침","점심","오후","저녁","주말","심야"],eq:"보안·환기·항온항습",ex:"무인 개인 창고. 장기 공실 칸·지하·2층을 수익 공간으로",cond:x=>!(x.shops&&x.vac!==null)||x.vac/x.shops>=0.3,t:["officetel","mixed","jisan","retail","small"],f:["inner","upper"],d:false,c:[],a:[30,500],dem:["주거","직장"],pay:1,tr:2,w:"상가가 남아도는 건물의 정리 수단. 관리 인력이 거의 안 듦"}
 ];
+// 한국부동산원 상업용부동산 임대동향조사 2026년 3분기(9월 말 기준, 2026.10.29 발표). 확인된 값만 넣음
+const MKT={at:"2026년 3분기",src:"한국부동산원 상업용부동산 임대동향조사 (2026.10.29 발표)",
+  nat:{gen:13.7,mid:14.7,small:8.7,col:11.4,f1:6.9},
+  seoul:{nm:"서울",gen:9.6},gyeonggi:{nm:"경기",gen:11.3},incheon:{nm:"인천",gen:14.0,small:10.7,col:11.9,f1:6.6}};
+const MKT_KIND={officetel:["col","집합상가(구분 소유 상가)"],jisan:["col","집합상가(구분 소유 상가)"],mixed:["col","집합상가(구분 소유 상가)"],retail:["mid","중대형 상가"],small:["small","소규모 상가"]};
+function renderMarket(x,vr){
+  const [k,knm]=MKT_KIND[x.type];const R=x.region?MKT[x.region]:null;
+  const rows=[];
+  if(R&&R[k]!=null)rows.push([R.nm+" "+knm,R[k]]);
+  rows.push(["전국 "+knm,MKT.nat[k]]);
+  if(R&&R.gen!=null)rows.push([R.nm+" 일반상가 전체",R.gen]);
+  if(x.pos==="front")rows.push([(R&&R.f1!=null?R.nm:"전국")+" 1층 상가",R&&R.f1!=null?R.f1:MKT.nat.f1]);
+  const mine=vr!==null?Math.round(vr*1000)/10:null;
+  const mx=Math.max(30,mine||0,...rows.map(r=>r[1]));
+  const bar=(n,v,col,b)=>`<div class="sc" style="grid-template-columns:minmax(0,1fr) 90px 48px"><span style="font-size:13px${b?";font-weight:700;color:var(--navy)":""}">${n}</span><div class="bar"><i style="width:${Math.min(100,v/mx*100)}%;background:${col}"></i></div><span style="text-align:right">${(+v).toFixed(1)}%</span></div>`;
+  let h=(mine!==null?bar("이 건물 상가",mine,"#13233D",1):"")+rows.map(r=>bar(r[0],r[1],"#B08D57")).join("");
+  const ref=rows[0][1];let msg;
+  if(mine===null)msg="상가 전체 칸 수와 빈 칸 수를 넣으면 이 건물 공실률을 지역 평균과 비교해 드립니다.";
+  else{const m=mine/ref;msg=m>=3?`이 건물 공실률이 ${rows[0][0]} 평균의 약 ${Math.round(m)}배입니다. 상권 문제가 아니라 이 건물의 구성·임대 조건 문제일 가능성이 큽니다 — 기획으로 풀 여지가 큰 경우입니다.`:m>=1.3?`평균보다 높습니다. 임대 조건과 업종 구성을 먼저 점검해야 합니다.`:m>=0.7?`지역 평균 수준입니다.`:`평균보다 낮은 편입니다. 남은 칸은 기존 임차인과 겹치지 않는 업종으로 채우면 됩니다.`;}
+  $('rMarket').innerHTML=h+`<p style="margin:8px 0 0;font-size:14px">${msg}</p>`;
+  $('rMarketNote').textContent=`출처: ${MKT.src}, ${MKT.at} 기준.${!x.region?" 지역을 고르면 지역 평균과도 비교합니다.":R&&R[k]==null?` ${R.nm} ${knm} 값은 이번 공표 자료에서 따로 확인되지 않아 전국 값으로 비교했습니다.`:""} 통계는 표본 건물 기준이라 개별 건물과 직접 같지는 않습니다.`;
+  return {mine,ref:rows[0]};
+}
 const TYPE_NM={small:"꼬마빌딩·소형 근린",officetel:"오피스텔",jisan:"지식산업센터",mixed:"주상복합·단지 상가",retail:"근린상가"};
 const num=v=>v===""||v==null||isNaN(+v)?null:+v;
 const won=v=>Math.round(v).toLocaleString('ko-KR')+"만 원";
@@ -576,7 +622,7 @@ function candFor(r,x,used){let c=CANDS.filter(c=>(!c.cond||c.cond(x))&&c.t.inclu
 $('f').addEventListener('submit',e=>{
   e.preventDefault();
   const x={m:null,name:$('name').value.trim()||"(현장명 미입력)",type:$('type').value,walk:num($('walk').value),units:num($('units').value),occ:num($('occ').value),
-    shops:num($('shops').value),vac:num($('vac').value),pos:$('pos').value,area:num($('area').value),rent:num($('rent').value),use:$('use').value,duct:$('duct').value,
+    region:$('region').value,shops:num($('shops').value),vac:num($('vac').value),pos:$('pos').value,area:num($('area').value),rent:num($('rent').value),use:$('use').value,duct:$('duct').value,
     exist:[...document.querySelectorAll('#exist .chip.on')].map(c=>c.dataset.k)};
   x.m=num($('walkm').value);if(x.m===null&&x.walk!==null)x.m=BUCKET_M[x.walk];
   const chk=[];
@@ -665,6 +711,7 @@ $('f').addEventListener('submit',e=>{
     planText="\n\n[등급 올리기 기획 플랜] "+g+" "+tot+"점 → "+PL.final.g+" "+PL.final.t+"점\n"+PL.steps.map((st,i)=>`${i+1}. ${st.nm} (${st.who}) ${st.d>=0?"+":""}${st.d} → ${st.t}점 ${st.g}`).join("\n")+planText;}
   if(!renderIso3D(out,x))renderIso(out,x);renderLegend(out);renderTime(out);const NWL=renderNew(x,rows);planText+=NWL.length?"\n\n[새 포맷 제안]\n"+NWL.map(c=>"- "+c.n+": "+c.ex).join("\n"):"";
   $('rDate').textContent=new Date().toLocaleDateString('ko-KR');
+  const MK=renderMarket(x,vr);
 
   // 임대 조건
   let mText="";
@@ -683,17 +730,33 @@ $('f').addEventListener('submit',e=>{
 
   const ex=x.exist.length?[...document.querySelectorAll('#exist .chip.on')].map(c=>c.textContent).join(", "):"없음/미입력";
   const posNm={front:"1층 전면",inner:"1층 안쪽",upper:"2층 이상"}[x.pos];
-  $('copybox').value=`[공실공 간이진단]\n현장: ${x.name} (${TYPE_NM[x.type]})\n예비 등급: ${g} (${tot}/100, 보수 채점)\n확인되면: ${nUnk?RG.lo+"~"+RG.hi+"점, 오차 줄이려면 "+RG.drv.slice(0,3).map(d=>d.k).join("·")+" 확인":"없음"}\n- 입지 ${s1}/30, 배후 ${s2}/30, 공실 조건 ${s3}/20, 경제성 ${s4}/20\n입력: 역까지 ${x.m===null?"모름":x.m+"m"}, 세대·실 ${x.units??"모름"}, 입주율 ${x.occ===null?"모름":x.occ+"%"}, 상가 ${x.shops??"?"}실 중 공실 ${x.vac??"?"}, ${posNm} ${x.area??"?"}㎡, 호가 월세 ${x.rent??"?"}만, 용도 ${x.use?x.use+"종 근생":"모름"}, 배기 ${x.duct==="y"?"가능":x.duct==="n"?"불가":"모름"}\n기존 업종: ${ex}\n\n[맞는 업종]${split?" (2칸 분할 시)":""}\n${recs.map((c,i)=>(i+1)+". "+c.n).join("\n")}${mText}\n\n[확인 필요]\n${chk.map(c=>"- "+c).join("\n")}`+planText;
+  $('copybox').value=`[공실공 간이진단]\n현장: ${x.name} (${TYPE_NM[x.type]})\n예비 등급: ${g} (${tot}/100, 보수 채점)\n확인되면: ${nUnk?RG.lo+"~"+RG.hi+"점, 오차 줄이려면 "+RG.drv.slice(0,3).map(d=>d.k).join("·")+" 확인":"없음"}\n- 입지 ${s1}/30, 배후 ${s2}/30, 공실 조건 ${s3}/20, 경제성 ${s4}/20\n입력: 역까지 ${x.m===null?"모름":x.m+"m"}, 세대·실 ${x.units??"모름"}, 입주율 ${x.occ===null?"모름":x.occ+"%"}, 상가 ${x.shops??"?"}실 중 공실 ${x.vac??"?"}, ${posNm} ${x.area??"?"}㎡, 호가 월세 ${x.rent??"?"}만, 용도 ${x.use?x.use+"종 근생":"모름"}, 배기 ${x.duct==="y"?"가능":x.duct==="n"?"불가":"모름"}\n기존 업종: ${ex}\n공실률 비교(${MKT.at}, 한국부동산원): 이 건물 ${MK.mine===null?"미입력":MK.mine+"%"} / ${MK.ref[0]} ${MK.ref[1]}%\n\n[맞는 업종]${split?" (2칸 분할 시)":""}\n${recs.map((c,i)=>(i+1)+". "+c.n).join("\n")}${mText}\n\n[확인 필요]\n${chk.map(c=>"- "+c).join("\n")}`+planText;
   saveRecent(snapshot());renderRecent();
+  window.peTrack&&peTrack("diagnose",{type:x.type,region:x.region||null,rows:rows.length});
   $('f').style.display="none";$('result').style.display="block";$('copied').style.display="none";$('copybox').style.display="none";
   window.scrollTo(0,0);
 });
 
 $('copyBtn').addEventListener('click',async()=>{
+  window.peTrack&&peTrack("copy");
   try{await navigator.clipboard.writeText($('copybox').value);$('copied').style.display="block";}
   catch(e){$('copybox').style.display="block";$('copybox').select();$('copied').textContent="아래 글을 길게 눌러 복사해 주세요.";$('copied').style.display="block";}
 });
+window.bkBack=function(){if($('result').style.display==="block"){$('againBtn').click();return true;}return false;};
 $('againBtn').addEventListener('click',()=>{$('result').style.display="none";$('f').style.display="block";window.scrollTo(0,0);});
+})();
+</script>
+<script>
+/* 뒤로가기 두 번 눌러야 나가기 (2초 안에 한 번 더) */
+(function(){var armed=false,last=0,t;
+function arm(){if(armed)return;armed=true;try{history.pushState({bk:1},"")}catch(e){}}
+["pointerdown","touchstart","keydown"].forEach(function(e){addEventListener(e,arm,{capture:true,passive:true})});
+function toast(){var d=document.getElementById("bkToast");if(!d){d=document.createElement("div");d.id="bkToast";d.textContent="한 번 더 누르면 종료됩니다";d.style.cssText="position:fixed;left:50%;bottom:28px;transform:translateX(-50%);background:rgba(17,24,39,.88);color:#fff;padding:10px 18px;border-radius:999px;font-size:14px;z-index:99999;pointer-events:none;transition:opacity .2s;font-family:inherit";document.body.appendChild(d);}
+d.style.opacity="1";clearTimeout(t);t=setTimeout(function(){d.style.opacity="0"},1800);}
+addEventListener("popstate",function(){if(!armed)return;
+  if(window.bkBack&&window.bkBack()){history.pushState({bk:1},"");return;}
+  var n=Date.now();if(n-last<2000){armed=false;history.back();return;}
+  last=n;toast();history.pushState({bk:1},"");});
 })();
 </script>
 </body>
