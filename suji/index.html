@@ -1435,6 +1435,35 @@ const KIND_NOTE = {
   rent: '민간임대주택(민간임대주택법): 임대사업자가 일정 기간 임대한 뒤 매각하는 주택입니다. 그중 공공지원민간임대는 주택도시기금·용적률 완화 등 공공지원을 받는 대신 의무임대 10년 이상, 최초 임대료 주변 시세 95% 이하(특별공급 85% 이하) 조건이 붙습니다. 결과는 의무기간 후 매각(분양전환) 시점에 필요한 평당 가치이며, 임대 기간 중 임대료·보증금 운용은 반영하지 않았습니다.',
   lh: 'LH 신축매입약정: 2026.3 매입공고부터 매입가는 감정평가형으로 일원화됐고, 2026.7 제도개선(2026년 공고분 소급)으로 착공~준공 동안 매매대금 90% 이내를 공정률에 따라 3개월 단위로 받습니다. 그래서 분양경비가 거의 없고 PF 60%·인출 30%로 계산합니다. 결과는 감정평가로 받아야 할 최소 평당 매입가입니다.'
 };
+const TAG_CLS = {
+  '공공': 'bg-blue-50 text-blue-800 border-blue-200',
+  '실사업': 'bg-emerald-50 text-emerald-800 border-emerald-200',
+  '추정': 'bg-amber-50 text-amber-800 border-amber-200'
+};
+function Tagged({ t }) {
+  const parts = String(t).split(/(\[(?:공공|실사업|추정)[^\]]*\])/);
+  return React.createElement(React.Fragment, null, ...parts.map((x, i) => {
+    const m = x.match(/^\[((공공|실사업|추정)[^\]]*)\]$/);
+    return m ? React.createElement("span", { key: i, className: `inline-block border rounded px-1 mr-1 text-[10px] font-bold align-middle ${TAG_CLS[m[2]]}` }, m[1]) : x;
+  }));
+}
+const UPDATE_AT = '2026.11.17';
+function UpdateNote({ go }) {
+  const [open, setOpen] = useState(() => { try { return localStorage.getItem('suji_upd') !== UPDATE_AT; } catch { return true; } });
+  const close = () => { setOpen(false); try { localStorage.setItem('suji_upd', UPDATE_AT); } catch {} };
+  if (!open) return React.createElement("button", { onClick: () => setOpen(true), className: "w-full text-left text-[11px] text-emerald-800 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-1.5 font-bold" }, "● ", UPDATE_AT, " 업데이트 내용 보기");
+  const row = (txt, id, label) => React.createElement("li", { className: "flex justify-between gap-2" }, React.createElement("span", null, "· ", React.createElement(Tagged, { t: txt })), id && React.createElement("button", { onClick: () => go(id), className: "shrink-0 underline font-bold" }, label));
+  return React.createElement("div", { className: "rounded-xl border-2 border-emerald-500 bg-emerald-50 p-3 space-y-1.5 text-[12px] text-slate-700" },
+    React.createElement("div", { className: "flex justify-between items-center" },
+      React.createElement("p", { className: "font-extrabold text-emerald-900 text-[13px]" }, "새로 바뀐 점 · ", UPDATE_AT),
+      React.createElement("button", { onClick: close, className: "text-[11px] text-slate-500 underline" }, "닫기")),
+    React.createElement("ul", { className: "space-y-1" },
+      row("[실사업] 수지표 51건으로 확대(+19건: 지식산업센터 11·오피스텔 5·오피스·생숙·고급주택). 지식산업센터 488만원·오피스텔 666만원(2026 환산 중앙값)", 'cost', '1.공사비'),
+      row("[공공] 공사비 시점 환산과 물가변동을 건설공사비지수 공표값으로 교체(2026.9 139.48, 1년 +5.9%)", 'esc', '4.물가변동'),
+      row("[공공] HUG 지역 평균 분양가 최신 공표값(서울 6,287만원/평 등)으로 갱신", 'pf', '2.사업수지'),
+      row("[공공] 인천광역시·경기 용인시 조례 용적률 원문 추가", 'rule', '5.조례'),
+      row("모든 기본값에 출처 등급 표시: [공공] 공공통계·법령 [실사업] 실제 수지표 [추정] 직접 확인 권장", 'faq', 'FAQ')));
+}
 function App() {
   const [f, setF] = useState(DEFAULT);
   const [sheet, setSheet] = useState('cost');
@@ -1604,7 +1633,7 @@ function App() {
     }), s.n);
   }))), /*#__PURE__*/React.createElement("main", {
     className: "max-w-4xl mx-auto px-4 py-4 space-y-3"
-  }, /*#__PURE__*/React.createElement("div", {
+  }, React.createElement(UpdateNote, { go }), /*#__PURE__*/React.createElement("div", {
     className: "grid grid-cols-3 gap-2 text-center"
   }, /*#__PURE__*/React.createElement("button", {
     onClick: () => go('cost'),
@@ -1864,7 +1893,7 @@ function App() {
     className: "mt-2 px-4 sm:px-0 text-[11px] text-slate-500 space-y-0.5"
   }, PRODUCTS.map(p => /*#__PURE__*/React.createElement("li", {
     key: p.id
-  }, "\xB7 ", p.name, ": ", BASIS[p.id])), /*#__PURE__*/React.createElement("li", null, "\xB7 [\uCD94\uC815] \uB4F1\uAE09\uD45C \uD3C9\uB2E8\uAC00\uC640 \uB4F1\uAE09 \uACC4\uC218\uB294 \uACF5\uACF5 \uD1B5\uACC4\uAC00 \uC5C6\uB294 \uC2E4\uBB34 \uCD94\uC815\uAC12\uC785\uB2C8\uB2E4. \uAE30\uBCF8 \uACC4\uC0B0\uC740 [\uC2E4\uC0AC\uC5C5] \uB2E8\uAC00(1.\uACF5\uC0AC\uBE44 '\uC2E4\uC0AC\uC5C5 \uAE30\uC900')\uB97C \uC4F0\uC138\uC694. \uCC38\uACE0: \uD55C\uAD6D\uBD80\uB3D9\uC0B0\uC6D0 \uBC1C\uD45C 2025\uB144 \uC804\uAD6D \uC815\uBE44\uC0AC\uC5C5 \uD3C9\uADE0 \uACF5\uC0AC\uBE44 3.3\u33A1\uB2F9 807\uB9CC\uC6D0(\uC11C\uC6B8 890\uB9CC\uC6D0\xB7\uC9C0\uBC29 681\uB9CC\uC6D0)"), /*#__PURE__*/React.createElement("li", null, "\xB7 \uC2E4\uC0AC\uC5C5 \uB3C4\uAE09 \uD3C9\uB2E8\uAC00(\uC218\uB3C4\uAD8C \uC678\uACFD \uBBFC\uAC04\uC784\uB300 560~680\uB9CC)\uB294 \uC774 \uD45C\uBCF4\uB2E4 \uB0AE\uC74C \u2014 \uC0AC\uC5C5\uC9C0\uC5D0 \uB9DE\uAC8C \uC218\uC815\uD558\uC138\uC694")))), /*#__PURE__*/React.createElement("button", {
+  }, "\xB7 ", p.name, ": ", React.createElement(Tagged, { t: BASIS[p.id] }))), /*#__PURE__*/React.createElement("li", null, React.createElement(Tagged, { t: "\xB7 [\uCD94\uC815] \uB4F1\uAE09\uD45C \uD3C9\uB2E8\uAC00\uC640 \uB4F1\uAE09 \uACC4\uC218\uB294 \uACF5\uACF5 \uD1B5\uACC4\uAC00 \uC5C6\uB294 \uC2E4\uBB34 \uCD94\uC815\uAC12\uC785\uB2C8\uB2E4. \uAE30\uBCF8 \uACC4\uC0B0\uC740 [\uC2E4\uC0AC\uC5C5] \uB2E8\uAC00(1.\uACF5\uC0AC\uBE44 '\uC2E4\uC0AC\uC5C5 \uAE30\uC900')\uB97C \uC4F0\uC138\uC694. \uCC38\uACE0: \uD55C\uAD6D\uBD80\uB3D9\uC0B0\uC6D0 \uBC1C\uD45C 2025\uB144 \uC804\uAD6D \uC815\uBE44\uC0AC\uC5C5 \uD3C9\uADE0 \uACF5\uC0AC\uBE44 3.3\u33A1\uB2F9 807\uB9CC\uC6D0(\uC11C\uC6B8 890\uB9CC\uC6D0\xB7\uC9C0\uBC29 681\uB9CC\uC6D0)" })), /*#__PURE__*/React.createElement("li", null, "\xB7 \uC2E4\uC0AC\uC5C5 \uB3C4\uAE09 \uD3C9\uB2E8\uAC00(\uC218\uB3C4\uAD8C \uC678\uACFD \uBBFC\uAC04\uC784\uB300 560~680\uB9CC)\uB294 \uC774 \uD45C\uBCF4\uB2E4 \uB0AE\uC74C \u2014 \uC0AC\uC5C5\uC9C0\uC5D0 \uB9DE\uAC8C \uC218\uC815\uD558\uC138\uC694")))), /*#__PURE__*/React.createElement("button", {
     onClick: () => go('pf'),
     className: "w-full py-3 rounded-xl bg-slate-900 text-white text-sm font-bold"
   }, "2.\uC0AC\uC5C5\uC218\uC9C0 \uC2DC\uD2B8\uB85C \u2192")), sheet === 'pf' && /*#__PURE__*/React.createElement("section", {
@@ -2638,7 +2667,7 @@ function App() {
     className: "shrink-0 group-open:rotate-180"
   })), /*#__PURE__*/React.createElement("p", {
     className: "text-[12px] text-slate-600 leading-relaxed mt-2 whitespace-pre-line"
-  }, a)))), /*#__PURE__*/React.createElement("details", {
+  }, React.createElement(Tagged, { t: a }))))), /*#__PURE__*/React.createElement("details", {
     className: "bg-white rounded-xl border border-slate-200 px-4 py-3 mb-20 mt-2 group",
     open: sheet === 'faq'
   }, /*#__PURE__*/React.createElement("summary", {
