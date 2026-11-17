@@ -1504,7 +1504,7 @@ function vwJsonp(base, params, ms = 9000) {
     };
     sc.onerror = () => {
       done();
-      rej(new Error('브이월드 연결 실패'));
+      rej(new Error('브이월드 연결 실패 — 해외망·VPN에서는 막힙니다. 국내 인터넷에서 다시 시도해 주세요'));
     };
     sc.src = base + '?' + q.toString();
     document.head.appendChild(sc);
