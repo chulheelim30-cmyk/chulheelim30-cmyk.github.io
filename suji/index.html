@@ -1788,6 +1788,16 @@ function App() {
       top: 0
     });
   };
+  // 뒤로가기: 홈(1.공사비)이 아니거나 창이 열려 있으면 홈으로, 홈에서는 한 번 더 누르면 종료
+  window.bkBack = () => {
+    if (pay || showMatrix || sheet !== 'cost') {
+      setPay(false);
+      setShowMatrix(false);
+      if (sheet !== 'cost') go('cost');
+      return true;
+    }
+    return false;
+  };
   const live = useMemo(() => analyze(f), [f]);
   const dirty = result && JSON.stringify(result) !== JSON.stringify(f);
   const R = useMemo(() => result ? analyze(result) : null, [result]);
@@ -3018,15 +3028,15 @@ function App() {
 ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(App, {
   canPrint: false
 }));</script><script>
-/* 뒤로가기 두 번 눌러야 나가기 (2초 안에 한 번 더) */
-(function(){var armed=false,last=0,t;
+/* 뒤로가기: 다른 탭·창이면 홈으로 → 홈에서 한 번 더 누르면 종료. 처음부터 홈이면 2초 안에 두 번 */
+(function(){var armed=false,last=0,t,home=false;
 function arm(){if(armed)return;armed=true;try{history.pushState({bk:1},"")}catch(e){}}
 ["pointerdown","touchstart","keydown"].forEach(function(e){addEventListener(e,arm,{capture:true,passive:true})});
 function toast(){var d=document.getElementById("bkToast");if(!d){d=document.createElement("div");d.id="bkToast";d.textContent="한 번 더 누르면 종료됩니다";d.style.cssText="position:fixed;left:50%;bottom:28px;transform:translateX(-50%);background:rgba(17,24,39,.88);color:#fff;padding:10px 18px;border-radius:999px;font-size:14px;z-index:99999;pointer-events:none;transition:opacity .2s;font-family:inherit";document.body.appendChild(d);}
 d.style.opacity="1";clearTimeout(t);t=setTimeout(function(){d.style.opacity="0"},1800);}
 addEventListener("popstate",function(){if(!armed)return;
-  if(window.bkBack&&window.bkBack()){history.pushState({bk:1},"");return;}
-  var n=Date.now();if(n-last<2000){armed=false;history.back();return;}
+  if(window.bkBack&&window.bkBack()){home=true;history.pushState({bk:1},"");return;}
+  var n=Date.now();if(home||n-last<2000){armed=false;history.back();return;}
   last=n;toast();history.pushState({bk:1},"");});
 })();
 </script>
