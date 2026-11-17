@@ -1316,6 +1316,8 @@ function Num({
   step = 1,
   max
 }) {
+  const [draft, setDraft] = useState(null);
+  const clamp = n => Math.max(0, Math.min(max ?? Infinity, n));
   return /*#__PURE__*/React.createElement("label", {
     className: "block"
   }, /*#__PURE__*/React.createElement("span", {
@@ -1325,10 +1327,20 @@ function Num({
   }, /*#__PURE__*/React.createElement("input", {
     type: "number",
     className: `${inputCls} text-right font-bold pr-11 tabular-nums`,
-    value: value,
+    value: draft !== null ? draft : value,
     step: step,
     min: 0,
-    onChange: e => onChange(Math.max(0, Math.min(max ?? Infinity, Number(e.target.value) || 0)))
+    onChange: e => {
+      const t = e.target.value;
+      setDraft(t);
+      if (t === '' || t === '-') return;
+      const n = Number(t);
+      if (!isNaN(n)) onChange(clamp(n));
+    },
+    onBlur: () => {
+      if (draft === '') onChange(0);
+      setDraft(null);
+    }
   }), /*#__PURE__*/React.createElement("span", {
     className: "absolute right-2.5 top-2.5 text-[11px] text-slate-500"
   }, unit)));
@@ -1716,16 +1728,20 @@ function LandLookup({ f, setF }) {
 }
 
 function SizeInput({ f, set, live }) {
+  const [draft, setDraft] = useState(null);
   const custom = !live.p.sizes.includes(f.size);
+  const shownNum = draft !== null && draft !== '' ? parseFloat(draft) : f.size;
   return React.createElement("div", { style: { gridColumn: '1 / -1', order: 99, display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 } },
     React.createElement("span", { className: "text-[11px] font-bold text-slate-600", style: { whiteSpace: 'nowrap' } }, "직접 입력"),
     React.createElement("input", {
-      type: "number", inputMode: "decimal", min: 1, step: 1, value: f.size || '',
-      onChange: e => { const v = parseFloat(e.target.value); if (v > 0) set('size')(v); },
+      type: "number", inputMode: "decimal", min: 10, step: 1, value: draft !== null ? draft : f.size || '',
+      placeholder: "㎡",
+      onChange: e => { const t = e.target.value; setDraft(t); const v = parseFloat(t); if (v >= 10) set('size')(v); },
+      onBlur: () => setDraft(null),
       className: "text-sm text-right rounded-lg outline-none",
       style: { width: 96, padding: '6px 8px', border: custom ? '2px solid #0f172a' : '1px solid #cbd5e1', background: '#fff' }
     }),
-    React.createElement("span", { className: "text-[11px] text-slate-500", style: { whiteSpace: 'nowrap' } }, "㎡ = ", (f.size / 3.3058).toFixed(1), "평", custom ? ' (직접)' : ''));
+    React.createElement("span", { className: "text-[11px] text-slate-500", style: { whiteSpace: 'nowrap' } }, draft !== null && draft !== '' && parseFloat(draft) < 10 ? "10㎡ 이상 입력" : ["㎡ = ", ((shownNum || 0) / 3.3058).toFixed(1), "평", custom ? ' (직접)' : ''].join('')));
 }
 function App() {
   const [f, setF] = useState(DEFAULT);
