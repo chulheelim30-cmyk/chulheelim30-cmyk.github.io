@@ -2542,8 +2542,18 @@ function SizeInput({ f, set, live }) {
     }),
     React.createElement("span", { className: "text-[11px] text-slate-500", style: { whiteSpace: 'nowrap' } }, draft !== null && draft !== '' && parseFloat(draft) < 10 ? "10㎡ 이상 입력" : ["㎡ = ", ((shownNum || 0) / 3.3058).toFixed(1), "평", custom ? ' (직접)' : ''].join('')));
 }
+// 입력 자동 저장(2026-11-19): 이 브라우저에만 저장, 서버로 보내지 않음. 버전이 바뀌면 무시
+const FORM_KEY = 'suji_form_v1';
+function loadForm() {
+  try {
+    const s = JSON.parse(localStorage.getItem(FORM_KEY) || 'null');
+    if (s && typeof s === 'object' && PRODUCTS.some(p => p.id === s.product) && ZONES.some(z => z.id === s.zone)) return { ...DEFAULT, ...s, bases: { ...DEFAULT.bases, ...(s.bases || {}) } };
+  } catch {}
+  return DEFAULT;
+}
 function App() {
-  const [f, setF] = useState(DEFAULT);
+  const [f, setF] = useState(loadForm);
+  useEffect(() => { const t = setTimeout(() => { try { localStorage.setItem(FORM_KEY, JSON.stringify(f)); } catch {} }, 300); return () => clearTimeout(t); }, [f]);
   const [sheet, setSheet] = useState('cost');
   const [result0, setResult] = useState(null);
   const [pay, setPay] = useState(false);
@@ -2629,7 +2639,7 @@ function App() {
     unit: t.unit,
     c: f.tier === i + 1 ? '#10b981' : TIER_COLORS[i]
   }));
-  const isExample = f.sitePy === DEFAULT.sitePy && f.zone === DEFAULT.zone && f.landEok === DEFAULT.landEok && !f.gfaManual;
+  const isExample = !(f.sitePy > 0) && !f.gfaManual; // 대지면적 입력 전
   const landExample = !isExample && f.landEok === DEFAULT.landEok;
   const dbUnit = useMemo(() => analyze({
     ...f,
@@ -2764,15 +2774,15 @@ function App() {
     style: { paddingBottom: 96 }
   }, sheet === 'cost' && vwOn() && React.createElement(LandLookup, { f, setF }), sheet === 'cost' && React.createElement(LandSheet, { f, setF }), sheet === 'cost' && React.createElement("div", { className: "bg-white rounded-xl border border-slate-200 p-4 space-y-3" },
     React.createElement("div", null,
-      React.createElement("h2", { className: "text-sm font-extrabold flex items-center gap-1.5" }, React.createElement(Target, { size: 15, className: "text-emerald-600" }), "토지 기본정보", React.createElement(Tip, { t: "토지비·대지면적·용도지역으로 용적률·연면적을 잡고, 공사비와 2.사업수지가 모두 이 값을 씁니다." }))),
+      React.createElement("h2", { className: "text-sm font-extrabold flex items-center gap-1.5" }, React.createElement(Target, { size: 15, className: "text-emerald-600" }), "토지 기본정보", React.createElement(Tip, { t: "토지비·대지면적·용도지역으로 용적률·연면적을 잡고, 공사비와 2.사업수지가 모두 이 값을 씁니다." }), React.createElement("button", { type: "button", onClick: () => { if (window.confirm('입력한 값을 모두 지우고 처음부터 할까요?')) setF(DEFAULT); }, style: { marginLeft: 'auto', fontSize: 11, fontWeight: 700, padding: '3px 9px', borderRadius: 999, border: '1px solid #CBD5E1', color: '#64748B', background: 'transparent' } }, "새로 입력"))),
     React.createElement("div", { className: "grid grid-cols-2 gap-2.5" }, /*#__PURE__*/React.createElement(Num, {
-    label: "\uD1A0\uC9C0\uBE44 (\uB9E4\uC785\uAC00)",
+    label: f.landEok > 0 && f.sitePy > 0 ? `토지비 (평당 ${fmt(f.landEok * 1e4 / f.sitePy)}만)` : "\uD1A0\uC9C0\uBE44 (\uB9E4\uC785\uAC00)",
     unit: "\uC5B5",
     value: f.landEok,
     step: 10,
     onChange: v => setF(o => ({ ...o, landEok: v, landEst: false }))
   }), /*#__PURE__*/React.createElement(Num, {
-    label: "\uB300\uC9C0\uBA74\uC801",
+    label: f.sitePy > 0 ? `대지면적 (= ${fmt(f.sitePy * 3.3058)}㎡)` : "대지면적 (㎡ ÷ 3.3058 = 평)",
     unit: "\uD3C9",
     value: f.sitePy,
     step: 50,
@@ -2799,12 +2809,12 @@ function App() {
     style: { fontSize: 12 }
   }, "\uC608\uC0C1 ", "\uACF5\uC0AC\uBE44 (", f.costMode === 'db' ? 'DB' : f.costMode === 'manual' ? '직접' : sel.n, ")", isExample && /*#__PURE__*/React.createElement("span", {
     style: { marginLeft: 6, fontSize: 11, fontWeight: 700, padding: '2px 7px', borderRadius: 999, border: '1px solid #3A4250', color: '#B0B7C1' }
-  }, "\uC608\uC2DC")), /*#__PURE__*/React.createElement("p", {
+  }, "입력 전")), /*#__PURE__*/React.createElement("p", {
     className: "text-sm font-extrabold tabular-nums",
     style: { fontSize: 38, lineHeight: 1.1, marginTop: 4, letterSpacing: '-0.03em', color: isExample ? '#7D8692' : '#FFFFFF' }
   }, eok(buildNow)), isExample && /*#__PURE__*/React.createElement("p", {
     style: { fontSize: 12, color: '#9AA3AF', marginTop: 6 }
-  }, "예시 값이에요. 지번을 넣으면 내 사업으로 바뀌어요."), f.landEst && React.createElement("p", {
+  }, "대지면적을 넣으면 예상 공사비가 나와요. 지번을 넣으면 자동으로 채워져요."), f.landEst && React.createElement("p", {
     style: { fontSize: 12, color: '#FCD34D', marginTop: 6, fontWeight: 700 }
   }, "토지비 ", fmt(f.landEok), "억은 공시지가로 추정한 값이에요(시세반영률 65.5% 역산). 실제 매입가를 넣으면 더 정확해집니다."), landExample && /*#__PURE__*/React.createElement("p", {
     style: { fontSize: 12, color: '#FDBA74', marginTop: 6, fontWeight: 700 }
@@ -2868,10 +2878,10 @@ function App() {
   }, c.n)))), /*#__PURE__*/React.createElement("div", {
     className: "col-span-2"
   }, /*#__PURE__*/React.createElement(Num, {
-    label: `연면적 (0=자동 ${fmt(scale({
+    label: f.sitePy > 0 ? `연면적 (비우면 자동 ${fmt(scale({
       ...f,
       gfaManual: 0
-    }).gfa)}평, 2.사업수지 대지·용적률 기준)`,
+    }).gfa)}평)` : '연면적 (비우면 대지·용적률로 자동)',
     unit: "\uD3C9",
     value: f.gfaManual,
     step: 100,
