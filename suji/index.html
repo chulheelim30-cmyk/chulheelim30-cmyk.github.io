@@ -2419,7 +2419,9 @@ function MaxLand({ f, set, jiga }) {
   const kd = KIND[p.kind];
   const hug = p.hug ? hugOf(f) : null;
   const [draft, setDraft] = useState('');
-  const [tm, setTm] = useState(f.targetMargin);
+  // 목표 이익률은 화면 전체(f.targetMargin) 하나로 맞춘다 — 여기서 고르면 수지표·필요 분양가도 같이 바뀜
+  const tm = f.targetMargin;
+  const setTm = set('targetMargin');
   const price = qcNum(draft) || f.price || (hug ? hug.v : 0);
   const res = useMemo(() => price > 0 ? solveLand(f, price, tm) : null, [f, price, tm]);
   if (p.kind === 'coop') return null;
