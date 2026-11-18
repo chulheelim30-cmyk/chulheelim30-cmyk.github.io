@@ -1904,7 +1904,7 @@ function lsFromJson(v) {
 const LS_PROMPT = `이 이미지는 한국 부동산 개발사업의 토지조서(필지 목록) 표입니다. 표를 한 칸도 빠짐없이 그대로 읽어 JSON만 답하세요. 추측하지 말고, 안 보이는 칸은 null로 두세요.
 형식:
 {"rows":[{"addr":"서울시 은평구 수색동","jibun":"154-1","jimok":"대","type":"완전편입","gongbu":264.00,"parts":[{"name":"대지","m2":264.00}],"incl":264.00,"owner":"주식회사코람코자산신탁"}],"totals":{"gongbu":40688.00,"incl":7814.00}}
-규칙: addr=시·구·동(행정구역 칸을 이어 붙임), jibun=지번 그대로(산 포함), jimok=지목 한 글자, type=편입구분, gongbu=공부(대장)면적㎡, parts=편입면적을 용도별로 나눈 칸(머리글 이름 그대로, "-"는 0), incl=편입면적 합계(계)㎡, owner=소유자 그대로. 숫자는 쉼표 없는 숫자. 합계·비율 줄은 rows에 넣지 말고 합계 줄 값만 totals에. 표가 아니면 {"rows":[]}.`;
+규칙: addr=시·구·동(행정구역 칸을 이어 붙임), jibun=지번 그대로(산 포함), jimok=지목 한 글자, type=편입구분, gongbu=공부(대장)면적㎡, parts=편입면적을 용도별로 나눈 칸(머리글 이름 그대로, "-"는 0), incl=편입면적 합계(계)㎡, owner=소유자 그대로. 숫자는 쉼표 없는 숫자. 합계·비율 줄은 rows에 넣지 말고 합계 줄 값만 totals에(사진에 합계 줄이 없으면 totals는 null, 직접 더하지 말 것). 잘린 줄은 넣지 마세요. 표가 아니면 {"rows":[]}.`;
 async function lsShrink(file) {
   try {
     const bmp = await createImageBitmap(file);
