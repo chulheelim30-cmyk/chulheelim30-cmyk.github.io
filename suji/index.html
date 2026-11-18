@@ -2414,6 +2414,27 @@ function Tip({ t }) {
     React.createElement("button", { type: "button", onClick: e => { e.stopPropagation(); setO(v => !v); }, "aria-label": "자세히", style: { marginLeft: 4, width: 20, height: 20, lineHeight: '18px', borderRadius: 999, border: '1px solid #3A4250', background: o ? '#2E3541' : 'transparent', color: '#9AA3AF', fontSize: 11, fontWeight: 800, verticalAlign: 'middle', padding: 0 } }, "i"),
     o && React.createElement("span", { style: { display: 'block', marginTop: 6, padding: '8px 10px', borderRadius: 8, background: '#12161C', border: '1px solid #2E3541', color: '#B0B7C1', fontSize: 12, lineHeight: 1.55, fontWeight: 400, textAlign: 'left' } }, t));
 }
+// 목표 이익률 직접 입력(2026-11-19): 버튼 외 값(예 7.5%)도 넣기. 빈칸 허용, 벗어나면 이전 값 복구
+function MarginInput({ value, onChange }) {
+  const [draft, setDraft] = useState(null);
+  const preset = [5, 8, 10, 12, 15].includes(value);
+  return React.createElement("label", { style: { display: 'inline-flex', alignItems: 'center', gap: 4, minHeight: 32, padding: '0 10px', borderRadius: 999, border: '1px solid ' + (preset ? '#2E3541' : QC.acc), background: preset ? 'transparent' : 'rgba(197,240,74,.12)' } },
+    React.createElement("span", { style: { fontSize: 12, fontWeight: 700, color: '#B0B7C1' } }, "직접"),
+    React.createElement("input", {
+      type: "number", inputMode: "decimal", step: 0.5, min: 0, max: 50,
+      "aria-label": "목표 이익률 직접 입력(%)",
+      value: draft !== null ? draft : value,
+      onChange: e => {
+        const t = e.target.value;
+        setDraft(t);
+        const n = Number(t);
+        if (t !== '' && !isNaN(n) && n >= 0 && n <= 50) onChange(n);
+      },
+      onBlur: () => setDraft(null),
+      style: { width: 52, background: 'transparent', border: 'none', outline: 'none', textAlign: 'right', fontSize: 13, fontWeight: 800, color: preset ? '#E8EAED' : QC.acc }
+    }),
+    React.createElement("span", { style: { fontSize: 12, fontWeight: 700, color: '#B0B7C1' } }, "%"));
+}
 function MaxLand({ f, set, jiga }) {
   const p = PRODUCTS.find(q => q.id === f.product);
   const kd = KIND[p.kind];
@@ -2448,7 +2469,8 @@ function MaxLand({ f, set, jiga }) {
         [5, 8, 10, 12, 15].map(v => React.createElement("button", {
           key: v, onClick: () => setTm(v),
           style: { minWidth: 44, minHeight: 32, borderRadius: 999, fontSize: 12, fontWeight: 800, border: tm === v ? '1px solid ' + QC.acc : '1px solid #2E3541', background: tm === v ? 'rgba(197,240,74,.12)' : 'transparent', color: tm === v ? QC.acc : '#B0B7C1' }
-        }, v, "%")))),
+        }, v, "%")),
+        React.createElement(MarginInput, { value: tm, onChange: setTm }))),
     !price ? React.createElement("p", { style: { ...QC.mut, marginTop: 10 } }, "팔 수 있는 평당가를 넣으면 바로 계산됩니다.") :
       res < 0 ? React.createElement("p", { style: { marginTop: 12, color: '#FCA5A5', fontSize: 13, fontWeight: 700 } }, "이 가격이면 땅값이 0원이어도 이익률 ", tm, "%가 나오지 않습니다. 가격이나 상품을 바꿔 보세요.") :
         React.createElement("div", { style: { marginTop: 12 } },
