@@ -1200,6 +1200,9 @@ const DEFAULT = {
   memberPct: 70,
   genPrice: 0,
   finEok: 0,
+  pubPct: 0,
+  pubPrice: 0,
+  etcEok: 0,
   landEok: 300,
   sitePy: 1000,
   zone: 'sr',
@@ -1268,10 +1271,13 @@ function model(f, price, o = {}) {
   const mem = p.kind === 'coop' ? x.memberPct / 100 : 1;
   const memberRev = p.kind === 'coop' ? mainPy * mem * price / 1e4 : 0;
   const genRev = p.kind === 'coop' ? mainPy * (1 - mem) * gen * r / 1e4 : 0;
-  const mainRev = p.kind === 'coop' ? memberRev + genRev : mainPy * price * r / 1e4;
+  // 임대·공공매입 물량(장기전세·의무임대 등): 주거 면적 중 pubPct%를 pubPrice로 전량 매입(분양률 무관)
+  const pub = p.res && p.kind === 'sale' ? Math.min(90, Math.max(0, x.pubPct || 0)) / 100 : 0;
+  const pubRev = mainPy * pub * (x.pubPrice || 0) / 1e4;
+  const mainRev = p.kind === 'coop' ? memberRev + genRev : mainPy * (1 - pub) * price * r / 1e4 + pubRev;
   const retailRev = retailPy * (p.kind === 'coop' ? gen : price) * p.retailMult * r / 1e4;
   const S = mainRev + retailRev;
-  const salesBase = p.kind === 'coop' ? genRev + retailRev : S;
+  const salesBase = p.kind === 'coop' ? genRev + retailRev : S - pubRev;
   const B = gfa * unit / 1e4;
   const landAdd = x.landAddPct || p.landAddPct,
     salesPct = x.salesPct || p.salesPct,
@@ -1292,6 +1298,7 @@ function model(f, price, o = {}) {
   if (p.res && p.school !== false) add('제세·부담금', '학교용지부담금', salesBase * 0.008, `${p.kind === 'coop' ? '일반분양 수입' : '매출'} × 0.8%`);
   add('사업추진비', p.kind === 'coop' ? '업무대행·조합운영·신탁·예비비' : '신탁·PM·운영·예비비', S * opsPct / 100, `매출 × ${opsPct}%`);
   if (fs.trust) add('사업추진비', '차입형 신탁보수', S * fs.trust / 100, `매출 × ${fs.trust}% (차입형 토지신탁)`);
+  if (x.etcEok > 0) add('사업추진비', '기타 사업비(공공기여·철거·명도 등)', x.etcEok, '입력값');
   let pf;
   if (x.finEok > 0) {
     const pre = lines.reduce((a, l) => a + l.v, 0);
@@ -1323,6 +1330,8 @@ function model(f, price, o = {}) {
     retailRev,
     memberRev,
     genRev,
+    pubRev,
+    pub,
     gen,
     mem,
     mainPy,
@@ -2387,6 +2396,41 @@ function MaxLand({ f, set, jiga }) {
           }, "이 분양가를 사업수지에 넣기")));
 }
 
+
+// 분양가 보조 입력(2026-11-18): 세대당 금액 ↔ 평당가, 임대·공공매입 물량, 기타 사업비, 분양가 입력 시 목표 이익률 안내
+function PriceExtras({ f, set, live }) {
+  const p = live.p;
+  const box = { gridColumn: '1 / -1', background: '#13171D', border: '1px solid #2E3541', borderRadius: 10, padding: 10 };
+  const note = { fontSize: 11, color: '#9AA3AF', marginTop: 4, lineHeight: 1.5 };
+  const unitPy = live.sc.unitPy;
+  const perUnit = f.price > 0 ? f.price * unitPy / 1e4 : 0;
+  const [uDraft, setUDraft] = useState(null);
+  const inp = { width: '100%', height: 40, borderRadius: 8, border: '1px solid #2E3541', background: '#0E1116', color: '#E8EAED', padding: '0 10px', fontSize: 15, textAlign: 'right' };
+  return React.createElement("div", { className: "space-y-2" },
+    p.kind !== 'coop' && !live.sc.whole && React.createElement("div", { style: box },
+      React.createElement("span", { style: { display: 'block', fontSize: 12, fontWeight: 700, color: '#B0B7C1', marginBottom: 4 } }, "또는 ", p.res ? '세대' : '호실', "당 금액으로 입력 (", p.sizeLabel || '전용', " ", f.size, "㎡ = ", p.priceUnit, " ", unitPy.toFixed(1), "평)"),
+      React.createElement("div", { style: { display: 'flex', alignItems: 'center', gap: 8 } },
+        React.createElement("input", { type: "number", inputMode: "decimal", step: 0.1, placeholder: "예) 12.5", style: inp, className: "tabular-nums",
+          value: uDraft !== null ? uDraft : perUnit ? +perUnit.toFixed(2) : '',
+          onChange: e => { const t = e.target.value; setUDraft(t); const v = parseFloat(t); if (v > 0) set('price')(Math.round(v * 1e4 / unitPy)); },
+          onBlur: () => setUDraft(null) }),
+        React.createElement("span", { style: { fontSize: 13, color: '#9AA3AF', whiteSpace: 'nowrap' } }, "억/", p.res ? '세대' : '호')),
+      React.createElement("p", { style: note }, "넣으면 평당가(", p.priceUnit, " 기준)로 바꿔 계산합니다. 평형이 여러 개면 대표 평형(위 전용면적)을 고르고 그 평형 분양가를 넣으세요.")),
+    f.price > 0 && p.kind !== 'coop' && React.createElement("div", { style: { ...box, borderColor: 'rgba(252,211,77,.45)' } },
+      React.createElement("p", { style: { fontSize: 12, color: '#FCD34D', fontWeight: 700, lineHeight: 1.5 } }, "분양가를 넣으면 이 가격으로 계산한 이익률(", live.margin.toFixed(1), "%)이 나옵니다. 목표 이익률 ", f.targetMargin, "%는 분양가를 비웠을 때 역산에만 씁니다 — ", f.targetMargin, "%를 맞추는 분양가는 ", fmt(live.t10), "만/평", unitPy && !live.sc.whole ? ` (${(live.t10 * unitPy / 1e4).toFixed(1)}억/${p.res ? '세대' : '호'})` : '', "."),
+      React.createElement("button", { onClick: () => set('price')(0), style: { marginTop: 6, minHeight: 34, padding: '0 12px', borderRadius: 8, fontSize: 12, fontWeight: 800, border: '1px solid #2E3541', background: 'transparent', color: '#E8EAED' } }, "분양가 비우고 목표 이익률로 보기")),
+    p.res && p.kind === 'sale' && React.createElement("div", { style: box },
+      React.createElement("span", { style: { display: 'block', fontSize: 12, fontWeight: 700, color: '#B0B7C1', marginBottom: 6 } }, "임대·공공매입 물량 (장기전세·의무임대 등, 없으면 0)"),
+      React.createElement("div", { className: "grid grid-cols-2 gap-2.5" },
+        React.createElement(Num, { label: "주거 면적 중 비율", unit: "%", value: f.pubPct, step: 1, max: 90, onChange: set('pubPct') }),
+        React.createElement(Num, { label: "평균 매입가", unit: "만/평", value: f.pubPrice, step: 50, onChange: set('pubPrice') })),
+      React.createElement("p", { style: note }, "이 물량은 위 분양가가 아니라 매입가로 전량 넘기는 것으로 계산합니다(분양률·분양경비 제외). 분양가를 일반분양 단가로 넣고 여기를 비우면 매출이 크게 잡힙니다.",
+        f.pubPct > 0 && live.pubRev > 0 ? ` 현재 임대·공공 수입 ${eok1(live.pubRev)}.` : '')),
+    React.createElement("div", { style: box },
+      React.createElement(Num, { label: "기타 사업비 (공공기여·철거·명도·지주작업 등)", unit: "억", value: f.etcEok, step: 10, onChange: set('etcEok') }),
+      React.createElement("p", { style: note }, "재개발·역세권 사업처럼 일반 요율에 없는 큰 비용은 여기 넣으세요. 사업추진비에 한 줄로 들어갑니다.")));
+}
+
 function SizeInput({ f, set, live }) {
   const [draft, setDraft] = useState(null);
   const custom = !live.p.sizes.includes(f.size);
@@ -3104,7 +3148,7 @@ function App() {
     value: f.saleRate,
     max: 100,
     onChange: set('saleRate')
-  })), live.p.kind === 'sale' && /*#__PURE__*/React.createElement("label", {
+  })), React.createElement(PriceExtras, { f, set, live }), live.p.kind === 'sale' && /*#__PURE__*/React.createElement("label", {
     className: "block"
   }, /*#__PURE__*/React.createElement("span", {
     className: "block text-[11px] font-bold text-slate-600 mb-1"
