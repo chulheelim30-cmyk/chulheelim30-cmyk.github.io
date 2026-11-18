@@ -2475,6 +2475,13 @@ function App() {
     region: CITIES.find(c => c.id === id).reg
   }));
   const [adv, setAdv] = useState(false);
+  // 용도지역을 바꿨는데 지금 상품을 그 땅에 지을 수 없으면, 지을 수 있는 대표 상품(실사업 근거)으로 자동 전환
+  useEffect(() => {
+    const z = ZONES.find(q => q.id === f.zone);
+    if (!z || z.ok.includes(f.product)) return;
+    const nx = QC_ORDER.find(id => z.ok.includes(id) && !PRODUCTS.find(q => q.id === id).est) || z.ok[0];
+    if (nx) setProduct(nx);
+  }, [f.zone]);
   const go = id => {
     setSheet(id);
     window.scrollTo({
