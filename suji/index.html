@@ -3813,7 +3813,7 @@ f.appendChild(links);
 var rows=[];
 if(b.regNo){
   rows.push([b.name||b.brand, b.owner&&("대표 "+b.owner)]);
-  rows.push(["사업자등록번호 "+b.regNo, b.taxType, b.ecommerce?("통신판매업 신고 "+b.ecommerce):(b.taxType==="간이과세자"?"통신판매업 신고 면제(간이과세자)":"")]);
+  rows.push(["사업자등록번호 "+b.regNo, b.taxType, b.ecommerce?("통신판매업 신고 "+b.ecommerce):(b.taxType==="간이과세자"?"통신판매업 신고 면제(간이과세자)":(b.regNo?"통신판매업 신고 진행 중":""))]);
   rows.push([b.address]);
   rows.push([b.tel&&("전화 "+b.tel), b.email&&("이메일 "+b.email), b.hosting&&("호스팅 "+b.hosting)]);
 }else{rows.push([(b.brand||"수지들")+" · 사업자 등록 준비 중"]);}
