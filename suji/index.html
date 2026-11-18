@@ -809,7 +809,8 @@ const ZONES = [{
   id: 'g1',
   n: '제1종일반주거',
   legal: 200,
-  ok: ['apt', 'retail', 'jitaek', 'rent', 'lh', 'dosi', 'villa', 'dagagu']
+  // 국토계획법 시행령 별표4: 1종일반주거는 공동주택 중 아파트 제외, 4층 이하 → 아파트·지역주택조합 제외
+  ok: ['retail', 'rent', 'lh', 'dosi', 'villa', 'dagagu']
 }, {
   id: 'g2',
   n: '제2종일반주거',
@@ -1885,8 +1886,15 @@ async function lsTesseract(img, onP) {
 const LS_SERVER = 'https://guwnuaeainixryxdxids.supabase.co/functions/v1/suji-ocr';
 let lsServerOff = false;
 const blobB64 = b => new Promise((res, rej) => { const fr = new FileReader(); fr.onload = () => res(String(fr.result).split(',')[1]); fr.onerror = rej; fr.readAsDataURL(b); });
+let lsAsked = false;
 async function lsServer(img) {
   if (lsServerOff) return { skip: 'off' };
+  // 개인정보: 토지조서에는 소유자 성명이 있을 수 있어, 해외 AI로 보내기 전에 한 번 묻는다(개인정보처리방침 4번)
+  if (!lsAsked) {
+    lsAsked = true;
+    const yes = window.confirm('정밀 인식을 하면 사진이 수지들 서버(호주)를 거쳐 Google Gemini(해외)로 전송되어 읽힙니다. 운영자는 사진을 저장하지 않습니다.\n\n소유자 이름 등 개인정보는 가리고 올려 주세요.\n\n[확인] 정밀 인식  /  [취소] 기기 안에서만 인식(무료 OCR)');
+    if (!yes) { lsServerOff = true; return { skip: 'off' }; }
+  }
   let r, j;
   try {
     r = await fetch(LS_SERVER, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ image: await blobB64(img), mime: img.type || 'image/jpeg', prompt: LS_PROMPT }) });
