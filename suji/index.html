@@ -1303,7 +1303,7 @@ function model(f, price, o = {}) {
     pfPct = x.pfPct || p.pfPct || fs.pf,
     drawPct = x.drawPct || p.drawPct || fs.draw,
     pfFee = x.pfFeePct || fs.fee,
-    finS = x.finSPct || (p.finS ?? 4);
+    finS = x.finSPct || (p.finS ?? (p.kind === 'exit' ? 0 : 4)); // 통매각은 중도금 없음(2026-11-19)
   // 지역주택조합: price = 조합원 평당가(전량 배정), 일반분양분은 일반분양가 × 분양률
   const gen = p.kind === 'coop' ? x.genPrice || hugOf(x).v : 0;
   const mem = p.kind === 'coop' ? x.memberPct / 100 : 1;
@@ -1331,7 +1331,7 @@ function model(f, price, o = {}) {
   add('토지비', '취득세·채권·법무·중개', L * landAdd / 100, `토지비 × ${landAdd}%`);
   add('공사비', '직접공사비', B, `연면적 ${fmt(gfa)}평 × ${fmt(unit)}만`);
   add('공사비', '설계·감리·인입·미술 등', B * x.buildAddPct / 100, `직접공사비 × ${x.buildAddPct}%`);
-  add('분양경비', p.kind === 'rent' ? '임차인 모집·임대 마케팅·M/H' : p.kind === 'lh' ? '매입 심의·인증 대응' : '분양대행·광고·촉진·M/H', salesBase * salesPct / 100, `${p.kind === 'coop' ? '일반분양 수입' : '매출'} × ${salesPct}%`);
+  add('분양경비', p.kind === 'rent' ? '임차인 모집·임대 마케팅·M/H' : p.kind === 'lh' ? '매입 심의·인증 대응' : p.kind === 'exit' ? '매각 자문·중개 수수료·마케팅' : '분양대행·광고·촉진·M/H', salesBase * salesPct / 100, `${p.kind === 'coop' ? '일반분양 수입' : '매출'} × ${salesPct}%`);
   add('제세·부담금', '보존등기·채권·각종 부담금', B * x.taxPct / 100, `직접공사비 × ${x.taxPct}%`);
   if (p.res && p.school !== false) add('제세·부담금', '학교용지부담금', salesBase * 0.008, `${p.kind === 'coop' ? '일반분양 수입' : '매출'} × 0.8%`);
   add('사업추진비', p.kind === 'coop' ? '업무대행·조합운영·신탁·예비비' : '신탁·PM·운영·예비비', S * opsPct / 100, `매출 × ${opsPct}%`);
@@ -3365,7 +3365,7 @@ function App() {
     step: 0.1,
     onChange: set('opsPct')
   }), /*#__PURE__*/React.createElement(Num, {
-    label: `중도금 무이자 등 (0=${live.p.finS ?? 4}%)`,
+    label: `중도금 무이자 등 (0=${live.p.finS ?? (live.p.kind === 'exit' ? 0 : 4)}%)`,
     unit: "%",
     value: f.finSPct,
     step: 0.1,
