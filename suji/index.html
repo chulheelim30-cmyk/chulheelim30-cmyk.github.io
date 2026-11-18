@@ -1267,7 +1267,6 @@ const DEFAULT = {
   pfFeePct: 0,
   drawPct: 0,
   finSPct: 0,
-  holdMonths: 0, // 통매각 준공 후 매각까지 개월(0=6)
   targetMargin: 10,
   // 0 = 상품 기본(PF 80%·인출 40%·중도금 4%)
   progress: 30,
@@ -1346,16 +1345,11 @@ function model(f, price, o = {}) {
   } else {
     if (finS) add('금융비', '중도금 무이자 등', S * finS / 100, `매출 × ${finS}%`);
     // PF = 총사업비 × PF비율 → 총사업비 = PF 외 비용 ÷ (1 − PF비율 × PF비용률)
-    // 통매각: 공사기간은 평균 인출, 준공 후 매각까지(기본 6개월, 사전 매각사 확정 관행)는 전액 인출 상태로 이자(2026-11-19 대표)
-    const exit = p.kind === 'exit';
-    const hold = exit ? x.holdMonths || 6 : 0;
-    const cMon = exit ? months : months + 3;
-    const pfCostRate = pfFee / 100 + rate / 100 * (cMon / 12) * (drawPct / 100) + rate / 100 * (hold / 12);
+    const pfCostRate = pfFee / 100 + rate / 100 * ((months + 3) / 12) * (drawPct / 100);
     const nonPf = lines.reduce((a, l) => a + l.v, 0);
     pf = pfPct / 100 * nonPf / (1 - pfPct / 100 * pfCostRate);
     add('금융비', fs.trust ? 'PF 수수료(토지 브릿지)' : 'PF 수수료(선·중·후순위)', pf * pfFee / 100, `PF ${eok1(pf)}(총사업비 × ${pfPct}%, ${fs.s}) × ${pfFee}%`);
-    add('금융비', exit ? 'PF 이자(공사 중)' : 'PF 이자', pf * (rate / 100) * (cMon / 12) * (drawPct / 100), `PF × ${rate}% × ${cMon}개월 × 평균인출 ${drawPct}%`);
-    if (hold) add('금융비', '준공 후 매각까지 이자', pf * (rate / 100) * (hold / 12), `PF × ${rate}% × ${hold}개월(전액 인출)`);
+    add('금융비', 'PF 이자', pf * (rate / 100) * ((months + 3) / 12) * (drawPct / 100), `PF × ${rate}% × ${months + 3}개월 × 평균인출 ${drawPct}%`);
   }
   const groups = {};
   lines.forEach(l => {
@@ -3376,13 +3370,6 @@ function App() {
     value: f.finSPct,
     step: 0.1,
     onChange: set('finSPct')
-  }), live.p.kind === 'exit' && React.createElement(Num, {
-    label: "준공 후 매각까지 (0=6개월)",
-    unit: "개월",
-    value: f.holdMonths,
-    step: 1,
-    max: 24,
-    onChange: set('holdMonths')
   }), /*#__PURE__*/React.createElement(Num, {
     label: `PF 비율 (0=${live.p.pfPct || live.fs.pf}%)`,
     unit: "%",
