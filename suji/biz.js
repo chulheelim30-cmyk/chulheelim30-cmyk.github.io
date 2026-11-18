@@ -9,7 +9,7 @@ window.SUJI_BIZ = {
   taxType: "일반과세자",
   ecommerce: "",   // 통신판매업 신고번호(일반과세자는 신고 필요). 간이과세자일 때만 비워 두면 "신고 면제"로 표시
   address: "경기도 남양주시 경춘로 490, 1동 10층 10080호(다산동, 힐스테이트지금디포레)",     // 사업장 주소
-  tel: "",         // 고객 문의 전화
+  tel: "010-6290-3652",         // 고객 문의 전화
   email: "pungnyeonmim@gmail.com",       // 고객 문의·개인정보 문의 이메일
   privacyOfficer: "임철희 (대표)", // 개인정보 보호책임자 (보통 대표자 본인)
   hosting: "GitHub Pages (GitHub, Inc.)"
