@@ -3792,4 +3792,26 @@ addEventListener("popstate",function(){if(!armed)return;
   last=n;toast();history.pushState({bk:1},"");});
 })();
 </script>
+<script src="biz.js"></script>
+<script>
+/* 사업자 정보 하단 표시(전자상거래법 제10조). 내용은 biz.js 한 곳에서 관리 */
+(function(){var b=window.SUJI_BIZ||{};
+function el(t,c,h){var e=document.createElement(t);if(c)e.style.cssText=c;if(h!=null)e.textContent=h;return e;}
+var f=el("footer","max-width:760px;margin:0 auto;padding:18px 20px 110px;color:#8A93A3;font-size:11.5px;line-height:1.8;border-top:1px solid #2A303A;font-family:inherit");
+f.id="bizFooter";
+var links=el("div","margin-bottom:6px");
+[["이용약관","terms.html"],["개인정보처리방침","privacy.html"]].forEach(function(x,i){var a=el("a","color:#C5F04A;text-decoration:none;font-weight:600",x[0]);a.href=x[1];if(i)links.appendChild(el("span","margin:0 8px;color:#4B5260","|"));links.appendChild(a);});
+f.appendChild(links);
+var rows=[];
+if(b.regNo){
+  rows.push([b.name||b.brand, b.owner&&("대표 "+b.owner)]);
+  rows.push(["사업자등록번호 "+b.regNo, b.taxType, b.ecommerce?("통신판매업 신고 "+b.ecommerce):(b.taxType==="간이과세자"?"통신판매업 신고 면제(간이과세자)":"")]);
+  rows.push([b.address]);
+  rows.push([b.tel&&("전화 "+b.tel), b.email&&("이메일 "+b.email), b.hosting&&("호스팅 "+b.hosting)]);
+}else{rows.push([(b.brand||"수지들")+" · 사업자 등록 준비 중"]);}
+rows.forEach(function(r){var t=r.filter(Boolean).join(" · ");if(t)f.appendChild(el("div","",t));});
+function put(){var r=document.getElementById("root");(r&&r.parentNode?r.parentNode:document.body).appendChild(f);}
+if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",put);else put();
+})();
+</script>
 </body></html>
