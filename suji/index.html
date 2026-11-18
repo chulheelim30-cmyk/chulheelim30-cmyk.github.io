@@ -1891,7 +1891,10 @@ async function lsTesseract(img, onP) {
 }
 // 정밀 인식: 수지들 서버 함수(Supabase)가 대표 Gemini 키로 읽는다. 키 미설정·한도 초과·오류면 무료 OCR로 넘어간다
 const LS_SERVER = 'https://guwnuaeainixryxdxids.supabase.co/functions/v1/suji-ocr';
-let lsServerOff = false;
+// 2026-11-18 법무: Gemini 무료 등급은 Google이 입력을 서비스 개선에 쓸 수 있어 소유자 성명이 담긴 토지조서는 제3자 제공·국외 이전 동의 문제가 생김
+// → 유료 등급(입력 학습 미사용)으로 바꾸고 처리방침 위탁·국외 이전 항목을 갖출 때까지 정밀 인식을 끈다
+const LS_GEMINI_ON = false;
+let lsServerOff = !LS_GEMINI_ON;
 const blobB64 = b => new Promise((res, rej) => { const fr = new FileReader(); fr.onload = () => res(String(fr.result).split(',')[1]); fr.onerror = rej; fr.readAsDataURL(b); });
 let lsAsked = false;
 async function lsServer(img) {
@@ -1899,7 +1902,7 @@ async function lsServer(img) {
   // 개인정보: 토지조서에는 소유자 성명이 있을 수 있어, 해외 AI로 보내기 전에 한 번 묻는다(개인정보처리방침 4번)
   if (!lsAsked) {
     lsAsked = true;
-    const yes = window.confirm('정밀 인식을 하면 사진이 수지들 서버(호주)를 거쳐 Google Gemini(해외)로 전송되어 읽힙니다. 운영자는 사진을 저장하지 않습니다.\n\n소유자 이름 등 개인정보는 가리고 올려 주세요.\n\n[확인] 정밀 인식  /  [취소] 기기 안에서만 인식(무료 OCR)');
+    const yes = window.confirm('[개인정보 국외 이전 동의]\n· 이전 항목: 올린 토지조서 사진(사진 속 글자 포함)\n· 이전 국가·시기·방법: 호주(Supabase, Inc.)를 거쳐 미국 등(Google LLC)으로, 정밀 인식을 누를 때 암호화 통신으로 전송\n· 이용 목적·보유: 표 글자 인식에만 쓰고 운영자는 저장하지 않음. 받는 회사의 보관은 각 회사 정책을 따름\n· 거부: [취소]를 누르면 사진이 밖으로 나가지 않고 기기 안 무료 OCR로만 읽습니다(인식 정확도가 낮을 수 있음)\n\n소유자 이름 등 개인정보는 가리고 올려 주세요.\n\n[확인] 동의하고 정밀 인식  /  [취소] 기기 안에서만 인식');
     if (!yes) { lsServerOff = true; return { skip: 'off' }; }
   }
   let r, j;
@@ -2101,7 +2104,7 @@ function LandSheet({ f, setF }) {
       "핸드폰: 버튼 → 사진 보관함·촬영 · PC: 캡처 후 Ctrl+V, 또는 이미지를 이 칸에 끌어놓기"),
     sampler ? React.createElement("p", { style: { fontSize: 11, color: '#9AA3AF', textAlign: 'center' } }, "인식: Claude (claude.ai 요금제 안에서 무료)") :
       React.createElement("p", { style: { fontSize: 10, color: '#7C8592', textAlign: 'center' } },
-        "인식: 정밀 인식(구글 Gemini로 사진을 보내 읽음, 1인 하루 30장) → 안 되면 기기 안 무료 OCR로 자동 전환. 결과는 주황·빨간 칸을 원본과 맞춰 보세요."),
+        LS_GEMINI_ON ? "인식: 정밀 인식(구글 Gemini로 사진을 보내 읽음, 1인 하루 30장) → 안 되면 기기 안 무료 OCR로 자동 전환. 결과는 주황·빨간 칸을 원본과 맞춰 보세요." : "인식: 기기 안 무료 OCR — 사진이 밖으로 나가지 않습니다. 결과는 주황·빨간 칸을 원본과 맞춰 보세요."),
     React.createElement("textarea", {
       className: "w-full rounded-md px-2.5 py-2",
       style: { background: '#12161C', border: '1px solid #2E3541', color: '#E8EAED', borderRadius: 10, minHeight: 48, fontSize: 13 },
