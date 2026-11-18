@@ -435,7 +435,7 @@ const {
   LabelList,
   Tooltip
 } = Recharts;
-// 개발 사업수지 · 공사비 (시트형, 최소 입력) — 1.공사비 2.사업수지 3.민감도 4.물가변동 5.조례 6.FAQ
+// 개발 사업수지 · 공사비 (시트형, 최소 입력) — 1.사업개요(토지·상품·공사비) 2.사업수지 3.민감도 4.물가변동 5.조례 6.FAQ
 // 핵심: 토지비 + 대지면적 + 용도지역 → 용적률·연면적·세대수·총사업비·분양가 범위.
 // 검증: 실사업 수지표 15건 교차검증(LOO) 총사업비 평균 오차 2.7% / 분양경비·사업추진비·금융비 입력 시 0.7%
 
@@ -1502,7 +1502,7 @@ function useUsage() {
 }
 const SHEETS = [{
   id: 'cost',
-  n: '1.공사비',
+  n: '1.사업개요',
   icon: Award
 }, {
   id: 'pf',
@@ -1559,7 +1559,7 @@ function UpdateNote({ go }) {
     React.createElement("ul", { className: "space-y-1" },
       row("토지조서 사진·캡처·엑셀 표로 여러 필지 한 번에 입력(무료 OCR): 편입면적 합계·국공유지·소유자 수 자동 정리, 합계 자동 검산", 'pf', '2.사업수지'),
       vwOn() && row("[공공] 주소로 불러오기: 대지면적·용도지역·공시지가 자동 입력(국토교통부 브이월드)", 'pf', '2.사업수지'),
-      row("[실사업] 수지표 51건으로 확대(+19건: 지식산업센터 11·오피스텔 5·오피스·생숙·고급주택). 지식산업센터 488만원·오피스텔 666만원(2026 환산 중앙값)", 'cost', '1.공사비'),
+      row("[실사업] 수지표 51건으로 확대(+19건: 지식산업센터 11·오피스텔 5·오피스·생숙·고급주택). 지식산업센터 488만원·오피스텔 666만원(2026 환산 중앙값)", 'cost', '1.사업개요'),
       row("[공공] 공사비 시점 환산과 물가변동을 건설공사비지수 공표값으로 교체(2026.9 139.48, 1년 +5.9%)", 'esc', '4.물가변동'),
       row("[공공] HUG 지역 평균 분양가 최신 공표값(서울 6,287만원/평 등)으로 갱신", 'pf', '2.사업수지'),
       row("[공공] 인천광역시·경기 용인시 조례 용적률 원문 추가", 'rule', '5.조례'),
@@ -2282,7 +2282,7 @@ function App() {
       top: 0
     });
   };
-  // 뒤로가기: 홈(1.공사비)이 아니거나 창이 열려 있으면 홈으로, 홈에서는 한 번 더 누르면 종료
+  // 뒤로가기: 홈(1.사업개요)이 아니거나 창이 열려 있으면 홈으로, 홈에서는 한 번 더 누르면 종료
   window.bkBack = () => {
     if (pay || showMatrix || sheet !== 'cost') {
       setPay(false);
@@ -2456,7 +2456,34 @@ function App() {
   }))), /*#__PURE__*/React.createElement("main", {
     className: "max-w-4xl mx-auto px-4 py-4 space-y-3",
     style: { paddingBottom: 96 }
-  }, (sheet === 'cost' || sheet === 'pf') && vwOn() && React.createElement(LandLookup, { f, setF }), (sheet === 'cost' || sheet === 'pf') && React.createElement(LandSheet, { f, setF }), /*#__PURE__*/React.createElement("div", {
+  }, sheet === 'cost' && vwOn() && React.createElement(LandLookup, { f, setF }), sheet === 'cost' && React.createElement(LandSheet, { f, setF }), sheet === 'cost' && React.createElement("div", { className: "bg-white rounded-xl border border-slate-200 p-4 space-y-3" },
+    React.createElement("div", null,
+      React.createElement("h2", { className: "text-sm font-extrabold flex items-center gap-1.5" }, React.createElement(Target, { size: 15, className: "text-emerald-600" }), "토지 기본정보"),
+      React.createElement("p", { className: "text-[11px] text-slate-500" }, "토지비·대지면적·용도지역으로 용적률·연면적을 잡고, 공사비와 2.사업수지가 모두 이 값을 씁니다.")),
+    React.createElement("div", { className: "grid grid-cols-2 gap-2.5" }, /*#__PURE__*/React.createElement(Num, {
+    label: "\uD1A0\uC9C0\uBE44 (\uB9E4\uC785\uAC00)",
+    unit: "\uC5B5",
+    value: f.landEok,
+    step: 10,
+    onChange: set('landEok')
+  }), /*#__PURE__*/React.createElement(Num, {
+    label: "\uB300\uC9C0\uBA74\uC801",
+    unit: "\uD3C9",
+    value: f.sitePy,
+    step: 50,
+    onChange: set('sitePy')
+  }), /*#__PURE__*/React.createElement("label", {
+    className: "block"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "block text-[11px] font-bold text-slate-600 mb-1"
+  }, "\uC6A9\uB3C4\uC9C0\uC5ED"), /*#__PURE__*/React.createElement("select", {
+    className: inputCls,
+    value: f.zone,
+    onChange: e => set('zone')(e.target.value)
+  }, ZONES.map(z => /*#__PURE__*/React.createElement("option", {
+    key: z.id,
+    value: z.id
+  }, z.n)))))), /*#__PURE__*/React.createElement("div", {
     className: "grid grid-cols-2 gap-2 text-center"
   }, /*#__PURE__*/React.createElement("button", {
     onClick: () => go('cost'),
@@ -2739,9 +2766,9 @@ function App() {
   }, /*#__PURE__*/React.createElement(Target, {
     size: 15,
     className: "text-emerald-600"
-  }), "\uB545 \uC815\uBCF4\uB9CC \uB123\uC73C\uC138\uC694"), /*#__PURE__*/React.createElement("p", {
+  }), "사업 조건"), /*#__PURE__*/React.createElement("p", {
     className: "text-[11px] text-slate-500"
-  }, "\uB300\uC9C0\uBA74\uC801\xB7\uC6A9\uB3C4\uC9C0\uC5ED\uC73C\uB85C \uC6A9\uC801\uB960\uACFC \uC5F0\uBA74\uC801\xB7\uC138\uB300\uC218\uB97C \uC7A1\uACE0, \uB098\uBA38\uC9C0 \uBE44\uC6A9\uC740 \uC2E4\uBB34 \uC218\uC9C0\uD45C \uBE44\uC728\uB85C \uC790\uB3D9 \uC0B0\uCD9C\uD569\uB2C8\uB2E4.")), /*#__PURE__*/React.createElement("div", {
+  }, "토지(토지비·대지면적·용도지역)는 1.사업개요에서 넣습니다. 대지면적·용도지역으로 용적률과 연면적·세대수를 잡고, 나머지 비용은 실무 수지표 비율로 자동 산출합니다.")), /*#__PURE__*/React.createElement("div", {
     className: "grid grid-cols-2 gap-2.5"
   }, /*#__PURE__*/React.createElement("label", {
     className: "block col-span-2"
@@ -2754,30 +2781,10 @@ function App() {
   }, CITIES.map(c => /*#__PURE__*/React.createElement("option", {
     key: c.id,
     value: c.id
-  }, c.n)))), /*#__PURE__*/React.createElement(Num, {
-    label: "\uD1A0\uC9C0\uBE44 (\uB9E4\uC785\uAC00)",
-    unit: "\uC5B5",
-    value: f.landEok,
-    step: 10,
-    onChange: set('landEok')
-  }), /*#__PURE__*/React.createElement(Num, {
-    label: "\uB300\uC9C0\uBA74\uC801",
-    unit: "\uD3C9",
-    value: f.sitePy,
-    step: 50,
-    onChange: set('sitePy')
-  }), /*#__PURE__*/React.createElement("label", {
-    className: "block"
-  }, /*#__PURE__*/React.createElement("span", {
-    className: "block text-[11px] font-bold text-slate-600 mb-1"
-  }, "\uC6A9\uB3C4\uC9C0\uC5ED"), /*#__PURE__*/React.createElement("select", {
-    className: inputCls,
-    value: f.zone,
-    onChange: e => set('zone')(e.target.value)
-  }, ZONES.map(z => /*#__PURE__*/React.createElement("option", {
-    key: z.id,
-    value: z.id
-  }, z.n)))), /*#__PURE__*/React.createElement("label", {
+  }, c.n)))), React.createElement("div", { className: "col-span-2 rounded-lg border border-slate-200 px-3 py-2", style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 } },
+    React.createElement("p", { className: "text-[12px] text-slate-700 tabular-nums" },
+      React.createElement("b", null, "토지 "), Math.round(f.landEok).toLocaleString('ko-KR'), "억 · 대지 ", Math.round(f.sitePy).toLocaleString('ko-KR'), "평 · ", (ZONES.find(z => z.id === f.zone) || {}).n || '용도지역 미정'),
+    React.createElement("button", { onClick: () => go('cost'), className: "text-[11px] font-bold underline text-slate-600", style: { whiteSpace: 'nowrap' } }, "사업개요에서 수정 ›")), /*#__PURE__*/React.createElement("label", {
     className: "block"
   }, /*#__PURE__*/React.createElement("span", {
     className: "block text-[11px] font-bold text-slate-600 mb-1"
