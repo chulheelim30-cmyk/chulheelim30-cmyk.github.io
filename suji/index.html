@@ -1426,6 +1426,8 @@ function analyze(f, o = {}) {
     ...m,
     price,
     priced: !!f.price,
+    empty: !(m.sc && m.sc.gfa > 0), // 대지면적·연면적이 없으면 계산 불가(2026-11-19)
+    capped: t10 >= 39999, // 평당 4억으로도 목표 이익률이 안 나옴 → 대개 토지비 단위(억) 착오
     be,
     t10,
     t15,
@@ -2361,6 +2363,9 @@ function QuickCompare({ f, setProduct }) {
     return { id, x, a, hug };
   }), [f, allowed.join()]);
   if (!allowed.length) return null;
+  if (rows[0] && rows[0].a.empty) return React.createElement("div", { style: QC.card },
+    React.createElement("p", { style: QC.h }, "이 땅에 지을 수 있는 상품 ", allowed.length, "가지"),
+    React.createElement("p", { style: { ...QC.mut, marginTop: 8 } }, "대지면적을 넣으면 상품별 필요 분양가가 바로 나와요. 지번을 넣으면 자동으로 채워져요."));
   const cur = rows.filter(r => r.id === f.product);
   const main = rows.filter(r => r.id !== f.product && !r.a.p.est);
   const est = rows.filter(r => r.id !== f.product && r.a.p.est);
@@ -2368,7 +2373,7 @@ function QuickCompare({ f, setProduct }) {
   const row = ({ id, a, hug }) => {
     const isCur = id === f.product;
     const isOpen = open === id;
-    const vsHug = hug ? (a.t10 / hug.v - 1) * 100 : null;
+    const vsHug = hug && !a.capped ? (a.t10 / hug.v - 1) * 100 : null;
     return React.createElement("div", { key: id, style: { background: '#0E1116', border: isCur ? '2px solid ' + QC.acc : '1px solid #2E3541', borderRadius: 10 } },
       React.createElement("button", {
         onClick: () => setOpen(isOpen ? null : id),
@@ -2379,9 +2384,9 @@ function QuickCompare({ f, setProduct }) {
             a.p.est && React.createElement("span", { style: { marginLeft: 6, fontSize: 10, fontWeight: 700, padding: '1px 6px', borderRadius: 999, color: '#FCD34D', border: '1px solid rgba(252,211,77,.4)' } }, "추정"),
             isCur && React.createElement("span", { style: { marginLeft: 6, fontSize: 10, fontWeight: 800, color: QC.acc } }, "선택됨")),
           React.createElement("span", { style: { display: 'block', fontSize: 11, color: '#9AA3AF', marginTop: 2 } }, "필요 ", a.kd.price, " · ", a.p.priceUnit, " 평당",
-            hug ? ` · ${hug.tag} 대비 ${vsHug >= 0 ? '+' : ''}${vsHug.toFixed(0)}%` : '')),
+            hug && vsHug !== null ? ` · ${hug.tag} 대비 ${vsHug >= 0 ? '+' : ''}${vsHug.toFixed(0)}%` : '')),
         React.createElement("span", { className: "tabular-nums", style: { flexShrink: 0, textAlign: 'right' } },
-          React.createElement("span", { style: { color: isCur ? QC.acc : '#E8EAED', fontSize: 18, fontWeight: 800 } }, fmt(a.t10)),
+          React.createElement("span", { style: { color: isCur ? QC.acc : '#E8EAED', fontSize: a.capped ? 12 : 18, fontWeight: 800 } }, a.capped ? '계산 범위 밖' : fmt(a.t10)),
           React.createElement("span", { style: { fontSize: 11, color: '#9AA3AF', marginLeft: 2 } }, "만 ", isOpen ? '▴' : '▾'))),
       isOpen && React.createElement("div", { style: { padding: '0 12px 12px' } },
         hug && React.createElement("p", { style: { fontSize: 11, color: vsHug > 10 ? '#FDBA74' : '#9AA3AF' } }, hug.full, " ", fmt(hug.v), "만 대비 ", vsHug >= 0 ? '+' : '', vsHug.toFixed(0), "%"),
@@ -2444,7 +2449,8 @@ function MaxLand({ f, set, jiga }) {
   const tm = f.targetMargin;
   const setTm = set('targetMargin');
   const price = qcNum(draft) || f.price || (hug ? hug.v : 0);
-  const res = useMemo(() => price > 0 ? solveLand(f, price, tm) : null, [f, price, tm]);
+  const noSite = !(scale(f).gfa > 0);
+  const res = useMemo(() => price > 0 && !noSite ? solveLand(f, price, tm) : null, [f, price, tm, noSite]);
   if (p.kind === 'coop') return null;
   const landEx = f.landEok === DEFAULT.landEok && !f.landEst;
   const diff = res > 0 ? res - f.landEok : 0;
@@ -2471,6 +2477,7 @@ function MaxLand({ f, set, jiga }) {
           style: { minWidth: 44, minHeight: 32, borderRadius: 999, fontSize: 12, fontWeight: 800, border: tm === v ? '1px solid ' + QC.acc : '1px solid #2E3541', background: tm === v ? 'rgba(197,240,74,.12)' : 'transparent', color: tm === v ? QC.acc : '#B0B7C1' }
         }, v, "%")),
         React.createElement(MarginInput, { value: tm, onChange: setTm }))),
+    noSite ? React.createElement("p", { style: { ...QC.mut, marginTop: 10 } }, "대지면적을 먼저 넣어 주세요.") :
     !price ? React.createElement("p", { style: { ...QC.mut, marginTop: 10 } }, "팔 수 있는 평당가를 넣으면 바로 계산됩니다.") :
       res < 0 ? React.createElement("p", { style: { marginTop: 12, color: '#FCA5A5', fontSize: 13, fontWeight: 700 } }, "이 가격이면 땅값이 0원이어도 이익률 ", tm, "%가 나오지 않습니다. 가격이나 상품을 바꿔 보세요.") :
         React.createElement("div", { style: { marginTop: 12 } },
@@ -2808,14 +2815,14 @@ function App() {
     className: "text-[10px] text-slate-500"
   }, R ? R.priced ? '사업수지' : `필요 분양가 (이익률 ${R.tm}%)` : '사업수지(미분석)'), /*#__PURE__*/React.createElement("p", {
     className: `text-sm font-extrabold tabular-nums ${R ? R.profit >= 0 ? 'text-emerald-700' : 'text-red-600' : 'text-slate-300'}`
-  }, R ? R.priced ? sEok1(R.profit) : `${fmt(R.t10)}만/평` : '—')), /*#__PURE__*/React.createElement("button", {
+  }, R && !R.empty ? R.priced ? sEok1(R.profit) : R.capped ? '계산 범위 밖' : `${fmt(R.t10)}만/평` : '—')), /*#__PURE__*/React.createElement("button", {
     onClick: () => go('pf'),
     className: "bg-white rounded-lg border border-slate-200 py-2"
   }, /*#__PURE__*/React.createElement("p", {
     className: "text-[10px] text-slate-500"
   }, R ? R.priced ? '이익률' : '손익분기 분양가' : '손익분기 분양가'), /*#__PURE__*/React.createElement("p", {
     className: `text-sm font-extrabold tabular-nums ${R && R.priced ? R.margin >= 0 ? 'text-emerald-700' : 'text-red-600' : 'text-slate-300'}`
-  }, R ? R.priced ? `${R.margin.toFixed(1)}%` : `${fmt(R.be)}만/평` : '—'))), sheet === 'cost' && React.createElement(QuickCompare, { f, setProduct }), sheet === 'cost' && React.createElement(MaxLand, { f, set, jiga: f.jigaEok || 0 }), sheet === 'cost' && /*#__PURE__*/React.createElement("section", {
+  }, R && !R.empty ? R.priced ? `${R.margin.toFixed(1)}%` : R.capped ? '토지비 단위(억) 확인' : `${fmt(R.be)}만/평` : '—'))), sheet === 'cost' && React.createElement(QuickCompare, { f, setProduct }), sheet === 'cost' && React.createElement(MaxLand, { f, set, jiga: f.jigaEok || 0 }), sheet === 'cost' && /*#__PURE__*/React.createElement("section", {
     className: "space-y-3"
   }, /*#__PURE__*/React.createElement("div", {
     className: "bg-white rounded-xl border border-slate-200 p-4 space-y-3"
@@ -3426,7 +3433,7 @@ function App() {
     size: 16
   }), autoOn ? '사업수지표 보기 ↓' : result ? dirty ? '바뀐 조건으로 다시 분석' : '다시 분석' : '사업수지 분석하기', !usage.owner && !BETA_OPEN && /*#__PURE__*/React.createElement("span", {
     className: "font-medium opacity-80"
-  }, "(1\uD68C \uCC28\uAC10)")))), R && /*#__PURE__*/React.createElement("div", {
+  }, "(1\uD68C \uCC28\uAC10)")))), R && R.empty ? React.createElement("p", { id: "result", style: { marginTop: 8, padding: 14, borderRadius: 12, border: '1px dashed #CBD5E1', fontSize: 13, fontWeight: 700, color: '#64748B', textAlign: 'center' } }, "대지면적(또는 연면적)을 넣으면 사업수지표가 나와요.") : R && /*#__PURE__*/React.createElement("div", {
     id: "result",
     className: `space-y-3 pt-2 transition ${dirty ? 'opacity-50' : ''}`
   }, dirty && /*#__PURE__*/React.createElement("p", {
