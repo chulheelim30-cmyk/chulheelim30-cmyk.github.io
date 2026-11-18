@@ -1527,7 +1527,7 @@ const SHEETS = [{
 }];
 const ACC = '실사업 수지표 51건 반영(2016~2026) · 15건 교차검증: 기본 입력 평균 오차 2.7%, 분양경비·사업추진비·금융비를 넣으면 평균 0.7% · 2026.11 추가 17건 점검: 공사비 단가를 넣으면 일반 상품 평균 5.1% · 2026.11 2차 19건 점검: 같은 조건 평균 6.1% · 2026.11.17 재점검 47건: 일반 상품 41건 평균 4.3%';
 const TIER_COLORS = ['#0f172a', '#1e40af', '#2563eb', '#60a5fa', '#bfdbfe'];
-const FAQ = [['상품은 어떤 기준으로 나눴나요?', '건축법 시행령 별표1(용도별 건축물의 종류)과 주택법(주택·준주택·도시형생활주택 정의)을 따랐습니다.\n· 주택: 아파트, 주상복합, 도시형생활주택, 연립·다세대, 다가구\n· 준주택·업무: 오피스텔, 오피스\n· 숙박: 생활숙박시설, 관광호텔\n· 산업·상업: 지식산업센터, 물류센터, 근린생활시설\n· 조합·임대·공공: 지역주택조합, 민간임대주택, LH 신축매입약정\n"추정" 표시 상품은 실사업 수지표가 없어 요율을 추정한 것이니 공사비·요율을 직접 넣어 쓰세요.'], ['이 결과를 투자·대출 근거로 써도 되나요?', '아니요. 참고용 개략 추정치입니다. 감정평가·투자자문·법률자문이 아니며, 실제 결정 전에는 견적·감정평가·금융기관 심사·전문가 확인이 필요합니다. 화면 맨 아래 "이용 고지 및 면책"을 확인해 주세요.'], ['얼마나 정확한가요?', '실제 시행 사업수지표 15건(오피스텔·지식산업센터·아파트·민간임대, 2020~2026)을 한 건씩 빼고 나머지로 맞혀 보는 교차검증을 했습니다. 토지비·대지·용도지역만 넣으면 총사업비 평균 오차 2.7%(최대 7%), 분양경비율·사업추진비율·금융비 총액까지 넣으면 평균 0.7%(최대 2%, 15건 중 11건이 1% 이내)입니다. 1% 수준이 필요하면 2.사업수지 → 요율 보기의 정밀 모드를 쓰세요.\n2026년 11월에는 수지표 17건(아파트·주상복합·오피스텔·상가·지식산업센터·오피스·호텔·물류, 2019~2026)을 더 받아 점검했습니다. 공사비 단가를 실제값으로 넣었을 때 일반 상품 13건의 총사업비 평균 오차는 5.1%(최대 10.6%)였고, 이 결과로 아파트 분양경비·사업추진비·중도금 무이자 요율을 낮추고 아파트·상가·물류 공사비 기본값을 실사업 중앙값으로 바꿨습니다. 고급주택·소형 호텔·강남 오피스는 오차가 커서(15~26%) 공사비·요율을 직접 넣어 쓰세요.\n같은 달 수지표 19건(지식산업센터 11·오피스텔 5·오피스·생활숙박시설·고급 공동주택, 2016~2026)을 더 받아 같은 방식으로 점검했습니다. 일반 상품 17건의 총사업비 평균 오차는 6.1%(최대 13.4%)이고, 지식산업센터는 평균 4.5% 크게 나오는 경향이 있었습니다. 구분분양 오피스 1건은 −24%로 오차가 커서 공사비·요율을 직접 넣어 쓰세요.\n2026년 11월 17일, 총액까지 확인된 실사업 47건을 지금 계산식으로 다시 맞혀 봤습니다(공사비 단가·토지비·연면적·매출은 실제값). 지식산업센터가 크게 나오던 경향(12건 평균 +3.2%)을 분양경비율 12.5%→10.5%로 보정해 편향을 +0.6%로 줄였습니다. 고급주택·호텔·오피스를 뺀 일반 상품 41건의 총사업비 평균 오차는 4.3%(최대 12.3%), 41건 중 27건이 5% 이내입니다. 남은 오차는 사업마다 다른 금융비·분양대행 수수료에서 주로 생기므로, 1% 수준이 필요하면 정밀 모드에 이 값을 넣으세요. 고급주택·호텔·오피스는 오차가 커서 요율을 직접 넣어 쓰세요. 이 결과로 지식산업센터·오피스텔·오피스·생활숙박시설의 실사업 단가 분포를 갱신했습니다.'], ['참고 수지표가 예전 자료도 있는데 지금 시세와 맞나요?', '수지표는 2016~2026년 자료입니다. 시점에 따라 바뀌는 값은 2026년 현재로 다시 맞췄습니다. 공사비는 한국건설기술연구원 건설공사비지수(국가승인통계, 2020=100)의 수지표 작성 월 값과 2026년 9월 139.48(잠정)의 비율로 환산했고, PF 금리는 한국은행 기준금리 3.00%(2026.10.22 동결)에 실무 가산폭을 더한 서울 6.0%·수도권 6.5%·지방 7.0%를 기본값으로 씁니다(추정, PF 금리 공공 통계 없음). 금융비는 사업 당시 금리로 역산해 구조만 가져왔습니다. 2026년 민간임대 2건은 원래 현재 자료이고, 이 2건도 오차 −3.5%~+2.0% 안에 들어옵니다.'], ['어떤 데이터를 쓰나요? (출처·검증 등급)', '모든 기본값을 세 등급으로 나눠 표시합니다.\n[공공] 국가승인통계·법령·공공기관 공표값\n· 공사비 시점 환산·물가변동: 한국건설기술연구원 「건설공사비지수」(2020=100, 2026.9 139.48 잠정)\n· 기준금리: 한국은행 금융통화위원회 연 3.00%(2026.10.22 동결)\n· 지역 평균 분양가: 주택도시보증공사(HUG) 민간아파트 분양가격 동향(최근 1년 평균, 지역별 확인된 최신 월 표시)\n· 용적률: 국가법령정보센터 자치법규 원문(서울·부산·대전·세종·인천·용인), 그 밖은 국토계획법 시행령 제85조 법정 상한\n· 학교용지부담금: 「학교용지 확보 등에 관한 특례법」 공동주택 분양가격(부가세 제외)의 0.8%\n· PF 자기자본비율 규제·LH 신축매입약정 대금 지급: 금융위원회·국토교통부·LH 발표\n· 정비사업 평균 공사비(참고): 한국부동산원 발표 2025년 3.3㎡당 807만원\n· 주소 불러오기(사이트 버전): 국토교통부 브이월드 연속지적도(필지 도형·개별공시지가)·용도지역도\n[실사업] 실제 시행 사업수지표 51건(2016~2026)\n· 상품별 도급 단가 분포(2026 환산), 오피스텔·지식산업센터·아파트·주상복합·상가·민간임대의 분양경비·사업추진비·금융비 요율, 금융 구조(PF형·분양불·차입형 신탁)\n[추정] 공공 통계나 충분한 사례가 없어 실무 관행으로 둔 값 — 직접 확인 권장\n· PF 금리 가산폭(기준금리 + 3.0~4.0%p), 시공사 등급 계수와 등급표 평단가, 지역 계수(서울·수도권·지방), PF 비율 80%·평균 인출 40%, "추정" 표시 상품(도시형생활주택·연립·다가구·오피스·생숙·호텔·LH)의 요율\n공공 통계는 표시된 기준 시점 값이며, 새 공표가 나오면 갱신합니다.'], ['용적률이 실제와 다릅니다.', '서울·부산·대전·세종·인천과 경기 용인시는 국가법령정보센터 조례 원문 값을 씁니다. 그 밖의 경기 시·군과 지방은 아직 내장되지 않아 법정 상한(국토계획법 시행령 제85조)을 쓰므로 실제보다 클 수 있습니다. 지구단위계획구역이면 결정도의 기준·허용·상한 용적률을 넣어 주세요. 5.조례 시트에서 근거 조문을 볼 수 있습니다.'], ['분양가가 시세라는 뜻인가요?', '아닙니다. 이 도구의 분양가는 "이 땅값과 원가로 목표 이익률을 내려면 얼마에 팔아야 하는가"입니다. 아파트·주상복합은 HUG 지역 평균 분양가와 비교해 보여 드리니, 평균보다 크게 높으면 분양성을 따로 검토하세요.'], ['PF는 왜 총사업비의 80%인가요?', '실무에서 PF 대출을 총사업비의 80% 수준으로 잡는 관행을 기본값으로 썼습니다(참고 수지표 평균 75%). 금융위원회 확정안(2026.10)에 따라 PF 사업비 대비 자기자본비율 규제는 비주거 사업에 2027년 5%부터 매년 5%p씩 올라 2030년 20%, 주거 사업은 2년 유예돼 2029년 5%부터 2032년 20%까지 적용됩니다(신규 취급분). 자기자본을 더 넣는 구조면 PF 비율을 낮춰 보세요. LH 매입약정은 공정률별 대금 지급을 반영해 60%로 둡니다.'], ['금융 구조(PF형·분양불·차입형 신탁)는 무엇이 다른가요?', '분양형 상품은 2.사업수지 시트 입력에서 금융 구조를 고를 수 있습니다.\n· PF형: 토지비·공사비 대부분을 본PF로 조달(총사업비의 80%, 평균 인출 40%, 수수료 3%).\n· 분양불: PF는 토지비·초기 비용 위주(50%, 인출 30%, 수수료 2%)이고 공사비는 분양대금으로 지급. 분양률이 낮으면 공사비가 막힐 수 있습니다.\n· 차입형 토지신탁: 신탁사가 사업비를 대고 매출의 3.3% 안팎을 신탁보수로 받음. PF는 토지 브릿지(15%) 정도.\n2026년 11월 실사업 아파트 6건(PF형 3·분양불 2·차입형 1)에 맞춰 보니, 구조를 실제대로 고르면 총사업비 평균 오차가 6.5%에서 4.1%로 줄었습니다. 통매각·임대·LH·조합 상품은 각 상품 기준을 씁니다.'], ['지역주택조합 결과는 어떻게 읽나요?', '조합은 이익을 남기는 구조가 아니라서, 총사업비에서 일반분양 수입을 뺀 금액을 조합원이 나눠 내는 평당가(분담금)를 보여 줍니다. 범위는 예비비 0~5%입니다. 조합원가가 일반분양가에 가까울수록 조합원 메리트가 없습니다. 업무대행비·조합운영비는 사업추진비(매출 7%)에 들어 있습니다.'], ['오피스·호텔·물류센터·다가구는 왜 연면적 평당가인가요?', '이 상품들은 호실을 나눠 파는 대신 준공 후 건물 전체를 한 번에 매각하는 경우가 많아, 연면적 평당 필요 매각가로 보여 줍니다. 구분분양할 계획이면 오피스텔·근린생활시설처럼 계약면적 기준 상품을 고르세요.'], ['민간임대·LH 매입약정은 무엇을 계산하나요?', '민간임대(공공지원)는 의무기간 뒤 매각(분양전환)할 때 필요한 평당 가치를, LH 신축매입약정은 감정평가로 받아야 할 최소 평당 매입가를 역산합니다. 임대 기간 중 임대료 수입·보증금 운용·운영비는 반영하지 않은 개략값입니다.'], ['무료로 몇 번 쓸 수 있나요?', '베타 기간에는 횟수 제한 없이 상세 수지표·산출근거·요율 수정까지 모두 무료로 열어 두었습니다. 유료로 바뀌기 전에 화면과 이용약관으로 미리 알려 드립니다.'], ['입력값은 저장되나요? 다른 사람이 볼 수 있나요?', '입력한 토지비·사업지 정보는 서버에 사업 단위로 저장하지 않습니다. 저장되는 것은 무료 사용 횟수뿐입니다. 결과를 남기려면 "수지표 복사(엑셀)"로 붙여 넣어 두세요.'], ['베타 동안 무료로 쓰면 계속 무료인가요?', '아니요. 베타 무료는 평생 무료가 아닙니다. 지금은 체험을 위해 모든 기능을 무제한으로 열어 두었고, 정식 출시 때 무료 범위·횟수·요금이 바뀔 수 있으며 바뀌기 전에 미리 알립니다. 베타 참여자에게는 출시 시점에 별도 혜택을 안내할 예정입니다.'], ['프로 결제·해지·환불은요?', '베타 기간에는 결제를 받지 않습니다. 정식 출시 시 월 구독(29,000원)으로 열리며, 해지·환불 조건은 결제 화면과 이용약관에 함께 고지합니다.'], ['반영하지 않은 것은?', '월별 현금흐름, 부가가치세, 법인세, 브릿지론 이자, 후순위·메자닌 구조, 기부채납 시설 공사비, 미분양 할인분양은 반영하지 않았습니다. 투자 판단 전에는 설계·견적·감정평가로 확인하세요.']];
+const FAQ = [['상품은 어떤 기준으로 나눴나요?', '건축법 시행령 별표1(용도별 건축물의 종류)과 주택법(주택·준주택·도시형생활주택 정의)을 따랐습니다.\n· 주택: 아파트, 주상복합, 도시형생활주택, 연립·다세대, 다가구\n· 준주택·업무: 오피스텔, 오피스\n· 숙박: 생활숙박시설, 관광호텔\n· 산업·상업: 지식산업센터, 물류센터, 근린생활시설\n· 조합·임대·공공: 지역주택조합, 민간임대주택, LH 신축매입약정\n"추정" 표시 상품은 실사업 수지표가 없어 요율을 추정한 것이니 공사비·요율을 직접 넣어 쓰세요.'], ['이 결과를 투자·대출 근거로 써도 되나요?', '아니요. 참고용 개략 추정치입니다. 감정평가·투자자문·법률자문이 아니며, 실제 결정 전에는 견적·감정평가·금융기관 심사·전문가 확인이 필요합니다. 화면 맨 아래 "이용 고지 및 면책"을 확인해 주세요.'], ['얼마나 정확한가요?', '실제 시행 사업수지표 15건(오피스텔·지식산업센터·아파트·민간임대, 2020~2026)을 한 건씩 빼고 나머지로 맞혀 보는 교차검증을 했습니다. 토지비·대지·용도지역만 넣으면 총사업비 평균 오차 2.7%(최대 7%), 분양경비율·사업추진비율·금융비 총액까지 넣으면 평균 0.7%(최대 2%, 15건 중 11건이 1% 이내)입니다. 1% 수준이 필요하면 2.사업수지 → 요율 보기의 정밀 모드를 쓰세요.\n2026년 11월에는 수지표 17건(아파트·주상복합·오피스텔·상가·지식산업센터·오피스·호텔·물류, 2019~2026)을 더 받아 점검했습니다. 공사비 단가를 실제값으로 넣었을 때 일반 상품 13건의 총사업비 평균 오차는 5.1%(최대 10.6%)였고, 이 결과로 아파트 분양경비·사업추진비·중도금 무이자 요율을 낮추고 아파트·상가·물류 공사비 기본값을 실사업 중앙값으로 바꿨습니다. 고급주택·소형 호텔·강남 오피스는 오차가 커서(15~26%) 공사비·요율을 직접 넣어 쓰세요.\n같은 달 수지표 19건(지식산업센터 11·오피스텔 5·오피스·생활숙박시설·고급 공동주택, 2016~2026)을 더 받아 같은 방식으로 점검했습니다. 일반 상품 17건의 총사업비 평균 오차는 6.1%(최대 13.4%)이고, 지식산업센터는 평균 4.5% 크게 나오는 경향이 있었습니다. 구분분양 오피스 1건은 −24%로 오차가 커서 공사비·요율을 직접 넣어 쓰세요.\n2026년 11월 17일, 총액까지 확인된 실사업 47건을 지금 계산식으로 다시 맞혀 봤습니다(공사비 단가·토지비·연면적·매출은 실제값). 지식산업센터가 크게 나오던 경향(12건 평균 +3.2%)을 분양경비율 12.5%→10.5%로 보정해 편향을 +0.6%로 줄였습니다. 고급주택·호텔·오피스를 뺀 일반 상품 41건의 총사업비 평균 오차는 4.3%(최대 12.3%), 41건 중 27건이 5% 이내입니다. 남은 오차는 사업마다 다른 금융비·분양대행 수수료에서 주로 생기므로, 1% 수준이 필요하면 정밀 모드에 이 값을 넣으세요. 고급주택·호텔·오피스는 오차가 커서 요율을 직접 넣어 쓰세요. 이 결과로 지식산업센터·오피스텔·오피스·생활숙박시설의 실사업 단가 분포를 갱신했습니다.'], ['참고 수지표가 예전 자료도 있는데 지금 시세와 맞나요?', '수지표는 2016~2026년 자료입니다. 시점에 따라 바뀌는 값은 2026년 현재로 다시 맞췄습니다. 공사비는 한국건설기술연구원 건설공사비지수(국가승인통계, 2020=100)의 수지표 작성 월 값과 2026년 9월 139.48(잠정)의 비율로 환산했고, PF 금리는 한국은행 기준금리 3.00%(2026.10.22 동결)에 실무 가산폭을 더한 서울 6.0%·수도권 6.5%·지방 7.0%를 기본값으로 씁니다(추정, PF 금리 공공 통계 없음). 금융비는 사업 당시 금리로 역산해 구조만 가져왔습니다. 2026년 민간임대 2건은 원래 현재 자료이고, 이 2건도 오차 −3.5%~+2.0% 안에 들어옵니다.'], ['어떤 데이터를 쓰나요? (출처·검증 등급)', '모든 기본값을 세 등급으로 나눠 표시합니다.\n[공공] 국가승인통계·법령·공공기관 공표값\n· 공사비 시점 환산·물가변동: 한국건설기술연구원 「건설공사비지수」(2020=100, 2026.9 139.48 잠정)\n· 기준금리: 한국은행 금융통화위원회 연 3.00%(2026.10.22 동결)\n· 지역 평균 분양가: 주택도시보증공사(HUG) 민간아파트 분양가격 동향(최근 1년 평균, 지역별 확인된 최신 월 표시)\n· 용적률: 국가법령정보센터 자치법규 원문(서울·부산·대전·세종·인천·용인), 그 밖은 국토계획법 시행령 제85조 법정 상한\n· 학교용지부담금: 「학교용지 확보 등에 관한 특례법」 공동주택 분양가격(부가세 제외)의 0.8%\n· PF 자기자본비율 규제·LH 신축매입약정 대금 지급: 금융위원회·국토교통부·LH 발표\n· 정비사업 평균 공사비(참고): 한국부동산원 발표 2025년 3.3㎡당 807만원\n· 주소 불러오기(사이트 버전): 국토교통부 브이월드 연속지적도(필지 도형·개별공시지가)·용도지역도\n· 토지비 자동 추정: 개별공시지가 합계 ÷ 토지 시세반영률 65.5%(국토교통부 「2026년 부동산 가격공시 추진방안」) — 개발 부지 매입가는 보통 이보다 높으니 실제 매입가로 바꿔 쓰세요\n[실사업] 실제 시행 사업수지표 51건(2016~2026)\n· 상품별 도급 단가 분포(2026 환산), 오피스텔·지식산업센터·아파트·주상복합·상가·민간임대의 분양경비·사업추진비·금융비 요율, 금융 구조(PF형·분양불·차입형 신탁)\n[추정] 공공 통계나 충분한 사례가 없어 실무 관행으로 둔 값 — 직접 확인 권장\n· PF 금리 가산폭(기준금리 + 3.0~4.0%p), 시공사 등급 계수와 등급표 평단가, 지역 계수(서울·수도권·지방), PF 비율 80%·평균 인출 40%, "추정" 표시 상품(도시형생활주택·연립·다가구·오피스·생숙·호텔·LH)의 요율\n공공 통계는 표시된 기준 시점 값이며, 새 공표가 나오면 갱신합니다.'], ['용적률이 실제와 다릅니다.', '서울·부산·대전·세종·인천과 경기 용인시는 국가법령정보센터 조례 원문 값을 씁니다. 그 밖의 경기 시·군과 지방은 아직 내장되지 않아 법정 상한(국토계획법 시행령 제85조)을 쓰므로 실제보다 클 수 있습니다. 지구단위계획구역이면 결정도의 기준·허용·상한 용적률을 넣어 주세요. 5.조례 시트에서 근거 조문을 볼 수 있습니다.'], ['분양가가 시세라는 뜻인가요?', '아닙니다. 이 도구의 분양가는 "이 땅값과 원가로 목표 이익률을 내려면 얼마에 팔아야 하는가"입니다. 아파트·주상복합은 HUG 지역 평균 분양가와 비교해 보여 드리니, 평균보다 크게 높으면 분양성을 따로 검토하세요.'], ['PF는 왜 총사업비의 80%인가요?', '실무에서 PF 대출을 총사업비의 80% 수준으로 잡는 관행을 기본값으로 썼습니다(참고 수지표 평균 75%). 금융위원회 확정안(2026.10)에 따라 PF 사업비 대비 자기자본비율 규제는 비주거 사업에 2027년 5%부터 매년 5%p씩 올라 2030년 20%, 주거 사업은 2년 유예돼 2029년 5%부터 2032년 20%까지 적용됩니다(신규 취급분). 자기자본을 더 넣는 구조면 PF 비율을 낮춰 보세요. LH 매입약정은 공정률별 대금 지급을 반영해 60%로 둡니다.'], ['금융 구조(PF형·분양불·차입형 신탁)는 무엇이 다른가요?', '분양형 상품은 2.사업수지 시트 입력에서 금융 구조를 고를 수 있습니다.\n· PF형: 토지비·공사비 대부분을 본PF로 조달(총사업비의 80%, 평균 인출 40%, 수수료 3%).\n· 분양불: PF는 토지비·초기 비용 위주(50%, 인출 30%, 수수료 2%)이고 공사비는 분양대금으로 지급. 분양률이 낮으면 공사비가 막힐 수 있습니다.\n· 차입형 토지신탁: 신탁사가 사업비를 대고 매출의 3.3% 안팎을 신탁보수로 받음. PF는 토지 브릿지(15%) 정도.\n2026년 11월 실사업 아파트 6건(PF형 3·분양불 2·차입형 1)에 맞춰 보니, 구조를 실제대로 고르면 총사업비 평균 오차가 6.5%에서 4.1%로 줄었습니다. 통매각·임대·LH·조합 상품은 각 상품 기준을 씁니다.'], ['지역주택조합 결과는 어떻게 읽나요?', '조합은 이익을 남기는 구조가 아니라서, 총사업비에서 일반분양 수입을 뺀 금액을 조합원이 나눠 내는 평당가(분담금)를 보여 줍니다. 범위는 예비비 0~5%입니다. 조합원가가 일반분양가에 가까울수록 조합원 메리트가 없습니다. 업무대행비·조합운영비는 사업추진비(매출 7%)에 들어 있습니다.'], ['오피스·호텔·물류센터·다가구는 왜 연면적 평당가인가요?', '이 상품들은 호실을 나눠 파는 대신 준공 후 건물 전체를 한 번에 매각하는 경우가 많아, 연면적 평당 필요 매각가로 보여 줍니다. 구분분양할 계획이면 오피스텔·근린생활시설처럼 계약면적 기준 상품을 고르세요.'], ['민간임대·LH 매입약정은 무엇을 계산하나요?', '민간임대(공공지원)는 의무기간 뒤 매각(분양전환)할 때 필요한 평당 가치를, LH 신축매입약정은 감정평가로 받아야 할 최소 평당 매입가를 역산합니다. 임대 기간 중 임대료 수입·보증금 운용·운영비는 반영하지 않은 개략값입니다.'], ['무료로 몇 번 쓸 수 있나요?', '베타 기간에는 횟수 제한 없이 상세 수지표·산출근거·요율 수정까지 모두 무료로 열어 두었습니다. 유료로 바뀌기 전에 화면과 이용약관으로 미리 알려 드립니다.'], ['입력값은 저장되나요? 다른 사람이 볼 수 있나요?', '입력한 토지비·사업지 정보는 서버에 사업 단위로 저장하지 않습니다. 저장되는 것은 무료 사용 횟수뿐입니다. 결과를 남기려면 "수지표 복사(엑셀)"로 붙여 넣어 두세요.'], ['베타 동안 무료로 쓰면 계속 무료인가요?', '아니요. 베타 무료는 평생 무료가 아닙니다. 지금은 체험을 위해 모든 기능을 무제한으로 열어 두었고, 정식 출시 때 무료 범위·횟수·요금이 바뀔 수 있으며 바뀌기 전에 미리 알립니다. 베타 참여자에게는 출시 시점에 별도 혜택을 안내할 예정입니다.'], ['프로 결제·해지·환불은요?', '베타 기간에는 결제를 받지 않습니다. 정식 출시 시 월 구독(29,000원)으로 열리며, 해지·환불 조건은 결제 화면과 이용약관에 함께 고지합니다.'], ['반영하지 않은 것은?', '월별 현금흐름, 부가가치세, 법인세, 브릿지론 이자, 후순위·메자닌 구조, 기부채납 시설 공사비, 미분양 할인분양은 반영하지 않았습니다. 투자 판단 전에는 설계·견적·감정평가로 확인하세요.']];
 const DISCLAIMER = ['이 서비스는 입력값과 통계·과거 사례 비율로 계산한 개략 사업성 추정치(세전)를 보여 주는 참고용 계산 도구입니다. 실제 사업수지, 분양 결과, 대출 승인, 인허가를 보장하지 않습니다.', '결과의 분양가·매입가·매각가는 원가에서 역산한 "필요 가격"이며 시세가 아닙니다. 「감정평가 및 감정평가사에 관한 법률」에 따른 감정평가가 아니고, 감정평가서·탁상감정을 대신할 수 없습니다.', '특정 개인을 상정하지 않은 일반 정보로, 금융투자상품에 관한 투자자문이나 법률·세무 자문이 아닙니다. 투자·대출·계약 결정 전에는 설계·시공 견적, 감정평가, 금융기관 심사, 변호사·세무사 등 전문가 확인을 받으세요.', '용적률은 국가법령정보센터 자치법규 원문(2026.11 조회)과 법정 상한을 쓰며, 조례가 내장되지 않은 지역은 법정 상한이라 실제보다 클 수 있습니다. 지구단위계획·건축 심의·도로·일조·주차 등으로 실제 허용 규모는 달라지므로 토지이음과 관할 관청에서 확인하세요.', '정확도(평균 오차 2.7%, 정밀 모드 0.7%)는 실사업 수지표 15건을 교차검증한 과거 결과이고, 2026.11 추가 17건 점검(공사비 단가 입력 시 일반 상품 평균 5.1%)과 2차 19건 점검(평균 6.1%)도 과거 사례 결과이며, 개별 사업의 오차를 보장하지 않습니다. 공사비지수·금리·분양가 통계는 표시된 기준 시점 값이고 이후 달라질 수 있습니다.', '운영자는 계산 결과의 활용으로 생긴 손해에 대해 책임을 지지 않습니다. 다만 운영자의 고의 또는 중대한 과실로 인한 손해는 그렇지 않습니다(약관의 규제에 관한 법률 제7조).', '입력한 사업 정보는 서버에 저장하지 않으며, 무료 사용 횟수만 계정(또는 브라우저) 단위로 기록합니다.', '베타 기간의 무료 제공(분석 무제한, 상세 공개)과 요금·기능 범위는 평생 무료나 가격 고정을 약속하지 않으며, 정식 출시 전 화면과 이용약관으로 미리 알린 뒤 바뀔 수 있습니다.'];
 const KIND_NOTE = {
   coop: '지역주택조합(주택법 제11조): 조합원 모집신고는 대지 50% 이상 사용권원, 설립인가는 80% 이상 사용권원 + 15% 이상 소유권, 사업계획승인은 원칙적으로 소유권(매도청구 시 95%)이 필요합니다. 2027.3.9부터 모집신고 80% 권원, 공동사업 조합의 승인 요건 80% 소유권으로 바뀝니다. 결과는 조합원이 내야 할 평당 분양가(분담금)입니다.',
@@ -1557,6 +1557,9 @@ function UpdateNote({ go }) {
       React.createElement("p", { className: "font-extrabold text-emerald-900 text-[13px]" }, "새로 바뀐 점 · ", UPDATE_AT),
       React.createElement("button", { onClick: close, className: "text-[11px] text-slate-500 underline" }, "닫기")),
     React.createElement("ul", { className: "space-y-1" },
+      row("상품 비교: 같은 땅에서 아파트·오피스텔·지식산업센터 등 필요 분양가·총사업비를 한 번에", 'cost', '1.사업개요'),
+      row("땅값은 얼마까지? 팔 수 있는 분양가를 넣으면 목표 이익률 기준 최대 토지비를 거꾸로 계산", 'cost', '1.사업개요'),
+      vwOn() && row("[공공] 지번 반영 시 토지비 자동 추정: 공시지가 ÷ 시세반영률 65.5%(국토교통부 2026 공시)", 'cost', '1.사업개요'),
       row("토지조서 사진·캡처·엑셀 표로 여러 필지 한 번에 입력(무료 OCR): 편입면적 합계·국공유지·소유자 수 자동 정리, 합계 자동 검산", 'pf', '2.사업수지'),
       vwOn() && row("[공공] 주소로 불러오기: 대지면적·용도지역·공시지가 자동 입력(국토교통부 브이월드)", 'pf', '2.사업수지'),
       row("[실사업] 수지표 51건으로 확대(+19건: 지식산업센터 11·오피스텔 5·오피스·생숙·고급주택). 지식산업센터 488만원·오피스텔 666만원(2026 환산 중앙값)", 'cost', '1.사업개요'),
@@ -2162,9 +2165,11 @@ function LandLookup({ f, setF }) {
     city: city || o.city,
     region: (CITIES.find(c => c.id === (city || o.city)) || {}).reg || o.region,
     sitePy: Math.round(py),
-    zone: zoneId || o.zone
+    zone: zoneId || o.zone,
+    jigaEok,
+    ...(jigaEok > 0 && (o.landEok === DEFAULT.landEok || o.landEst) ? { landEok: Math.round(jigaEok / (LAND_REAL / 100)), landEst: true } : {})
   })));
-  const landIsExample = f.landEok === DEFAULT.landEok;
+  const landIsExample = f.landEok === DEFAULT.landEok || !!f.landEst;
   const fmt0 = v => Math.round(v).toLocaleString('ko-KR');
   return React.createElement("div", { className: "col-span-2 rounded-lg p-3 space-y-2", style: { background: '#13171D', border: '1px solid #2E3541', borderRadius: 12 } },
     React.createElement("p", { className: "font-bold", style: { color: '#E8EAED', fontSize: 16, letterSpacing: '-0.01em' } }, "지번으로 시작하기"),
@@ -2212,23 +2217,174 @@ function LandLookup({ f, setF }) {
         }, applied ? "반영됨 ✓ 다시 반영" : "입력에 반영 (지역·대지면적" + (zoneId ? '·용도지역' : '') + ")"),
         applied && React.createElement("div", { style: { marginTop: 8, padding: 12, borderRadius: 10, border: landIsExample ? '2px solid #C5F04A' : '1px solid #2E3541', background: '#12161C' } },
           React.createElement("label", { style: { display: 'block' } },
-            React.createElement("span", { style: { display: 'block', fontSize: 14, fontWeight: 800, color: '#E8EAED', marginBottom: 6 } }, landIsExample ? "다음: 토지비(매입가)를 넣어 주세요" : "토지비(매입가)"),
+            React.createElement("span", { style: { display: 'block', fontSize: 14, fontWeight: 800, color: '#E8EAED', marginBottom: 6 } }, f.landEst ? "토지비: 공시지가로 추정해 넣었어요 — 실제 매입가로 바꿔 주세요" : landIsExample ? "다음: 토지비(매입가)를 넣어 주세요" : "토지비(매입가)"),
             React.createElement("div", { style: { display: 'flex', alignItems: 'center', gap: 8 } },
               React.createElement("input", {
                 type: "number", inputMode: "decimal", step: 1,
-                value: landDraft !== null ? landDraft : landIsExample ? '' : f.landEok,
+                value: landDraft !== null ? landDraft : f.landEst ? f.landEok : landIsExample ? '' : f.landEok,
                 placeholder: "실제 매입가",
-                onChange: e => { const t = e.target.value; setLandDraft(t); const v = parseFloat(t); if (v > 0) setF(o => ({ ...o, landEok: v })); },
+                onChange: e => { const t = e.target.value; setLandDraft(t); const v = parseFloat(t); if (v > 0) setF(o => ({ ...o, landEok: v, landEst: false })); },
                 onBlur: () => setLandDraft(null),
                 className: "tabular-nums",
                 style: { flex: 1, minWidth: 0, height: 44, borderRadius: 10, border: '1px solid #2E3541', background: '#0E1116', color: '#E8EAED', padding: '0 12px', fontSize: 16, textAlign: 'right' }
               }),
               React.createElement("span", { style: { fontSize: 14, color: '#9AA3AF' } }, "억"))),
           React.createElement("p", { style: { fontSize: 11, color: '#9AA3AF', marginTop: 6 } },
-            "공시지가 합계 ", jigaEok.toFixed(1), "억", landIsExample ? '' : ` · 입력값은 공시지가의 ${(f.landEok / (jigaEok || 1)).toFixed(2)}배`, ". 실제 매입가(계약가)를 넣어야 사업수지가 맞습니다.")),
+            "공시지가 합계 ", jigaEok.toFixed(1), "억", f.landEst ? ` ÷ 시세반영률 ${LAND_REAL}%(국토교통부 2026 공시) = 시세 추정 ${Math.round(jigaEok / (LAND_REAL / 100))}억. 개발 부지는 실제 매입가가 이보다 높은 경우가 많습니다` : landIsExample ? '' : ` · 입력값은 공시지가의 ${(f.landEok / (jigaEok || 1)).toFixed(2)}배`, ". 실제 매입가(계약가)를 넣어야 사업수지가 맞습니다.")),
         React.createElement("p", { className: "text-[10px] text-slate-500" },
           "면적은 연속지적도 도형으로 계산한 값이라 토지대장 면적과 조금 다를 수 있습니다. 지구단위계획·도로 저촉 등은 토지이음에서 확인하세요.")))
   );
+}
+
+// ── 빠른 결과(2026-11-18): 같은 땅 상품 비교 · 최대 토지비 역산 ──────────────────
+const LAND_REAL = 65.5; // [공공] 토지 공시가격 시세반영률 65.5%(국토교통부 「2026년 부동산 가격공시 추진방안」, 2025.11.13 의결)
+const QC_ORDER = ['apt', 'officetel', 'kc', 'mixed', 'retail', 'logistics', 'dosi', 'villa', 'saengsuk', 'office', 'hotel', 'dagagu'];
+const qcNum = t => {
+  const v = parseFloat(String(t).replace(/[^\d.]/g, ''));
+  return isFinite(v) ? v : 0;
+};
+// 다른 상품으로 바꿔 계산할 때: 상품별 기본 요율·평형으로 되돌리고 직접 넣은 공사비는 DB 단가로
+function qcForm(f, id) {
+  if (id === f.product) return f;
+  const np = PRODUCTS.find(q => q.id === id);
+  const fixed = ['lh', 'rent', 'exit'];
+  const curFixed = fixed.includes(PRODUCTS.find(q => q.id === f.product).kind);
+  return {
+    ...f,
+    product: id,
+    size: np.size,
+    price: 0,
+    finEok: 0,
+    salesPct: 0,
+    opsPct: 0,
+    landAddPct: 0,
+    costMode: f.costMode === 'manual' ? 'db' : f.costMode,
+    saleRate: fixed.includes(np.kind) ? 100 : curFixed ? 90 : f.saleRate
+  };
+}
+// 목표 이익률을 맞추는 최대 토지비(억). 땅값 0이어도 안 되면 -1
+function solveLand(f, price, target) {
+  if (model({ ...f, landEok: 0 }, price).margin < target) return -1;
+  let lo = 0, hi = 100000;
+  for (let i = 0; i < 50; i++) {
+    const m = (lo + hi) / 2;
+    if (model({ ...f, landEok: m }, price).margin >= target) lo = m;else hi = m;
+  }
+  return lo;
+}
+const QC = {
+  card: { background: '#13171D', border: '1px solid #2E3541', borderRadius: 14, padding: 14 },
+  h: { color: '#E8EAED', fontSize: 16, fontWeight: 800, letterSpacing: '-0.01em' },
+  sub: { color: '#9AA3AF', fontSize: 11, marginTop: 2 },
+  mut: { color: '#9AA3AF', fontSize: 11 },
+  big: { color: '#FFFFFF', fontSize: 24, fontWeight: 800, letterSpacing: '-0.02em', lineHeight: 1.15 },
+  acc: '#C5F04A'
+};
+function QuickCompare({ f, setProduct }) {
+  const zone = ZONES.find(z => z.id === f.zone);
+  const allowed = QC_ORDER.filter(id => zone.ok.includes(id));
+  const firstPick = () => {
+    const base = allowed.includes(f.product) ? [f.product] : [];
+    return [...base, ...allowed.filter(id => id !== f.product)].slice(0, 3);
+  };
+  const [picks, setPicks] = useState(firstPick);
+  const [zoneSeen, setZoneSeen] = useState(f.zone);
+  if (zoneSeen !== f.zone) {
+    setZoneSeen(f.zone);
+    setPicks(firstPick());
+  }
+  const shown = picks.filter(id => allowed.includes(id));
+  const rows = useMemo(() => shown.map(id => {
+    const x = qcForm(f, id);
+    const a = analyze(x);
+    const hug = a.p.hug ? hugOf(x) : null;
+    return { id, x, a, hug };
+  }), [f, shown.join()]);
+  const toggle = id => setPicks(ps => ps.includes(id) ? ps.length > 1 ? ps.filter(q => q !== id) : ps : [...ps, id].slice(-4));
+  if (!allowed.length) return null;
+  return React.createElement("div", { style: QC.card },
+    React.createElement("p", { style: QC.h }, "이 땅에 뭘 지으면 될까 — 상품 비교"),
+    React.createElement("p", { style: QC.sub }, zone.n, " · 대지 ", fmt(f.sitePy), "평 · 토지비 ", fmt(f.landEok), "억 기준, 목표 이익률 ", f.targetMargin, "%를 내려면 얼마에 팔아야 하는지 바로 계산합니다. 주변 시세보다 낮을수록 유리합니다."),
+    React.createElement("div", { style: { display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 10 } },
+      allowed.map(id => {
+        const on = shown.includes(id);
+        const p = PRODUCTS.find(q => q.id === id);
+        return React.createElement("button", {
+          key: id,
+          onClick: () => toggle(id),
+          style: { padding: '6px 10px', borderRadius: 999, fontSize: 12, fontWeight: 700, minHeight: 32, border: on ? '1px solid ' + QC.acc : '1px solid #2E3541', background: on ? 'rgba(197,240,74,.12)' : 'transparent', color: on ? QC.acc : '#B0B7C1' }
+        }, p.name.replace(/\(.*\)/, '').trim());
+      })),
+    React.createElement("div", { style: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 8, marginTop: 10 } },
+      rows.map(({ id, x, a, hug }) => {
+        const cur = id === f.product;
+        const vsHug = hug ? (a.t10 / hug.v - 1) * 100 : null;
+        return React.createElement("div", { key: id, style: { background: '#0E1116', border: cur ? '2px solid ' + QC.acc : '1px solid #2E3541', borderRadius: 12, padding: 12 } },
+          React.createElement("div", { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 6 } },
+            React.createElement("p", { style: { color: '#E8EAED', fontSize: 14, fontWeight: 800 } }, a.p.name.replace(/\(.*\)/, '').trim(),
+              a.p.est && React.createElement("span", { style: { marginLeft: 6, fontSize: 10, fontWeight: 700, padding: '1px 6px', borderRadius: 999, color: '#FCD34D', border: '1px solid rgba(252,211,77,.4)' } }, "추정")),
+            cur && React.createElement("span", { style: { fontSize: 10, fontWeight: 800, color: QC.acc } }, "선택됨")),
+          React.createElement("p", { style: { ...QC.mut, marginTop: 8 } }, "필요 ", a.kd.price, " (", a.p.priceUnit, " 평당)"),
+          React.createElement("p", { className: "tabular-nums", style: QC.big }, fmt(a.t10), React.createElement("span", { style: { fontSize: 13, color: '#9AA3AF', marginLeft: 3 } }, "만원")),
+          hug && React.createElement("p", { style: { fontSize: 11, marginTop: 2, color: vsHug > 10 ? '#FDBA74' : '#9AA3AF' } }, hug.n, " 평균 분양가(HUG ", hug.at, ") ", fmt(hug.v), "만 대비 ", vsHug >= 0 ? '+' : '', vsHug.toFixed(0), "%"),
+          React.createElement("div", { className: "tabular-nums", style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px 8px', marginTop: 8, fontSize: 12, color: '#B0B7C1' } },
+            React.createElement("span", null, "손익분기 ", fmt(a.be), "만"),
+            React.createElement("span", null, a.p.res ? '세대' : '호실', " ", a.sc.whole ? '통매각' : fmt(a.units)),
+            React.createElement("span", null, "연면적 ", fmt(a.sc.gfa), "평"),
+            React.createElement("span", null, "공사비 ", eok1(a.B)),
+            React.createElement("span", null, "총사업비 ", eok1(a.cost)),
+            React.createElement("span", null, "이익 ", eok1(a.profit))),
+          !cur && React.createElement("button", {
+            onClick: () => setProduct(id),
+            style: { marginTop: 10, width: '100%', minHeight: 36, borderRadius: 8, fontSize: 12, fontWeight: 800, border: '1px solid #2E3541', background: 'transparent', color: '#E8EAED' }
+          }, "이 상품으로 보기"));
+      })),
+    React.createElement("p", { style: { ...QC.mut, marginTop: 8, fontSize: 10 } }, "다른 상품은 상품별 기본 요율·평형과 실사업 DB 공사비로 계산합니다. 분양가는 원가에서 역산한 필요 가격이며 시세가 아닙니다."));
+}
+function MaxLand({ f, set, jiga }) {
+  const p = PRODUCTS.find(q => q.id === f.product);
+  const kd = KIND[p.kind];
+  const hug = p.hug ? hugOf(f) : null;
+  const [draft, setDraft] = useState('');
+  const [tm, setTm] = useState(f.targetMargin);
+  const price = qcNum(draft) || f.price || (hug ? hug.v : 0);
+  const res = useMemo(() => price > 0 ? solveLand(f, price, tm) : null, [f, price, tm]);
+  if (p.kind === 'coop') return null;
+  const landEx = f.landEok === DEFAULT.landEok && !f.landEst;
+  const diff = res > 0 ? res - f.landEok : 0;
+  const perPy = res > 0 && f.sitePy > 0 ? res * 1e4 / f.sitePy : 0;
+  const inp = { flex: 1, minWidth: 0, height: 44, borderRadius: 10, border: '1px solid #2E3541', background: '#0E1116', color: '#E8EAED', padding: '0 12px', fontSize: 16, textAlign: 'right' };
+  return React.createElement("div", { style: QC.card },
+    React.createElement("p", { style: QC.h }, "땅값은 얼마까지? — 거꾸로 계산"),
+    React.createElement("p", { style: QC.sub }, "이 가격에 팔 수 있다면, 목표 이익률을 지키면서 토지를 최대 얼마에 사도 되는지 계산합니다. 매입 협상용."),
+    React.createElement("div", { style: { display: 'grid', gridTemplateColumns: '1fr', gap: 8, marginTop: 10 } },
+      React.createElement("label", null,
+        React.createElement("span", { style: { display: 'block', fontSize: 12, fontWeight: 700, color: '#B0B7C1', marginBottom: 4 } }, "팔 수 있다고 보는 ", kd.price, " (", p.priceUnit, " 평당)"),
+        React.createElement("div", { style: { display: 'flex', alignItems: 'center', gap: 8 } },
+          React.createElement("input", {
+            type: "text", inputMode: "decimal", value: draft,
+            placeholder: price ? fmt(price) + (f.price ? ' (입력한 분양가)' : ' (HUG 평균)') : '예) 2,500',
+            onChange: e => setDraft(e.target.value),
+            className: "tabular-nums", style: inp
+          }),
+          React.createElement("span", { style: { fontSize: 14, color: '#9AA3AF' } }, "만원"))),
+      React.createElement("div", { style: { display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' } },
+        React.createElement("span", { style: { fontSize: 12, fontWeight: 700, color: '#B0B7C1', marginRight: 2 } }, "목표 이익률"),
+        [5, 8, 10, 12, 15].map(v => React.createElement("button", {
+          key: v, onClick: () => setTm(v),
+          style: { minWidth: 44, minHeight: 32, borderRadius: 999, fontSize: 12, fontWeight: 800, border: tm === v ? '1px solid ' + QC.acc : '1px solid #2E3541', background: tm === v ? 'rgba(197,240,74,.12)' : 'transparent', color: tm === v ? QC.acc : '#B0B7C1' }
+        }, v, "%")))),
+    !price ? React.createElement("p", { style: { ...QC.mut, marginTop: 10 } }, "팔 수 있는 평당가를 넣으면 바로 계산됩니다.") :
+      res < 0 ? React.createElement("p", { style: { marginTop: 12, color: '#FCA5A5', fontSize: 13, fontWeight: 700 } }, "이 가격이면 땅값이 0원이어도 이익률 ", tm, "%가 나오지 않습니다. 가격이나 상품을 바꿔 보세요.") :
+        React.createElement("div", { style: { marginTop: 12 } },
+          React.createElement("p", { style: QC.mut }, "최대 토지비 (목표 이익률 ", tm, "%)"),
+          React.createElement("p", { className: "tabular-nums", style: { ...QC.big, fontSize: 32, color: QC.acc } }, eok1(res)),
+          React.createElement("p", { className: "tabular-nums", style: { fontSize: 12, color: '#B0B7C1', marginTop: 2 } }, "대지 평당 ", fmt(perPy), "만원", jiga > 0 ? ` · 공시지가 합계의 ${(res / jiga).toFixed(2)}배` : ''),
+          !landEx && React.createElement("p", { className: "tabular-nums", style: { fontSize: 13, fontWeight: 800, marginTop: 6, color: diff >= 0 ? '#86EFAC' : '#FCA5A5' } }, "지금 토지비 ", fmt(f.landEok), "억", f.landEst ? '(추정)' : '', " → ", diff >= 0 ? `${eok1(diff)} 여유` : `${eok1(-diff)} 초과`),
+          React.createElement("button", {
+            onClick: () => set('price')(price),
+            style: { marginTop: 10, width: '100%', minHeight: 40, borderRadius: 8, fontSize: 12, fontWeight: 800, border: '1px solid #2E3541', background: 'transparent', color: '#E8EAED' }
+          }, "이 분양가를 사업수지에 넣기")));
 }
 
 function SizeInput({ f, set, live }) {
@@ -2465,7 +2621,7 @@ function App() {
     unit: "\uC5B5",
     value: f.landEok,
     step: 10,
-    onChange: set('landEok')
+    onChange: v => setF(o => ({ ...o, landEok: v, landEst: false }))
   }), /*#__PURE__*/React.createElement(Num, {
     label: "\uB300\uC9C0\uBA74\uC801",
     unit: "\uD3C9",
@@ -2499,7 +2655,9 @@ function App() {
     style: { fontSize: 38, lineHeight: 1.1, marginTop: 4, letterSpacing: '-0.03em', color: isExample ? '#7D8692' : '#FFFFFF' }
   }, eok(buildNow)), isExample && /*#__PURE__*/React.createElement("p", {
     style: { fontSize: 12, color: '#9AA3AF', marginTop: 6 }
-  }, "\uB300\uC9C0 1,000\uD3C9 \xB7 \uC900\uC8FC\uAC70 \uAE30\uC900 \uC608\uC2DC\uC608\uC694. \uC9C0\uBC88\uC774\uB098 \uB300\uC9C0\uBA74\uC801\uC744 \uB123\uC73C\uBA74 \uB0B4 \uC0AC\uC5C5\uC73C\uB85C \uBC14\uB01D\uB2C8\uB2E4."), landExample && /*#__PURE__*/React.createElement("p", {
+  }, "\uB300\uC9C0 1,000\uD3C9 \xB7 \uC900\uC8FC\uAC70 \uAE30\uC900 \uC608\uC2DC\uC608\uC694. \uC9C0\uBC88\uC774\uB098 \uB300\uC9C0\uBA74\uC801\uC744 \uB123\uC73C\uBA74 \uB0B4 \uC0AC\uC5C5\uC73C\uB85C \uBC14\uB01D\uB2C8\uB2E4."), f.landEst && React.createElement("p", {
+    style: { fontSize: 12, color: '#FCD34D', marginTop: 6, fontWeight: 700 }
+  }, "토지비 ", fmt(f.landEok), "억은 공시지가로 추정한 값이에요(시세반영률 65.5% 역산). 실제 매입가를 넣으면 더 정확해집니다."), landExample && /*#__PURE__*/React.createElement("p", {
     style: { fontSize: 12, color: '#FDBA74', marginTop: 6, fontWeight: 700 }
   }, "\uD1A0\uC9C0\uBE44\uAC00 \uC544\uC9C1 \uC608\uC2DC\uAC12(300\uC5B5)\uC774\uC5D0\uC694. \uC2E4\uC81C \uB9E4\uC785\uAC00\uB97C \uB123\uC5B4 \uC8FC\uC138\uC694.")), /*#__PURE__*/React.createElement("button", {
     onClick: () => go('pf'),
@@ -2515,7 +2673,7 @@ function App() {
     className: "text-[10px] text-slate-500"
   }, "\uBB3C\uAC00\uBCC0\uB3D9 \uB9AC\uC2A4\uD06C"), /*#__PURE__*/React.createElement("p", {
     className: "text-sm font-extrabold tabular-nums text-red-600"
-  }, "+", eok(escWon)))), sheet === 'cost' && /*#__PURE__*/React.createElement("section", {
+  }, "+", eok(escWon)))), sheet === 'cost' && React.createElement(QuickCompare, { f, setProduct }), sheet === 'cost' && React.createElement(MaxLand, { f, set, jiga: f.jigaEok || 0 }), sheet === 'cost' && /*#__PURE__*/React.createElement("section", {
     className: "space-y-3"
   }, /*#__PURE__*/React.createElement("div", {
     className: "bg-white rounded-xl border border-slate-200 p-4 space-y-3"
