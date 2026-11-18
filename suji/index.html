@@ -1868,6 +1868,23 @@ async function lsTesseract(img, onP) {
   const r = await lsTessWorker.recognize(c, {}, { blocks: true, text: true });
   return lsParseLines(lsOcrLines(r.data));
 }
+// 정밀 인식: 수지들 서버 함수(Supabase)가 대표 Gemini 키로 읽는다. 키 미설정·한도 초과·오류면 무료 OCR로 넘어간다
+const LS_SERVER = 'https://guwnuaeainixryxdxids.supabase.co/functions/v1/suji-ocr';
+let lsServerOff = false;
+const blobB64 = b => new Promise((res, rej) => { const fr = new FileReader(); fr.onload = () => res(String(fr.result).split(',')[1]); fr.onerror = rej; fr.readAsDataURL(b); });
+async function lsServer(img) {
+  if (lsServerOff) return { skip: 'off' };
+  let r, j;
+  try {
+    r = await fetch(LS_SERVER, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ image: await blobB64(img), mime: img.type || 'image/jpeg', prompt: LS_PROMPT }) });
+    j = await r.json().catch(() => ({}));
+  } catch {
+    return { skip: 'net' };
+  }
+  if (r.ok && j && j.ok) return { res: lsFromJson(j.data), left: j.left };
+  if (j && (j.error === 'not_configured' || j.error === 'bad_key' || j.error === 'origin')) lsServerOff = true;
+  return { skip: j && j.error || 'err' };
+}
 function lsFromJson(v) {
   return {
     rows: (v && v.rows || []).map(r => ({
@@ -1916,6 +1933,7 @@ function LandSheet({ f, setF }) {
   const [showSrc, setShowSrc] = useState(false);
   const [usedEng, setUsedEng] = useState('');
   const [drag, setDrag] = useState(false);
+  const [note, setNote] = useState('');
   useEffect(() => {
     let alive = true;
     (async () => {
@@ -1932,10 +1950,11 @@ function LandSheet({ f, setF }) {
   }, []);
   // 인식 방식: claude.ai 아티팩트 안이면 Claude(외부 스크립트가 막힘), 그 밖에는 기기 안 무료 OCR(Tesseract)
   const engine = sampler ? 'claude' : 'ocr';
-  const ENG = { claude: 'Claude', ocr: '무료 OCR(기기 안)' };
+  const ENG = { claude: 'Claude', server: '정밀 인식', ocr: '무료 OCR(기기 안)' };
   const fromPhotos = async files => {
     if (!files || !files.length || busy) return;
     setMsg('');
+    setNote('');
     setApplied(false);
     setUsedEng(engine);
     try { if (srcUrl) URL.revokeObjectURL(srcUrl); setSrcUrl(URL.createObjectURL(files[0])); } catch {}
@@ -1948,7 +1967,18 @@ function LandSheet({ f, setF }) {
         const img = await lsShrink(files[i]);
         let res;
         if (engine === 'claude') res = lsFromJson(await sampler.json(LS_PROMPT, { images: [img], modelTier: 'complex', cache: false }));
-        else res = await lsTesseract(img, t => setBusy(head + t));
+        else {
+          let sv = { skip: 'off' };
+          if (!lsServerOff) { setBusy(head + '정밀 인식 중… (10~30초)'); sv = await lsServer(img); }
+          if (sv.res) { res = sv.res; setUsedEng('server'); if (sv.left != null && sv.left <= 5) setNote(`오늘 정밀 인식 ${sv.left}장 남음`); }
+          else {
+            if (/cap_who/.test(sv.skip)) setNote('오늘 정밀 인식 횟수를 다 써서 무료 OCR로 읽었습니다(내일 다시 정밀 인식).');
+            else if (/cap_all|gemini_quota/.test(sv.skip)) setNote('오늘 정밀 인식 전체 한도가 차서 무료 OCR로 읽었습니다.');
+            else if (sv.skip !== 'off') setNote('정밀 인식 서버에 연결하지 못해 무료 OCR로 읽었습니다.');
+            setUsedEng('ocr');
+            res = await lsTesseract(img, t => setBusy(head + t));
+          }
+        }
         all.push(...res.rows);
         if (res.totals) tot = res.totals;
         setRows([...all]);
@@ -2043,7 +2073,7 @@ function LandSheet({ f, setF }) {
       "핸드폰: 버튼 → 사진 보관함·촬영 · PC: 캡처 후 Ctrl+V, 또는 이미지를 이 칸에 끌어놓기"),
     sampler ? React.createElement("p", { style: { fontSize: 11, color: '#9AA3AF', textAlign: 'center' } }, "인식: Claude (claude.ai 요금제 안에서 무료)") :
       React.createElement("p", { style: { fontSize: 10, color: '#7C8592', textAlign: 'center' } },
-        "인식: 무료 OCR(사진이 기기 밖으로 나가지 않음). 숫자를 가끔 잘못 읽으니 주황·빨간 칸을 원본과 맞춰 보세요."),
+        "인식: 정밀 인식(구글 Gemini로 사진을 보내 읽음, 1인 하루 30장) → 안 되면 기기 안 무료 OCR로 자동 전환. 결과는 주황·빨간 칸을 원본과 맞춰 보세요."),
     React.createElement("textarea", {
       className: "w-full rounded-md px-2.5 py-2",
       style: { background: '#12161C', border: '1px solid #2E3541', color: '#E8EAED', borderRadius: 10, minHeight: 48, fontSize: 13 },
@@ -2053,6 +2083,7 @@ function LandSheet({ f, setF }) {
     }),
     txt.trim() && React.createElement("button", { onClick: fromText, className: "w-full py-2 rounded-md text-xs font-bold", style: { background: '#2E3541', color: '#E8EAED' } }, "붙여넣은 표 정리하기"),
     msg && React.createElement("p", { style: { fontSize: 12, color: '#FCA5A5' } }, msg),
+    note && React.createElement("p", { style: { fontSize: 11, color: '#FCD34D' } }, note),
     rows.length > 0 && React.createElement(React.Fragment, null,
       React.createElement("div", null,
         totG !== null && chip(totG, `공부면적 합계 ${totG ? '일치' : `불일치(표 ${fmt(totals.gongbu)} / 읽은 값 ${fmt(sumG)})`}`),
