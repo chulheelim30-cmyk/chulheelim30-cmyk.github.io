@@ -1546,7 +1546,7 @@ function Tagged({ t }) {
     return m ? React.createElement("span", { key: i, className: "inline-block rounded px-1 text-[10px] font-bold", style: { ...TAG_STYLE[m[2]], borderWidth: 1, borderStyle: 'solid', marginRight: 4, verticalAlign: 'middle' } }, m[1]) : x;
   }));
 }
-const UPDATE_AT = '2026.11.17';
+const UPDATE_AT = '2026.11.18';
 function UpdateNote({ go }) {
   const [open, setOpen] = useState(() => { try { return localStorage.getItem('suji_upd') !== UPDATE_AT; } catch { return true; } });
   const close = () => { setOpen(false); try { localStorage.setItem('suji_upd', UPDATE_AT); } catch {} };
@@ -1557,6 +1557,7 @@ function UpdateNote({ go }) {
       React.createElement("p", { className: "font-extrabold text-emerald-900 text-[13px]" }, "새로 바뀐 점 · ", UPDATE_AT),
       React.createElement("button", { onClick: close, className: "text-[11px] text-slate-500 underline" }, "닫기")),
     React.createElement("ul", { className: "space-y-1" },
+      row("토지조서 사진·엑셀 표로 여러 필지 한 번에 입력: 편입면적 합계·국공유지·소유자 수 자동 정리, 합계 자동 검산", 'pf', '2.사업수지'),
       vwOn() && row("[공공] 주소로 불러오기: 대지면적·용도지역·공시지가 자동 입력(국토교통부 브이월드)", 'pf', '2.사업수지'),
       row("[실사업] 수지표 51건으로 확대(+19건: 지식산업센터 11·오피스텔 5·오피스·생숙·고급주택). 지식산업센터 488만원·오피스텔 666만원(2026 환산 중앙값)", 'cost', '1.공사비'),
       row("[공공] 공사비 시점 환산과 물가변동을 건설공사비지수 공표값으로 교체(2026.9 139.48, 1년 +5.9%)", 'esc', '4.물가변동'),
@@ -1725,6 +1726,238 @@ async function vwLookup(addr) {
     jigaYear: pr.gosi_year || '',
     zoneName
   };
+}
+// ── 토지조서 → 필지 일괄 입력 (사진: claude.ai에서 Claude 이미지 인식, 붙여넣기: 어디서나) ──
+const JIMOK = '대전답과목임광염장학주창도철제천구유양수공체사종묘잡';
+const LS_NUM = /^-?[\d,]+(\.\d+)?$/;
+const LS_DASH = /^[-−–—]$/;
+const lsNum = t => parseFloat(String(t).replace(/,/g, '')) || 0;
+const lsR2 = v => Math.round(v * 100) / 100;
+// 국공유지·공기업 판정 [추정]: 소유자 이름 규칙. 확인 화면에서 바꿀 수 있음
+const LS_GU = '종로|중|용산|성동|광진|동대문|중랑|성북|강북|도봉|노원|은평|서대문|마포|양천|강서|구로|금천|영등포|동작|관악|서초|강남|송파|강동|서|동|영도|부산진|동래|남|북|해운대|사하|금정|연제|수영|사상|수성|달서|미추홀|연수|남동|부평|계양|광산|유성|대덕';
+const LS_PUB = new RegExp('^(국|대한민국|국\\(.*\\))$|^국\\(|특별시|광역시|특별자치|^(경기|강원|충청북|충청남|전라북|전라남|경상북|경상남)도$|^[가-힣]{2,3}[시군]$|^(' + LS_GU + ')구$|^(서울|부산|대구|인천|광주|대전|울산)?(' + LS_GU + ')구청?$|[시군구]청$|교육청|공사$|공단$|토지주택|^LH|^SH');
+// 국공유지·공기업 판정 [추정]: 소유자 이름 규칙. 확인 화면에서 바꿀 수 있음
+const isPublicOwner = o => {
+  const t = String(o || '').replace(/\s/g, '');
+  return !!t && LS_PUB.test(t) && !/주식회사|\(주\)|㈜|신탁|외\d/.test(t);
+};
+const ownerCount = o => {
+  const m = String(o || '').match(/외\s*(\d+)/);
+  return 1 + (m ? +m[1] : 0);
+};
+function lsParseText(txt) {
+  const lines = String(txt || '').split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+  const rows = [];
+  let totals = null,
+    partNames = [];
+  for (const line of lines) {
+    let tk = line.includes('\t') ? line.split('\t') : line.split(/\s{2,}|\s/);
+    tk = tk.map(t => t.trim()).filter(t => t !== '');
+    if (!tk.length) continue;
+    const nums = tk.filter(t => LS_NUM.test(t));
+    if (/합\s*계|^계$|소\s*계/.test(tk.slice(0, 3).join(''))) {
+      const ns = tk.filter(t => LS_NUM.test(t)).map(lsNum);
+      if (ns.length) totals = { gongbu: ns[0], incl: ns[ns.length - 1] };
+      continue;
+    }
+    if (!nums.length) {
+      // 머리글 두 번째 줄(예: 대지 보건소 도로 계)에서 용도 이름을 가져온다
+      if (tk.includes('계') && !tk.includes('지번')) partNames = tk.filter(t => t !== '계' && !/면적|편입|소유/.test(t));
+      continue;
+    }
+    let ji = tk.findIndex((t, i) => i > 0 && t.length === 1 && JIMOK.includes(t) && /^(산\s?)?\d+(-\d+)?$/.test(tk[i - 1]));
+    let jibunIdx = ji > 0 ? ji - 1 : tk.findIndex((t, i) => i > 0 && /^(산\s?)?\d+(-\d+)?$/.test(t) && /[가-힣]$/.test(tk[i - 1]));
+    if (jibunIdx < 0) continue;
+    const first = /^\d+$/.test(tk[0]) && jibunIdx > 0 ? 1 : 0;
+    const addr = tk.slice(first, jibunIdx).join(' ');
+    let p = jibunIdx + 1;
+    const jimok = ji > 0 ? tk[p++] : '';
+    let type = '';
+    if (tk[p] && /편입|제척|완전|부분|일부|전부/.test(tk[p])) type = tk[p++];
+    const ns = [];
+    while (p < tk.length && (LS_NUM.test(tk[p]) || LS_DASH.test(tk[p]))) ns.push(LS_DASH.test(tk[p++]) ? null : lsNum(tk[p - 1]));
+    const owner = tk.slice(p).join(' ');
+    if (!ns.length) continue;
+    const gongbu = ns[0] || 0;
+    const incl = ns.length > 1 ? ns[ns.length - 1] || 0 : gongbu;
+    const parts = ns.length > 2 ? ns.slice(1, -1).map((v, i) => ({ name: partNames[i] || '용도' + (i + 1), m2: v || 0 })) : [];
+    rows.push({ addr, jibun: tk[jibunIdx], jimok, type, gongbu, incl, parts, owner });
+  }
+  return { rows, totals };
+}
+const LS_PROMPT = `이 이미지는 한국 부동산 개발사업의 토지조서(필지 목록) 표입니다. 표를 한 칸도 빠짐없이 그대로 읽어 JSON만 답하세요. 추측하지 말고, 안 보이는 칸은 null로 두세요.
+형식:
+{"rows":[{"addr":"서울시 은평구 수색동","jibun":"154-1","jimok":"대","type":"완전편입","gongbu":264.00,"parts":[{"name":"대지","m2":264.00}],"incl":264.00,"owner":"주식회사코람코자산신탁"}],"totals":{"gongbu":40688.00,"incl":7814.00}}
+규칙: addr=시·구·동(행정구역 칸을 이어 붙임), jibun=지번 그대로(산 포함), jimok=지목 한 글자, type=편입구분, gongbu=공부(대장)면적㎡, parts=편입면적을 용도별로 나눈 칸(머리글 이름 그대로, "-"는 0), incl=편입면적 합계(계)㎡, owner=소유자 그대로. 숫자는 쉼표 없는 숫자. 합계·비율 줄은 rows에 넣지 말고 합계 줄 값만 totals에. 표가 아니면 {"rows":[]}.`;
+async function lsShrink(file) {
+  try {
+    const bmp = await createImageBitmap(file);
+    const k = Math.min(1, 2200 / Math.max(bmp.width, bmp.height));
+    if (k >= 1 && file.size < 3.5e6) return file;
+    const c = document.createElement('canvas');
+    c.width = Math.round(bmp.width * k);
+    c.height = Math.round(bmp.height * k);
+    c.getContext('2d').drawImage(bmp, 0, 0, c.width, c.height);
+    return await new Promise(r => c.toBlob(b => r(b || file), 'image/jpeg', 0.9));
+  } catch {
+    return file;
+  }
+}
+function LandSheet({ f, setF }) {
+  const [open, setOpen] = useState(false);
+  const [sampler, setSampler] = useState(null);
+  const [txt, setTxt] = useState('');
+  const [rows, setRows] = useState([]);
+  const [totals, setTotals] = useState(null);
+  const [busy, setBusy] = useState('');
+  const [msg, setMsg] = useState('');
+  const [applied, setApplied] = useState(false);
+  const [copied, setCopied] = useState(false);
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        if (!window.claude || !window.claude.use) return;
+        const s = await window.claude.use('sample');
+        if (!s || !alive) return;
+        const lim = s.limits ? await s.limits() : null;
+        if (alive && lim && lim.images) setSampler(() => s);
+      } catch {}
+    })();
+    return () => { alive = false; };
+  }, []);
+  const fromPhotos = async files => {
+    if (!sampler || !files || !files.length) return;
+    setMsg('');
+    setApplied(false);
+    const all = [];
+    let tot = null;
+    try {
+      for (let i = 0; i < files.length; i++) {
+        setBusy(`사진 ${i + 1}/${files.length} 읽는 중… (30초~1분)`);
+        const img = await lsShrink(files[i]);
+        const v = await sampler.json(LS_PROMPT, { images: [img], modelTier: 'complex', cache: false });
+        const rs = (v && v.rows || []).map(r => ({
+          addr: String(r.addr || ''),
+          jibun: String(r.jibun || ''),
+          jimok: String(r.jimok || ''),
+          type: String(r.type || ''),
+          gongbu: +r.gongbu || 0,
+          incl: r.incl == null ? +r.gongbu || 0 : +r.incl || 0,
+          parts: (r.parts || []).map(p => ({ name: String(p.name || ''), m2: +p.m2 || 0 })),
+          owner: String(r.owner || '')
+        })).filter(r => r.jibun);
+        all.push(...rs);
+        if (v && v.totals && (v.totals.gongbu || v.totals.incl)) tot = { gongbu: +v.totals.gongbu || 0, incl: +v.totals.incl || 0 };
+        setRows([...all]);
+      }
+      setTotals(tot);
+      if (!all.length) setMsg('표를 찾지 못했습니다. 표가 화면에 꽉 차게, 반듯하게 찍어 다시 올려 주세요.');
+    } catch (e) {
+      setMsg(e && e.code === 'rate_limited' ? '잠시 후 다시 시도해 주세요(사용량 제한).' : e && e.code === 'not_granted' ? 'Claude 사용 허용이 필요합니다. 다시 눌러 허용해 주세요.' : '사진을 읽지 못했습니다: ' + (e && e.message || e));
+    }
+    setBusy('');
+  };
+  const fromText = () => {
+    const r = lsParseText(txt);
+    setApplied(false);
+    setRows(r.rows);
+    setTotals(r.totals);
+    setMsg(r.rows.length ? '' : '필지 줄을 찾지 못했습니다. 엑셀에서 머리글부터 합계까지 표를 통째로 복사해 붙여넣어 주세요.');
+  };
+  const edit = (i, k, v) => setRows(rs => rs.map((r, j) => j === i ? { ...r, [k]: v } : r));
+  const sumG = rows.reduce((a, r) => a + (+r.gongbu || 0), 0);
+  const sumI = rows.reduce((a, r) => a + (+r.incl || 0), 0);
+  const bad = r => r.parts && r.parts.length && Math.abs(r.parts.reduce((a, p) => a + p.m2, 0) - r.incl) > 0.02 || +r.incl > +r.gongbu + 0.01;
+  const nBad = rows.filter(bad).length;
+  const totG = totals && totals.gongbu ? Math.abs(totals.gongbu - sumG) < 0.05 : null;
+  const totI = totals && totals.incl ? Math.abs(totals.incl - sumI) < 0.05 : null;
+  const pub = rows.filter(r => isPublicOwner(r.owner));
+  const pubM2 = pub.reduce((a, r) => a + (+r.incl || 0), 0);
+  const priv = rows.filter(r => !isPublicOwner(r.owner) && r.owner);
+  const privM2 = sumI - pubM2;
+  const owners = {};
+  priv.forEach(r => { owners[r.owner] = ownerCount(r.owner); });
+  const nOwners = Object.values(owners).reduce((a, b) => a + b, 0);
+  const fmt = v => (+v || 0).toLocaleString('ko-KR', { maximumFractionDigits: 2 });
+  const py = sumI / 3.3058;
+  const city = rows[0] ? cityFromAddr(rows[0].addr) : '';
+  const apply = () => {
+    setApplied(true);
+    setF(o => ({
+      ...o,
+      sitePy: Math.round(py),
+      ...(city ? { city, region: (CITIES.find(c => c.id === city) || {}).reg || o.region } : {})
+    }));
+  };
+  const copyAddr = () => {
+    const t = rows.map(r => `${r.addr} ${r.jibun}`.trim()).join('\n');
+    try { navigator.clipboard.writeText(t).then(() => { setCopied(true); setTimeout(() => setCopied(false), 1500); }); } catch {}
+  };
+  const box = { background: '#13171D', border: '1px solid #2E3541', borderRadius: 12 };
+  const inp = { background: '#0E1116', border: '1px solid #2E3541', color: '#E8EAED', borderRadius: 6, padding: '2px 4px', fontSize: 12, width: '100%', textAlign: 'right' };
+  const th = { padding: '4px 4px', color: '#9AA3AF', fontWeight: 700, fontSize: 11, textAlign: 'left', whiteSpace: 'nowrap' };
+  const td = { padding: '3px 4px', borderTop: '1px solid #232933', color: '#E8EAED', fontSize: 12, whiteSpace: 'nowrap' };
+  const chip = (ok, label) => React.createElement("span", { style: { display: 'inline-block', marginRight: 6, padding: '1px 6px', borderRadius: 6, fontSize: 11, fontWeight: 700, background: ok ? 'rgba(52,211,153,.12)' : 'rgba(248,113,113,.14)', color: ok ? '#6EE7B7' : '#FCA5A5', border: '1px solid ' + (ok ? 'rgba(52,211,153,.35)' : 'rgba(248,113,113,.4)') } }, (ok ? '✓ ' : '✗ ') + label);
+  if (!open) return React.createElement("button", {
+    onClick: () => setOpen(true),
+    className: "w-full rounded-lg p-3 text-left",
+    style: { ...box, color: '#E8EAED' }
+  }, React.createElement("p", { className: "font-bold", style: { fontSize: 15 } }, "토지조서로 여러 필지 한 번에 입력 ›"),
+    React.createElement("p", { style: { fontSize: 11, color: '#9AA3AF', marginTop: 2 } }, "지역주택조합·민간임대처럼 필지가 많을 때: 토지조서 ", sampler ? '사진을 찍어 올리거나 ' : '', "엑셀 표를 붙여넣으면 지번·면적·소유자를 자동으로 정리합니다"));
+  return React.createElement("div", { className: "rounded-lg p-3 space-y-2", style: box },
+    React.createElement("div", { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' } },
+      React.createElement("p", { className: "font-bold", style: { color: '#E8EAED', fontSize: 16 } }, "토지조서로 여러 필지 한 번에 입력"),
+      React.createElement("button", { onClick: () => setOpen(false), style: { fontSize: 11, color: '#9AA3AF', textDecoration: 'underline' } }, "접기")),
+    sampler ? React.createElement("label", {
+      className: "w-full py-2.5 rounded-md text-xs font-bold",
+      style: { display: 'block', textAlign: 'center', background: '#C5F04A', color: '#0E1116', cursor: busy ? 'wait' : 'pointer', opacity: busy ? 0.6 : 1 }
+    }, busy || '📷 토지조서 사진 올리기 (여러 장 가능)', React.createElement("input", {
+      type: "file", accept: "image/*", multiple: true, disabled: !!busy, style: { display: 'none' },
+      onChange: e => { const fs = [...(e.target.files || [])]; e.target.value = ''; fromPhotos(fs); }
+    })) : React.createElement("p", { style: { fontSize: 11, color: '#9AA3AF' } },
+      "사진 인식은 claude.ai의 수지들(아티팩트)에서 무료로 됩니다. 여기서는 엑셀·한글·PDF의 표를 복사해 아래에 붙여넣으세요."),
+    React.createElement("textarea", {
+      className: "w-full rounded-md px-2.5 py-2",
+      style: { background: '#12161C', border: '1px solid #2E3541', color: '#E8EAED', borderRadius: 10, minHeight: 56, fontSize: 13 },
+      placeholder: (sampler ? '또는 ' : '') + "엑셀에서 토지조서 표(머리글~합계)를 복사해 붙여넣기\n예) 1  서울시 은평구  수색동  154-1  대  완전편입  264.00  264.00  -  -  264.00  주식회사○○",
+      value: txt,
+      onChange: e => setTxt(e.target.value)
+    }),
+    txt.trim() && React.createElement("button", { onClick: fromText, className: "w-full py-2 rounded-md text-xs font-bold", style: { background: '#2E3541', color: '#E8EAED' } }, "붙여넣은 표 정리하기"),
+    msg && React.createElement("p", { style: { fontSize: 12, color: '#FCA5A5' } }, msg),
+    rows.length > 0 && React.createElement(React.Fragment, null,
+      React.createElement("div", null,
+        totG !== null && chip(totG, `공부면적 합계 ${totG ? '일치' : `불일치(표 ${fmt(totals.gongbu)} / 읽은 값 ${fmt(sumG)})`}`),
+        totI !== null && chip(totI, `편입면적 합계 ${totI ? '일치' : `불일치(표 ${fmt(totals.incl)} / 읽은 값 ${fmt(sumI)})`}`),
+        chip(nBad === 0, nBad === 0 ? '필지별 용도 합 = 계' : `확인 필요 ${nBad}필지(빨간 줄)`),
+        !totals && React.createElement("span", { style: { fontSize: 11, color: '#9AA3AF' } }, "표의 합계 줄이 없어 합계 대조는 못 했습니다")),
+      React.createElement("div", { style: { overflowX: 'auto', maxHeight: 360, overflowY: 'auto', border: '1px solid #232933', borderRadius: 8 } },
+        React.createElement("table", { style: { width: '100%', borderCollapse: 'collapse' } },
+          React.createElement("thead", null, React.createElement("tr", { style: { background: '#0E1116', position: 'sticky', top: 0 } },
+            ['#', '소재지', '지번', '지목', '편입', '공부㎡', '편입㎡', '소유자', ''].map((h, i) => React.createElement("th", { key: i, style: th }, h)))),
+          React.createElement("tbody", null, rows.map((r, i) => React.createElement("tr", { key: i, style: { background: bad(r) ? 'rgba(248,113,113,.10)' : isPublicOwner(r.owner) ? 'rgba(250,204,21,.06)' : 'transparent' } },
+            React.createElement("td", { style: { ...td, color: '#9AA3AF' } }, i + 1),
+            React.createElement("td", { style: { ...td, color: '#B0B7C1' } }, r.addr),
+            React.createElement("td", { style: td }, React.createElement("input", { value: r.jibun, onChange: e => edit(i, 'jibun', e.target.value), style: { ...inp, width: 64, textAlign: 'left' } })),
+            React.createElement("td", { style: td }, r.jimok),
+            React.createElement("td", { style: { ...td, color: '#B0B7C1' } }, String(r.type).replace('편입', '')),
+            React.createElement("td", { style: td }, React.createElement("input", { type: "number", inputMode: "decimal", value: r.gongbu, onChange: e => edit(i, 'gongbu', e.target.value), style: { ...inp, width: 82 } })),
+            React.createElement("td", { style: td, title: r.parts && r.parts.length ? r.parts.map(p => `${p.name} ${fmt(p.m2)}`).join(' · ') : '' }, React.createElement("input", { type: "number", inputMode: "decimal", value: r.incl, onChange: e => edit(i, 'incl', e.target.value), style: { ...inp, width: 82 } })),
+            React.createElement("td", { style: td }, React.createElement("input", { value: r.owner, onChange: e => edit(i, 'owner', e.target.value), style: { ...inp, width: 150, textAlign: 'left' } })),
+            React.createElement("td", { style: td }, React.createElement("button", { onClick: () => setRows(rs => rs.filter((_, j) => j !== i)), style: { color: '#9AA3AF', fontSize: 11 } }, "삭제"))))))),
+      React.createElement("div", { className: "rounded px-2 py-2 space-y-1", style: { background: '#0E1116', border: '1px solid #2E3541' } },
+        React.createElement("p", { className: "tabular-nums", style: { color: '#E8EAED', fontWeight: 800, fontSize: 14 } },
+          rows.length, "필지 · 편입면적 ", fmt(sumI), "㎡ = ", Math.round(py).toLocaleString('ko-KR'), "평", React.createElement("span", { style: { color: '#9AA3AF', fontWeight: 400, fontSize: 12 } }, " (공부면적 ", fmt(sumG), "㎡)")),
+        React.createElement("p", { className: "tabular-nums", style: { color: '#B0B7C1', fontSize: 12 } },
+          "사유지 ", priv.length, "필지 ", fmt(privM2), "㎡(", sumI ? (privM2 / sumI * 100).toFixed(1) : 0, "%) · 소유자 약 ", nOwners, "명",
+          " · 국공유지·공기업 ", pub.length, "필지 ", fmt(pubM2), "㎡(", sumI ? (pubM2 / sumI * 100).toFixed(1) : 0, "%)"),
+        React.createElement("p", { style: { fontSize: 10, color: '#7C8592' } }, "[추정] 국공유지 구분은 소유자 이름(국·시·구·공사 등)으로 나눈 것입니다. 노란 줄을 확인하세요. 소유자 수는 '외N'을 더한 값이라 실제 공유자 수와 다를 수 있습니다."),
+        React.createElement("div", { style: { display: 'flex', gap: 6, marginTop: 4 } },
+          React.createElement("button", { onClick: apply, className: "py-2 rounded-md text-xs font-bold", style: { flex: 2, background: '#C5F04A', color: '#0E1116' } },
+            applied ? `✓ 대지면적 ${Math.round(py).toLocaleString('ko-KR')}평 반영됨` : `대지면적 ${Math.round(py).toLocaleString('ko-KR')}평으로 반영`),
+          React.createElement("button", { onClick: copyAddr, className: "py-2 rounded-md text-xs font-bold", style: { flex: 1, background: '#2E3541', color: '#E8EAED' } }, copied ? '✓ 복사됨' : '지번 목록 복사')),
+        React.createElement("p", { style: { fontSize: 10, color: '#7C8592' } }, "대지면적은 편입면적(계) 합계로 넣습니다. 토지비는 실제 매입 예정가를 넣으세요.", vwOn() ? " 지번 목록을 '지번으로 시작하기'에 붙여넣으면 공시지가·용도지역을 불러옵니다." : ''))));
 }
 function LandLookup({ f, setF }) {
   const [txt, setTxt] = useState('');
@@ -2060,7 +2293,7 @@ function App() {
   }))), /*#__PURE__*/React.createElement("main", {
     className: "max-w-4xl mx-auto px-4 py-4 space-y-3",
     style: { paddingBottom: 96 }
-  }, (sheet === 'cost' || sheet === 'pf') && vwOn() && React.createElement(LandLookup, { f, setF }), /*#__PURE__*/React.createElement("div", {
+  }, (sheet === 'cost' || sheet === 'pf') && vwOn() && React.createElement(LandLookup, { f, setF }), (sheet === 'cost' || sheet === 'pf') && React.createElement(LandSheet, { f, setF }), /*#__PURE__*/React.createElement("div", {
     className: "grid grid-cols-2 gap-2 text-center"
   }, /*#__PURE__*/React.createElement("button", {
     onClick: () => go('cost'),
