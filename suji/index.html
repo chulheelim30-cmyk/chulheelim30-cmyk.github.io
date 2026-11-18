@@ -1567,7 +1567,7 @@ function UpdateNote({ go }) {
       React.createElement("button", { onClick: close, className: "text-[11px] text-slate-500 underline" }, "닫기")),
     React.createElement("ul", { className: "space-y-1" },
       row("입력하면 사업수지·민감도가 바로 계산돼요(분석 버튼 없음). 맨 위 요약에 필요 분양가·손익분기 표시", 'pf', '2.사업수지'),
-      row("상품 비교: 같은 땅에서 아파트·오피스텔·지식산업센터 등 필요 분양가·총사업비를 한 번에", 'cost', '1.사업개요'),
+      row("상품 비교: 용도지역에서 지을 수 있는 상품을 자동으로 모두 계산, 누르면 자세히(고르는 단계 없음)", 'cost', '1.사업개요'),
       row("땅값은 얼마까지? 팔 수 있는 분양가를 넣으면 목표 이익률 기준 최대 토지비를 거꾸로 계산", 'cost', '1.사업개요'),
       vwOn() && row("[공공] 지번 반영 시 토지비 자동 추정: 공시지가 ÷ 시세반영률 65.5%(국토교통부 2026 공시)", 'cost', '1.사업개요'),
       row("토지조서 사진·캡처·엑셀 표로 여러 필지 한 번에 입력(무료 OCR): 편입면적 합계·국공유지·소유자 수 자동 정리, 합계 자동 검산", 'pf', '2.사업수지'),
@@ -2291,65 +2291,63 @@ const QC = {
   acc: '#C5F04A'
 };
 function QuickCompare({ f, setProduct }) {
+  // 용도지역에서 지을 수 있는 상품을 자동으로 모두 계산(고르는 단계 없음). 실사업 근거 상품 먼저, [추정] 상품은 접어 둠
   const zone = ZONES.find(z => z.id === f.zone);
   const allowed = QC_ORDER.filter(id => zone.ok.includes(id));
-  const firstPick = () => {
-    const base = allowed.includes(f.product) ? [f.product] : [];
-    return [...base, ...allowed.filter(id => id !== f.product)].slice(0, 3);
-  };
-  const [picks, setPicks] = useState(firstPick);
-  const [zoneSeen, setZoneSeen] = useState(f.zone);
-  if (zoneSeen !== f.zone) {
-    setZoneSeen(f.zone);
-    setPicks(firstPick());
-  }
-  const shown = picks.filter(id => allowed.includes(id));
-  const rows = useMemo(() => shown.map(id => {
+  const [open, setOpen] = useState(null);
+  const [showEst, setShowEst] = useState(false);
+  const rows = useMemo(() => allowed.map(id => {
     const x = qcForm(f, id);
     const a = analyze(x);
     const hug = a.p.hug ? hugOf(x) : null;
     return { id, x, a, hug };
-  }), [f, shown.join()]);
-  const toggle = id => setPicks(ps => ps.includes(id) ? ps.length > 1 ? ps.filter(q => q !== id) : ps : [...ps, id].slice(-4));
+  }), [f, allowed.join()]);
   if (!allowed.length) return null;
+  const cur = rows.filter(r => r.id === f.product);
+  const main = rows.filter(r => r.id !== f.product && !r.a.p.est);
+  const est = rows.filter(r => r.id !== f.product && r.a.p.est);
+  const list = [...cur, ...main, ...(showEst ? est : [])];
+  const row = ({ id, a, hug }) => {
+    const isCur = id === f.product;
+    const isOpen = open === id;
+    const vsHug = hug ? (a.t10 / hug.v - 1) * 100 : null;
+    return React.createElement("div", { key: id, style: { background: '#0E1116', border: isCur ? '2px solid ' + QC.acc : '1px solid #2E3541', borderRadius: 10 } },
+      React.createElement("button", {
+        onClick: () => setOpen(isOpen ? null : id),
+        style: { width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, padding: '10px 12px', textAlign: 'left', background: 'transparent' }
+      },
+        React.createElement("span", { style: { minWidth: 0 } },
+          React.createElement("span", { style: { display: 'block', color: '#E8EAED', fontSize: 14, fontWeight: 800 } }, a.p.name.replace(/\(.*\)/, '').trim(),
+            a.p.est && React.createElement("span", { style: { marginLeft: 6, fontSize: 10, fontWeight: 700, padding: '1px 6px', borderRadius: 999, color: '#FCD34D', border: '1px solid rgba(252,211,77,.4)' } }, "추정"),
+            isCur && React.createElement("span", { style: { marginLeft: 6, fontSize: 10, fontWeight: 800, color: QC.acc } }, "선택됨")),
+          React.createElement("span", { style: { display: 'block', fontSize: 11, color: '#9AA3AF', marginTop: 2 } }, "필요 ", a.kd.price, " · ", a.p.priceUnit, " 평당",
+            hug ? ` · HUG 평균 대비 ${vsHug >= 0 ? '+' : ''}${vsHug.toFixed(0)}%` : '')),
+        React.createElement("span", { className: "tabular-nums", style: { flexShrink: 0, textAlign: 'right' } },
+          React.createElement("span", { style: { color: isCur ? QC.acc : '#E8EAED', fontSize: 18, fontWeight: 800 } }, fmt(a.t10)),
+          React.createElement("span", { style: { fontSize: 11, color: '#9AA3AF', marginLeft: 2 } }, "만 ", isOpen ? '▴' : '▾'))),
+      isOpen && React.createElement("div", { style: { padding: '0 12px 12px' } },
+        hug && React.createElement("p", { style: { fontSize: 11, color: vsHug > 10 ? '#FDBA74' : '#9AA3AF' } }, hug.n, " 평균 분양가(HUG ", hug.at, ") ", fmt(hug.v), "만 대비 ", vsHug >= 0 ? '+' : '', vsHug.toFixed(0), "%"),
+        React.createElement("div", { className: "tabular-nums", style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px 8px', marginTop: 6, fontSize: 12, color: '#B0B7C1' } },
+          React.createElement("span", null, "손익분기 ", fmt(a.be), "만"),
+          React.createElement("span", null, a.p.res ? '세대' : '호실', " ", a.sc.whole ? '통매각' : fmt(a.units)),
+          React.createElement("span", null, "연면적 ", fmt(a.sc.gfa), "평"),
+          React.createElement("span", null, "공사비 ", eok1(a.B)),
+          React.createElement("span", null, "총사업비 ", eok1(a.cost)),
+          React.createElement("span", null, "이익 ", eok1(a.profit))),
+        !isCur && React.createElement("button", {
+          onClick: () => { setProduct(id); setOpen(null); },
+          style: { marginTop: 10, width: '100%', minHeight: 36, borderRadius: 8, fontSize: 12, fontWeight: 800, border: '1px solid ' + QC.acc, background: 'transparent', color: QC.acc }
+        }, "이 상품으로 사업수지 보기")));
+  };
   return React.createElement("div", { style: QC.card },
-    React.createElement("p", { style: QC.h }, "이 땅에 뭘 지으면 될까 — 상품 비교"),
-    React.createElement("p", { style: QC.sub }, zone.n, " · 대지 ", fmt(f.sitePy), "평 · 토지비 ", fmt(f.landEok), "억 기준, 목표 이익률 ", f.targetMargin, "%를 내려면 얼마에 팔아야 하는지 바로 계산합니다. 주변 시세보다 낮을수록 유리합니다."),
-    React.createElement("div", { style: { display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 10 } },
-      allowed.map(id => {
-        const on = shown.includes(id);
-        const p = PRODUCTS.find(q => q.id === id);
-        return React.createElement("button", {
-          key: id,
-          onClick: () => toggle(id),
-          style: { padding: '6px 10px', borderRadius: 999, fontSize: 12, fontWeight: 700, minHeight: 32, border: on ? '1px solid ' + QC.acc : '1px solid #2E3541', background: on ? 'rgba(197,240,74,.12)' : 'transparent', color: on ? QC.acc : '#B0B7C1' }
-        }, p.name.replace(/\(.*\)/, '').trim());
-      })),
-    React.createElement("div", { style: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 8, marginTop: 10 } },
-      rows.map(({ id, x, a, hug }) => {
-        const cur = id === f.product;
-        const vsHug = hug ? (a.t10 / hug.v - 1) * 100 : null;
-        return React.createElement("div", { key: id, style: { background: '#0E1116', border: cur ? '2px solid ' + QC.acc : '1px solid #2E3541', borderRadius: 12, padding: 12 } },
-          React.createElement("div", { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 6 } },
-            React.createElement("p", { style: { color: '#E8EAED', fontSize: 14, fontWeight: 800 } }, a.p.name.replace(/\(.*\)/, '').trim(),
-              a.p.est && React.createElement("span", { style: { marginLeft: 6, fontSize: 10, fontWeight: 700, padding: '1px 6px', borderRadius: 999, color: '#FCD34D', border: '1px solid rgba(252,211,77,.4)' } }, "추정")),
-            cur && React.createElement("span", { style: { fontSize: 10, fontWeight: 800, color: QC.acc } }, "선택됨")),
-          React.createElement("p", { style: { ...QC.mut, marginTop: 8 } }, "필요 ", a.kd.price, " (", a.p.priceUnit, " 평당)"),
-          React.createElement("p", { className: "tabular-nums", style: QC.big }, fmt(a.t10), React.createElement("span", { style: { fontSize: 13, color: '#9AA3AF', marginLeft: 3 } }, "만원")),
-          hug && React.createElement("p", { style: { fontSize: 11, marginTop: 2, color: vsHug > 10 ? '#FDBA74' : '#9AA3AF' } }, hug.n, " 평균 분양가(HUG ", hug.at, ") ", fmt(hug.v), "만 대비 ", vsHug >= 0 ? '+' : '', vsHug.toFixed(0), "%"),
-          React.createElement("div", { className: "tabular-nums", style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px 8px', marginTop: 8, fontSize: 12, color: '#B0B7C1' } },
-            React.createElement("span", null, "손익분기 ", fmt(a.be), "만"),
-            React.createElement("span", null, a.p.res ? '세대' : '호실', " ", a.sc.whole ? '통매각' : fmt(a.units)),
-            React.createElement("span", null, "연면적 ", fmt(a.sc.gfa), "평"),
-            React.createElement("span", null, "공사비 ", eok1(a.B)),
-            React.createElement("span", null, "총사업비 ", eok1(a.cost)),
-            React.createElement("span", null, "이익 ", eok1(a.profit))),
-          !cur && React.createElement("button", {
-            onClick: () => setProduct(id),
-            style: { marginTop: 10, width: '100%', minHeight: 36, borderRadius: 8, fontSize: 12, fontWeight: 800, border: '1px solid #2E3541', background: 'transparent', color: '#E8EAED' }
-          }, "이 상품으로 보기"));
-      })),
-    React.createElement("p", { style: { ...QC.mut, marginTop: 8, fontSize: 10 } }, "다른 상품은 상품별 기본 요율·평형과 실사업 DB 공사비로 계산합니다. 분양가는 원가에서 역산한 필요 가격이며 시세가 아닙니다."));
+    React.createElement("p", { style: QC.h }, "이 땅에 지을 수 있는 상품 ", allowed.length, "가지"),
+    React.createElement("p", { style: QC.sub }, zone.n, " · 대지 ", fmt(f.sitePy), "평 · 토지비 ", fmt(f.landEok), "억 기준, 목표 이익률 ", f.targetMargin, "%를 내려면 평당 얼마에 팔아야 하는지입니다. 주변 시세보다 낮을수록 유리합니다. 누르면 자세히 보입니다."),
+    React.createElement("div", { style: { display: 'grid', gap: 6, marginTop: 10 } }, list.map(row)),
+    est.length > 0 && React.createElement("button", {
+      onClick: () => setShowEst(v => !v),
+      style: { marginTop: 8, width: '100%', minHeight: 36, borderRadius: 8, fontSize: 12, fontWeight: 700, border: '1px dashed #2E3541', background: 'transparent', color: '#9AA3AF' }
+    }, showEst ? '추정 상품 접기' : `실사업 근거가 적은 [추정] 상품 ${est.length}개 더 보기`),
+    React.createElement("p", { style: { ...QC.mut, marginTop: 8, fontSize: 10 } }, "상품마다 면적 기준(공급·계약·연면적)이 달라 평당가끼리 바로 비교하지는 마세요. 상품별 기본 요율·평형과 실사업 DB 공사비로 계산한 필요 가격이며 시세가 아닙니다."));
 }
 function MaxLand({ f, set, jiga }) {
   const p = PRODUCTS.find(q => q.id === f.product);
