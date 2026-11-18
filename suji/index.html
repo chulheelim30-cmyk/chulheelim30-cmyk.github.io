@@ -2236,7 +2236,7 @@ function LandLookup({ f, setF }) {
     React.createElement("p", { className: "font-bold", style: { color: '#E8EAED', fontSize: 16, letterSpacing: '-0.01em' } }, "지번으로 시작하기"),
     React.createElement("p", { className: "text-[11px]", style: { color: '#9AA3AF', marginTop: 2 } },
       React.createElement("span", { className: "inline-block rounded px-1 text-[10px] font-bold", style: { marginRight: 4, background: 'rgba(96,165,250,.12)', color: '#93C5FD', border: '1px solid rgba(96,165,250,.35)' } }, "공공"),
-      "대지면적·용도지역·공시지가를 불러와 공사비·사업수지를 바로 계산합니다 (국토교통부 브이월드)"),
+      "주소만 넣으면 면적·용도지역을 불러와요", React.createElement(Tip, { t: "국토교통부 브이월드 연속지적도(필지 도형·개별공시지가)와 용도지역도에서 대지면적·용도지역·공시지가를 불러와 공사비·사업수지를 바로 계산합니다." })),
     React.createElement("textarea", {
       className: "w-full rounded-md px-2.5 py-2 text-[13px]",
       style: { background: '#12161C', border: '1px solid #2E3541', color: '#E8EAED', borderRadius: 10, minHeight: 64, fontSize: 15 },
@@ -2399,13 +2399,20 @@ function QuickCompare({ f, setProduct }) {
   };
   return React.createElement("div", { style: QC.card },
     React.createElement("p", { style: QC.h }, "이 땅에 지을 수 있는 상품 ", allowed.length, "가지"),
-    React.createElement("p", { style: QC.sub }, zone.n, " · 대지 ", fmt(f.sitePy), "평 · 토지비 ", fmt(f.landEok), "억 기준, 목표 이익률 ", f.targetMargin, "%를 내려면 평당 얼마에 팔아야 하는지입니다. 주변 시세보다 낮을수록 유리합니다. 누르면 자세히 보입니다."),
+    React.createElement("p", { style: QC.sub }, "이익률 ", f.targetMargin, "%를 내려면 평당 이만큼 받아야 해요", React.createElement(Tip, { t: zone.n + " · 대지 " + fmt(f.sitePy) + "평 · 토지비 " + fmt(f.landEok) + "억 기준으로, 목표 이익률을 내려면 평당 얼마에 팔아야 하는지(필요 분양가)입니다. 주변 분양가보다 낮을수록 유리합니다. 카드를 누르면 자세히 보입니다. 상품마다 면적 기준(공급·계약·연면적)이 달라 평당가끼리 바로 비교하지는 마세요. 상품별 기본 요율·평형과 실사업 DB 공사비로 계산했습니다." })),
     React.createElement("div", { style: { display: 'grid', gap: 6, marginTop: 10 } }, list.map(row)),
     est.length > 0 && React.createElement("button", {
       onClick: () => setShowEst(v => !v),
       style: { marginTop: 8, width: '100%', minHeight: 36, borderRadius: 8, fontSize: 12, fontWeight: 700, border: '1px dashed #2E3541', background: 'transparent', color: '#9AA3AF' }
     }, showEst ? '추정 상품 접기' : `실사업 근거가 적은 [추정] 상품 ${est.length}개 더 보기`),
-    React.createElement("p", { style: { ...QC.mut, marginTop: 8, fontSize: 10 } }, "상품마다 면적 기준(공급·계약·연면적)이 달라 평당가끼리 바로 비교하지는 마세요. 상품별 기본 요율·평형과 실사업 DB 공사비로 계산한 필요 가격이며 시세가 아닙니다."));
+    React.createElement("p", { style: { ...QC.mut, marginTop: 8, fontSize: 10 } }, "원가로 계산한 필요 가격이며 시세가 아닙니다."));
+}
+// 긴 설명은 접어 두고 ⓘ를 누르면 펼침 (2026-11-19 화면 글 줄이기)
+function Tip({ t }) {
+  const [o, setO] = useState(false);
+  return React.createElement("span", null,
+    React.createElement("button", { type: "button", onClick: e => { e.stopPropagation(); setO(v => !v); }, "aria-label": "자세히", style: { marginLeft: 4, width: 20, height: 20, lineHeight: '18px', borderRadius: 999, border: '1px solid #3A4250', background: o ? '#2E3541' : 'transparent', color: '#9AA3AF', fontSize: 11, fontWeight: 800, verticalAlign: 'middle', padding: 0 } }, "i"),
+    o && React.createElement("span", { style: { display: 'block', marginTop: 6, padding: '8px 10px', borderRadius: 8, background: '#12161C', border: '1px solid #2E3541', color: '#B0B7C1', fontSize: 12, lineHeight: 1.55, fontWeight: 400, textAlign: 'left' } }, t));
 }
 function MaxLand({ f, set, jiga }) {
   const p = PRODUCTS.find(q => q.id === f.product);
@@ -2422,7 +2429,7 @@ function MaxLand({ f, set, jiga }) {
   const inp = { flex: 1, minWidth: 0, height: 44, borderRadius: 10, border: '1px solid #2E3541', background: '#0E1116', color: '#E8EAED', padding: '0 12px', fontSize: 16, textAlign: 'right' };
   return React.createElement("div", { style: QC.card },
     React.createElement("p", { style: QC.h }, "땅값은 얼마까지? — 거꾸로 계산"),
-    React.createElement("p", { style: QC.sub }, "이 가격에 팔 수 있다면, 목표 이익률을 지키면서 토지를 최대 얼마에 사도 되는지 계산합니다. 매입 협상용."),
+    React.createElement("p", { style: QC.sub }, "팔 수 있는 분양가로 최대 토지비를 계산해요", React.createElement(Tip, { t: "이 가격에 팔 수 있다면, 목표 이익률을 지키면서 토지를 최대 얼마에 사도 되는지 거꾸로 계산합니다. 토지 매입 협상용입니다." })),
     React.createElement("div", { style: { display: 'grid', gridTemplateColumns: '1fr', gap: 8, marginTop: 10 } },
       React.createElement("label", null,
         React.createElement("span", { style: { display: 'block', fontSize: 12, fontWeight: 700, color: '#B0B7C1', marginBottom: 4 } }, "팔 수 있다고 보는 ", kd.price, " (", p.priceUnit, " 평당)"),
@@ -2726,8 +2733,7 @@ function App() {
     style: { paddingBottom: 96 }
   }, sheet === 'cost' && vwOn() && React.createElement(LandLookup, { f, setF }), sheet === 'cost' && React.createElement(LandSheet, { f, setF }), sheet === 'cost' && React.createElement("div", { className: "bg-white rounded-xl border border-slate-200 p-4 space-y-3" },
     React.createElement("div", null,
-      React.createElement("h2", { className: "text-sm font-extrabold flex items-center gap-1.5" }, React.createElement(Target, { size: 15, className: "text-emerald-600" }), "토지 기본정보"),
-      React.createElement("p", { className: "text-[11px] text-slate-500" }, "토지비·대지면적·용도지역으로 용적률·연면적을 잡고, 공사비와 2.사업수지가 모두 이 값을 씁니다.")),
+      React.createElement("h2", { className: "text-sm font-extrabold flex items-center gap-1.5" }, React.createElement(Target, { size: 15, className: "text-emerald-600" }), "토지 기본정보", React.createElement(Tip, { t: "토지비·대지면적·용도지역으로 용적률·연면적을 잡고, 공사비와 2.사업수지가 모두 이 값을 씁니다." }))),
     React.createElement("div", { className: "grid grid-cols-2 gap-2.5" }, /*#__PURE__*/React.createElement(Num, {
     label: "\uD1A0\uC9C0\uBE44 (\uB9E4\uC785\uAC00)",
     unit: "\uC5B5",
@@ -2767,7 +2773,7 @@ function App() {
     style: { fontSize: 38, lineHeight: 1.1, marginTop: 4, letterSpacing: '-0.03em', color: isExample ? '#7D8692' : '#FFFFFF' }
   }, eok(buildNow)), isExample && /*#__PURE__*/React.createElement("p", {
     style: { fontSize: 12, color: '#9AA3AF', marginTop: 6 }
-  }, "\uB300\uC9C0 1,000\uD3C9 \xB7 \uC900\uC8FC\uAC70 \uAE30\uC900 \uC608\uC2DC\uC608\uC694. \uC9C0\uBC88\uC774\uB098 \uB300\uC9C0\uBA74\uC801\uC744 \uB123\uC73C\uBA74 \uB0B4 \uC0AC\uC5C5\uC73C\uB85C \uBC14\uB01D\uB2C8\uB2E4."), f.landEst && React.createElement("p", {
+  }, "예시 값이에요. 지번을 넣으면 내 사업으로 바뀌어요."), f.landEst && React.createElement("p", {
     style: { fontSize: 12, color: '#FCD34D', marginTop: 6, fontWeight: 700 }
   }, "토지비 ", fmt(f.landEok), "억은 공시지가로 추정한 값이에요(시세반영률 65.5% 역산). 실제 매입가를 넣으면 더 정확해집니다."), landExample && /*#__PURE__*/React.createElement("p", {
     style: { fontSize: 12, color: '#FDBA74', marginTop: 6, fontWeight: 700 }
@@ -2793,7 +2799,7 @@ function App() {
     className: "text-sm font-extrabold"
   }, "\uACF5\uC0AC\uBE44 \uC870\uAC74"), /*#__PURE__*/React.createElement("p", {
     className: "text-[11px] text-slate-500"
-  }, "\uB3C4\uAE09\uC21C\uC704(1~5\uAD70) \xD7 \uC0C1\uD488\uBCC4 \uD3C9\uB2E8\uAC00 \xB7 \uB9CC\uC6D0/3.3\u33A1 \xB7 VAT \uBCC4\uB3C4 \xB7 \uC5EC\uAE30\uC11C \uACE0\uB978 \uAC12\uC774 2.\uC0AC\uC5C5\uC218\uC9C0\uC5D0 \uADF8\uB300\uB85C \uB4E4\uC5B4\uAC11\uB2C8\uB2E4")), /*#__PURE__*/React.createElement("div", {
+  }, "만원/평 · VAT 별도", React.createElement(Tip, { t: "도급순위(1~5군) × 상품별 평단가(만원/3.3㎡, VAT 별도)입니다. 여기서 고른 값이 2.사업수지에 그대로 들어갑니다." }))), /*#__PURE__*/React.createElement("div", {
     className: "grid grid-cols-2 gap-2.5"
   }, /*#__PURE__*/React.createElement("label", {
     className: "block col-span-2"
@@ -2875,7 +2881,7 @@ function App() {
   }, fmt(t.unit), "\uB9CC")))), /*#__PURE__*/React.createElement("p", {
     className: "text-[11px] text-slate-500 mt-1.5",
     style: { fontSize: 12, lineHeight: 1.5 }
-  }, f.costMode === 'db' ? '실사업 수지표 기준 기본값 (2026.9 건설공사비지수로 환산)' : f.costMode === 'manual' ? '직접 입력한 평단가를 씁니다' : `${sel.n} · ${sel.rank} · ${sel.note}`)), /*#__PURE__*/React.createElement("div", {
+  }, f.costMode === 'db' ? React.createElement(React.Fragment, null, '실사업 수지표 기준', React.createElement(Tip, { t: '실제 시행 사업수지표의 도급 단가를 2026.9 건설공사비지수(한국건설기술연구원)로 환산한 기본값입니다.' })) : f.costMode === 'manual' ? '직접 입력한 평단가를 씁니다' : `${sel.n} · ${sel.rank} · ${sel.note}`)), /*#__PURE__*/React.createElement("div", {
     style: { display: dist ? 'block' : 'none' }
   }, dist && /*#__PURE__*/React.createElement("div", {
     className: "rounded-lg border border-slate-200 px-3 py-3",
@@ -2906,7 +2912,7 @@ function App() {
   }, /*#__PURE__*/React.createElement("span", null, "\uCD5C\uC800 ", fmt(dist.min)), /*#__PURE__*/React.createElement("span", null, "\uC911\uC559 ", fmt(dist.med)), /*#__PURE__*/React.createElement("span", null, "\uCD5C\uACE0 ", fmt(dist.max))), /*#__PURE__*/React.createElement("p", {
     className: "text-slate-500",
     style: { fontSize: 11, marginTop: 6 }
-  }, "2026.9 \uAC74\uC124\uACF5\uC0AC\uBE44\uC9C0\uC218 \uD658\uC0B0 \xB7 \uC218\uB3C4\uAD8C \uAE30\uC900 (\uC11C\uC6B8 \xD71.08 \xB7 \uC9C0\uBC29 \xD70.98)"))), /*#__PURE__*/React.createElement("div", {
+  }, "수도권 기준", React.createElement(Tip, { t: "2026.9 건설공사비지수로 환산한 값입니다. 서울은 ×1.08, 지방은 ×0.98을 곱해 수도권 기준으로 맞췄습니다." })))), /*#__PURE__*/React.createElement("div", {
     className: "rounded-lg bg-slate-50 border border-slate-200 px-3 py-2.5 text-xs space-y-1.5"
   }, /*#__PURE__*/React.createElement("div", {
     className: "flex justify-between items-center"
