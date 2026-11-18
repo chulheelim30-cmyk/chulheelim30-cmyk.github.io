@@ -1803,8 +1803,9 @@ async function lsShrink(file) {
     return file;
   }
 }
+const LS_CLAUDE_URL = 'https://claude.ai/artifact/LsoxJfNBZDbdtX8i7d2A9k';
 function LandSheet({ f, setF }) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(true);
   const [sampler, setSampler] = useState(null);
   const [txt, setTxt] = useState('');
   const [rows, setRows] = useState([]);
@@ -1820,8 +1821,9 @@ function LandSheet({ f, setF }) {
         if (!window.claude || !window.claude.use) return;
         const s = await window.claude.use('sample');
         if (!s || !alive) return;
-        const lim = s.limits ? await s.limits() : null;
-        if (alive && lim && lim.images) setSampler(() => s);
+        let lim = null;
+        try { lim = s.limits ? await s.limits() : null; } catch {}
+        if (alive && !(lim && lim.images === false)) setSampler(() => s);
       } catch {}
     })();
     return () => { alive = false; };
@@ -1910,13 +1912,18 @@ function LandSheet({ f, setF }) {
       React.createElement("p", { className: "font-bold", style: { color: '#E8EAED', fontSize: 16 } }, "토지조서로 여러 필지 한 번에 입력"),
       React.createElement("button", { onClick: () => setOpen(false), style: { fontSize: 11, color: '#9AA3AF', textDecoration: 'underline' } }, "접기")),
     sampler ? React.createElement("label", {
-      className: "w-full py-2.5 rounded-md text-xs font-bold",
+      className: "w-full py-3 rounded-md text-sm font-bold",
       style: { display: 'block', textAlign: 'center', background: '#C5F04A', color: '#0E1116', cursor: busy ? 'wait' : 'pointer', opacity: busy ? 0.6 : 1 }
     }, busy || '📷 토지조서 사진 올리기 (여러 장 가능)', React.createElement("input", {
       type: "file", accept: "image/*", multiple: true, disabled: !!busy, style: { display: 'none' },
       onChange: e => { const fs = [...(e.target.files || [])]; e.target.value = ''; fromPhotos(fs); }
-    })) : React.createElement("p", { style: { fontSize: 11, color: '#9AA3AF' } },
-      "사진 인식은 claude.ai의 수지들(아티팩트)에서 무료로 됩니다. 여기서는 엑셀·한글·PDF의 표를 복사해 아래에 붙여넣으세요."),
+    })) : React.createElement("a", {
+      href: LS_CLAUDE_URL, target: "_blank", rel: "noopener",
+      className: "w-full py-3 rounded-md text-sm font-bold",
+      style: { display: 'block', textAlign: 'center', background: '#C5F04A', color: '#0E1116' }
+    }, '📷 토지조서 사진 올리기 → claude.ai에서 열기'),
+    !sampler && React.createElement("p", { style: { fontSize: 11, color: '#9AA3AF' } },
+      "사진 인식은 Claude가 읽어 주는 방식이라 claude.ai 안의 수지들에서만 됩니다(무료, 요금제 사용량). 버튼을 누르면 그 화면이 열립니다. 여기서는 엑셀·한글·PDF 표를 복사해 아래에 붙여넣어도 됩니다."),
     React.createElement("textarea", {
       className: "w-full rounded-md px-2.5 py-2",
       style: { background: '#12161C', border: '1px solid #2E3541', color: '#E8EAED', borderRadius: 10, minHeight: 56, fontSize: 13 },
