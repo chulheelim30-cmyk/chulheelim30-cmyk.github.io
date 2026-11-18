@@ -2305,7 +2305,7 @@ function App() {
     }), 50);
   };
 
-  // 1.공사비
+  // 1.사업개요(공사비)
   const tiers = TIERS.map((t, i) => {
     const u = unitOf(f, f.product, i);
     return {
@@ -2753,7 +2753,7 @@ function App() {
     className: "mt-2 px-4 sm:px-0 text-[11px] text-slate-500 space-y-0.5"
   }, PRODUCTS.map(p => /*#__PURE__*/React.createElement("li", {
     key: p.id
-  }, "\xB7 ", p.name, ": ", React.createElement(Tagged, { t: BASIS[p.id] }))), /*#__PURE__*/React.createElement("li", null, React.createElement(Tagged, { t: "\xB7 [\uCD94\uC815] \uB4F1\uAE09\uD45C \uD3C9\uB2E8\uAC00\uC640 \uB4F1\uAE09 \uACC4\uC218\uB294 \uACF5\uACF5 \uD1B5\uACC4\uAC00 \uC5C6\uB294 \uC2E4\uBB34 \uCD94\uC815\uAC12\uC785\uB2C8\uB2E4. \uAE30\uBCF8 \uACC4\uC0B0\uC740 [\uC2E4\uC0AC\uC5C5] \uB2E8\uAC00(1.\uACF5\uC0AC\uBE44 '\uC2E4\uC0AC\uC5C5 \uAE30\uC900')\uB97C \uC4F0\uC138\uC694. \uCC38\uACE0: \uD55C\uAD6D\uBD80\uB3D9\uC0B0\uC6D0 \uBC1C\uD45C 2025\uB144 \uC804\uAD6D \uC815\uBE44\uC0AC\uC5C5 \uD3C9\uADE0 \uACF5\uC0AC\uBE44 3.3\u33A1\uB2F9 807\uB9CC\uC6D0(\uC11C\uC6B8 890\uB9CC\uC6D0\xB7\uC9C0\uBC29 681\uB9CC\uC6D0)" })), /*#__PURE__*/React.createElement("li", null, "\xB7 \uC2E4\uC0AC\uC5C5 \uB3C4\uAE09 \uD3C9\uB2E8\uAC00(\uC218\uB3C4\uAD8C \uC678\uACFD \uBBFC\uAC04\uC784\uB300 560~680\uB9CC)\uB294 \uC774 \uD45C\uBCF4\uB2E4 \uB0AE\uC74C \u2014 \uC0AC\uC5C5\uC9C0\uC5D0 \uB9DE\uAC8C \uC218\uC815\uD558\uC138\uC694")))), /*#__PURE__*/React.createElement("button", {
+  }, "\xB7 ", p.name, ": ", React.createElement(Tagged, { t: BASIS[p.id] }))), /*#__PURE__*/React.createElement("li", null, React.createElement(Tagged, { t: "\xB7 [\uCD94\uC815] \uB4F1\uAE09\uD45C \uD3C9\uB2E8\uAC00\uC640 \uB4F1\uAE09 \uACC4\uC218\uB294 \uACF5\uACF5 \uD1B5\uACC4\uAC00 \uC5C6\uB294 \uC2E4\uBB34 \uCD94\uC815\uAC12\uC785\uB2C8\uB2E4. \uAE30\uBCF8 \uACC4\uC0B0\uC740 [\uC2E4\uC0AC\uC5C5] \uB2E8\uAC00(1.\uC0AC\uC5C5\uAC1C\uC694 '\uC2E4\uC0AC\uC5C5 \uAE30\uC900')\uB97C \uC4F0\uC138\uC694. \uCC38\uACE0: \uD55C\uAD6D\uBD80\uB3D9\uC0B0\uC6D0 \uBC1C\uD45C 2025\uB144 \uC804\uAD6D \uC815\uBE44\uC0AC\uC5C5 \uD3C9\uADE0 \uACF5\uC0AC\uBE44 3.3\u33A1\uB2F9 807\uB9CC\uC6D0(\uC11C\uC6B8 890\uB9CC\uC6D0\xB7\uC9C0\uBC29 681\uB9CC\uC6D0)" })), /*#__PURE__*/React.createElement("li", null, "\xB7 \uC2E4\uC0AC\uC5C5 \uB3C4\uAE09 \uD3C9\uB2E8\uAC00(\uC218\uB3C4\uAD8C \uC678\uACFD \uBBFC\uAC04\uC784\uB300 560~680\uB9CC)\uB294 \uC774 \uD45C\uBCF4\uB2E4 \uB0AE\uC74C \u2014 \uC0AC\uC5C5\uC9C0\uC5D0 \uB9DE\uAC8C \uC218\uC815\uD558\uC138\uC694")))), /*#__PURE__*/React.createElement("button", {
     onClick: () => go('pf'),
     className: "sel w-full py-3 rounded-xl bg-slate-900 text-white text-sm font-bold",
     style: { minHeight: 52, fontSize: 15 }
@@ -2915,7 +2915,7 @@ function App() {
   }, region.n, " \xB7 \uACF5\uC0AC\uBE44 \uD3C9\uB2F9 ", fmt(live.unit), "\uB9CC(", f.costMode === 'auto' ? sel.n : f.costMode === 'db' ? '실사업 기준' : '직접 입력', ") ", /*#__PURE__*/React.createElement("button", {
     onClick: () => go('cost'),
     className: "text-blue-700 font-bold ml-1"
-  }, "1.\uACF5\uC0AC\uBE44\uC5D0\uC11C \uBCC0\uACBD"))), live.p.kind === 'coop' && /*#__PURE__*/React.createElement("div", {
+  }, "1.\uC0AC\uC5C5\uAC1C\uC694\uC5D0\uC11C \uBCC0\uACBD"))), live.p.kind === 'coop' && /*#__PURE__*/React.createElement("div", {
     className: "grid grid-cols-2 gap-2.5"
   }, /*#__PURE__*/React.createElement(Num, {
     label: "\uC870\uD569\uC6D0 \uBE44\uC728 (\uC138\uB300 \uAE30\uC900)",
@@ -3366,7 +3366,7 @@ function App() {
     className: "text-sm font-extrabold"
   }, "\uC2DC\uACF5\uC0AC \uB4F1\uAE09 \xD7 \uBD84\uC591\uB960 \u2192 \uC774\uC775\uB960"), /*#__PURE__*/React.createElement("p", {
     className: "text-[11px] text-slate-500"
-  }, "\uAC19\uC740 \uBD84\uC591\uAC00\uC5D0\uC11C \uC2DC\uACF5\uC0AC \uB4F1\uAE09(1.\uACF5\uC0AC\uBE44 \uD45C \uD3C9\uB2E8\uAC00)\uB9CC \uBC14\uAFE8\uC744 \uB54C")), /*#__PURE__*/React.createElement("div", {
+  }, "\uAC19\uC740 \uBD84\uC591\uAC00\uC5D0\uC11C \uC2DC\uACF5\uC0AC \uB4F1\uAE09(1.\uC0AC\uC5C5\uAC1C\uC694 \uD45C \uD3C9\uB2E8\uAC00)\uB9CC \uBC14\uAFE8\uC744 \uB54C")), /*#__PURE__*/React.createElement("div", {
     className: "overflow-x-auto"
   }, /*#__PURE__*/React.createElement("table", {
     className: "w-full text-xs text-center border-separate border-spacing-1 min-w-[400px]"
