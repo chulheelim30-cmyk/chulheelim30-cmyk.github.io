@@ -2651,8 +2651,8 @@ function solveLand(f, price, target) {
 // ── 보고서(2026-11-19): 계산 결과로 5개 섹션 보고서를 만들어 인쇄·PDF 저장. AI 없이 양식을 채움 ──
 // 주변 실거래(국토교통부 실거래가 공개 API, Supabase 서버 함수 rtms가 대신 조회 — 인증키는 서버 비밀값)
 const RTMS_URL = 'https://guwnuaeainixryxdxids.supabase.co/functions/v1/rtms';
-const RTMS_TYPE = { officetel: 'offi', apt: 'apt', mixed: 'apt', logistics: 'indu' };
-const RTMS_N = { offi: '오피스텔 매매', apt: '아파트 매매', indu: '공장·창고 매매' };
+const RTMS_TYPE = { officetel: ['offi'], apt: ['silv', 'apt'], mixed: ['silv', 'apt'], jitaek: ['silv', 'apt'], retail: ['nrg'], office: ['nrg'], logistics: ['indu'] };
+const RTMS_N = { offi: '오피스텔 매매', apt: '아파트 매매', silv: '아파트 분양권 전매', nrg: '상업업무용 매매', indu: '공장·창고 매매' };
 function buildReportHTML(f, R, rt) {
   const esc = t => String(t == null ? '' : t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
   const tm = R.tm || f.targetMargin || 10, price = R.price, pu = R.p.priceUnit || '분양면적';
@@ -2665,14 +2665,14 @@ function buildReportHTML(f, R, rt) {
   const cap15 = solveLand(f, price, tm);
   let rtHTML = '', rtOp = '';
   if (rt && !rt.error && rt.all && rt.all.n) {
-    const use = rt.recent5y && rt.recent5y.n >= 5 ? rt.recent5y : rt.all, lab = use === rt.recent5y ? '최근 5년 안 준공' : '전체(기존 건물 포함)';
+    const use = rt.recent5y && rt.recent5y.n >= 5 ? rt.recent5y : rt.all, lab = rt.type === 'silv' ? '거래' : use === rt.recent5y ? '최근 5년 안 준공' : '전체(기존 건물 포함)';
     const eff = R.sc && R.sc.eff ? R.sc.eff : 0, conv = eff && rt.basis === '전용면적' ? Math.round(use.med * eff) : 0;
     const g = conv ? ((R.t10 / conv - 1) * 100) : null;
     rtHTML = `<h2><span>02-1</span>주변 실거래 (${RTMS_N[rt.type] || ''})</h2><div class="box"><table>
 <tr><td>기간 · 건수</td><td class="r">${rt.from.slice(0,4)}.${rt.from.slice(4)}~${rt.to.slice(0,4)}.${rt.to.slice(4)} · ${rt.all.n}건 (최근 5년 안 준공 ${rt.recent5y.n}건)</td></tr>
 <tr><td>${lab} ${rt.basis} 평당</td><td class="r">중앙 ${fmt(use.med)}만 (중간 50%: ${fmt(use.p25)}~${fmt(use.p75)}만)</td></tr>
 ${conv ? `<tr><td>${esc(R.p.priceUnit || '분양면적')} 기준 환산 (전용률 ${Math.round(eff * 100)}%)</td><td class="r"><b>약 ${fmt(conv)}만</b></td></tr><tr><td>필요 분양가와 비교</td><td class="r">${fmt(R.t10)}만 (${g >= 0 ? '+' : ''}${g.toFixed(0)}%)</td></tr>` : ''}
-</table><div class="bs" style="margin-top:6px">${esc(rt.src)} · 조회 ${esc(rt.at)} · 해제 거래 제외. 기존 건물 매매가라 새 분양가는 보통 이보다 높습니다. 시세·감정가가 아닌 통계 참고값입니다.</div></div>`;
+${(rt.others || []).map(d => `<tr><td>참고: ${RTMS_N[d.type] || ''}</td><td class="r">${d.all.n}건 · ${d.basis} 평당 중앙 ${fmt(d.all.med)}만</td></tr>`).join('')}</table><div class="bs" style="margin-top:6px">${esc(rt.src)} · 조회 ${esc(rt.at)} · 해제 거래 제외. ${rt.type === 'silv' ? '분양권 전매가는 프리미엄이 붙은 거래라 최초 분양가와 다를 수 있습니다.' : '기존 건물 매매가라 새 분양가는 보통 이보다 높습니다.'} 시세·감정가가 아닌 통계 참고값입니다.</div></div>`;
     if (conv) rtOp = `<b>[실거래]</b> 주변 ${RTMS_N[rt.type] || ''} ${lab} 중앙값을 ${esc(R.p.priceUnit || '분양면적')} 기준으로 바꾸면 평당 약 ${fmt(conv)}만으로, 필요 분양가는 이보다 ${g >= 0 ? g.toFixed(0) + '% 높습니다' : Math.abs(g).toFixed(0) + '% 낮습니다'}.`;
   } else if (rt && rt.error) rtHTML = `<div class="bs" style="margin:8px 0">주변 실거래를 불러오지 못했습니다(${esc(rt.error)}).</div>`;
   const tag = b => { const m = /^\[(공공|실사업|추정|입력)\]/.exec(b || ''); const c = { 공공: '#2B6CB0', 실사업: '#2F855A', 추정: '#C05621', 입력: '#6B46C1' }; return m ? `<span class="tg" style="color:${c[m[1]]};background:${c[m[1]]}14">${m[1]}</span>` : ''; };
@@ -3145,7 +3145,11 @@ function App() {
     const done = rt => { w.document.open(); w.document.write(buildReportHTML(result, R, rt)); w.document.close(); };
     if (!t || !result.lawd) return done(null);
     const ac = new AbortController(); const tm = setTimeout(() => ac.abort(), 15000);
-    fetch(`${RTMS_URL}?type=${t}&lawd=${result.lawd}&months=12`, { signal: ac.signal }).then(r => r.json()).then(d => done(d && !d.error ? d : { error: d && d.error })).catch(() => done({ error: '시간 초과' })).finally(() => clearTimeout(tm));
+    Promise.all(t.map(ty => fetch(`${RTMS_URL}?type=${ty}&lawd=${result.lawd}&months=12`, { signal: ac.signal }).then(r => r.json()).then(d => d && !d.error ? d : { type: ty, error: d && d.error }).catch(() => ({ type: ty, error: '시간 초과' })))).then(list => {
+      const ok = list.filter(d => !d.error && d.all && d.all.n);
+      const pick = ok.find(d => d.type === 'silv' && d.all.n >= 5) || ok.find(d => d.type !== 'silv') || ok[0];
+      done(pick ? { ...pick, others: ok.filter(d => d !== pick) } : { error: (list[0] && list[0].error) || '거래 없음' });
+    }).finally(() => clearTimeout(tm));
   };
   const share = async () => {
     if (!pro) return setPay(true);
