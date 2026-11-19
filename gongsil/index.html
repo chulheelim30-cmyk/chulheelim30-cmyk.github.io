@@ -194,9 +194,9 @@ peTrack("visit");})();
     <label>건물 유형</label>
     <select id="type">
       <option value="small">꼬마빌딩 · 동네 상가 건물</option>
+      <option value="mixed">아파트 단지 상가 · 주상복합</option>
       <option value="officetel">오피스텔 (저층부 상가)</option>
       <option value="jisan">지식산업센터</option>
-      <option value="mixed">주상복합 · 아파트 단지 상가</option>
       <option value="retail">근린상가 · 상가 전용 건물</option>
     </select>
     <label>지역 <small>(지역 평균 공실률과 비교)</small></label>
@@ -221,7 +221,7 @@ peTrack("visit");})();
   <div class="card">
     <h2>2. 건물 안 사람 <small style="font-weight:400;color:var(--muted)">2/4</small></h2>
     <div class="row">
-      <div><label>집·사무실 수 <small>(상가 빼고)</small></label><input type="number" id="units" inputmode="numeric" placeholder="예: 300"></div>
+      <div><label>세대·사무실 수 <small>(아파트는 단지 전체 세대)</small></label><input type="number" id="units" inputmode="numeric" placeholder="예: 300"></div>
       <div><label>채워진 비율 % <small>(입주율)</small></label><input type="number" id="occ" inputmode="numeric" placeholder="예: 60"></div>
     </div>
   </div>
@@ -792,14 +792,15 @@ $('f').addEventListener('submit',async e=>{
   // 2 배후 30
   let s2,st2="입력";
   if(x.units===null&&x.type==="small"){s2=12;st2="주변 배후 모름";chk.push("반경 300m 주거 세대·직장인 수 (소상공인 상권정보시스템, 무료)");}
-  else if(x.units===null){s2=10;st2="모름";chk.push(x.type==="jisan"?"공장·사무실 호실 수":"오피스텔 세대수");}
+  else if(x.units===null){s2=10;st2="모름";chk.push(x.type==="jisan"?"공장·사무실 호실 수":x.type==="mixed"?"아파트 단지 세대수":x.type==="officetel"?"오피스텔 세대수":"세대·사무실 수");}
   else{
-    const occ=x.occ===null?50:x.occ;
+    const occ=x.occ===null?(x.type==="mixed"?90:50):x.occ;
     const people=x.units*(occ/100)*(x.type==="jisan"?3:1.3);
     s2=Math.round(Math.min(30,6+24*Math.min(1,people/400)));
-    if(x.occ===null){s2=Math.min(s2,15);st2="입주율 가정 50%";chk.push("관리사무소 기준 실제 입주율");}
+    if(x.occ===null){s2=Math.min(s2,x.type==="mixed"?21:15);st2="입주율 가정 "+occ+"%";chk.push("관리사무소 기준 실제 입주율");}
     if(x.type!=="small"&&x.shops&&x.units/x.shops<10){s2=Math.max(Math.round(s2-Math.min(8,(10-x.units/x.shops)*1.2)),4);st2=(st2==="입력"?"":st2+", ")+"상가가 배후에 비해 많음";chk.push("상가 1실당 배후 "+(x.units/x.shops).toFixed(1)+"세대·실 — 상가 과잉. 일부 호실은 비F&B·분할·통합 임대 검토");}
   }
+  if(x.units===null&&AREA&&AREA.n500>=30){const e=Math.min(21,Math.round(6+18*Math.min(1,AREA.n500/500)));if(e>s2){s2=e;st2=`주변 500m 점포 ${AREA.n500}곳으로 추정`;}}
   // 3 스펙 20
   let s3={front:20,inner:13,upper:8}[x.pos],st3="입력";
   if(x.duct==="n")s3-=3;
@@ -826,8 +827,9 @@ $('f').addEventListener('submit',async e=>{
   const nUnk=RG.drv.length;
   $('rRange').innerHTML=nUnk?`<b>확인되면 ${RG.lo}~${RG.hi}점 (${grade(RG.lo)}~${grade(RG.hi)}등급)</b><br>지금 점수 ${tot}점은 모르는 값을 가장 낮게 본 보수 점수입니다. 모르는 값이 확인되면 이 범위 안에서 정해집니다. 오차를 가장 크게 줄이는 정보: ${RG.drv.slice(0,3).map(d=>d.k+"(−"+d.cut+"점)").join(", ")}`:`<b>오차 범위: ±0점</b> — 점수에 쓰는 값이 모두 입력됐습니다. 남은 오차는 입력값 자체의 정확도입니다.`;
   $('rTitle').textContent=x.name+" · "+TYPE_NM[x.type];
-  $('rGrade').textContent=g;$('rScore').textContent=tot+" / 100";
-  $('rGradeTxt').innerHTML="<b>예비 "+g+"등급.</b> "+gTxt+(vr!==null?"<br>공실률 "+Math.round(vr*100)+"%"+(vr>=0.5?" — 통으로 비어 있어 처음부터 업종을 짤 수 있습니다.":""):"");
+  const gHi=grade(RG.hi)==="A"?"B":grade(RG.hi),wide=nUnk>=2&&"DCB".indexOf(gHi)>"DCB".indexOf(g);
+  $('rGrade').textContent=wide?g+"~"+gHi:g;$('rGrade').style.fontSize=wide?"20px":"";$('rScore').textContent=tot+" / 100";
+  $('rGradeTxt').innerHTML=(wide?"<b>예비 "+g+"~"+gHi+"등급 (판정 보류).</b> 비어 있는 값이 많아 등급을 하나로 정할 수 없습니다. 아래 '오차를 줄이는 정보'를 넣으면 확정됩니다.":"<b>예비 "+g+"등급.</b> "+gTxt)+(vr!==null?"<br>공실률 "+Math.round(vr*100)+"%"+(vr>=0.5?" — 통으로 비어 있어 처음부터 업종을 짤 수 있습니다.":""):"");
   const bars=[["입지",s1,30,st1],["배후",s2,30,st2],["공실 조건",s3,20,st3],["경제성",s4,20,st4]];
   $('rBars').innerHTML=bars.map(b=>`<div class="sc"><span>${b[0]}${b[3]!=="입력"?'':''}</span><div class="bar"><i style="width:${b[1]/b[2]*100}%"></i></div><span>${b[1]}/${b[2]}</span></div>${b[3]!=="입력"?`<div style="font-size:12px;color:var(--warn);margin:-4px 0 4px 80px">${b[3]} → 보수 채점</div>`:''}`).join("");
 
@@ -893,7 +895,7 @@ $('f').addEventListener('submit',async e=>{
 
   const ex=x.exist.length?[...document.querySelectorAll('#exist .chip.on')].map(c=>c.textContent).join(", "):"없음/미입력";
   const posNm={front:"1층 전면",inner:"1층 안쪽",upper:"2층 이상"}[x.pos];
-  $('copybox').value=`[공실공 간이진단]\n현장: ${x.name} (${TYPE_NM[x.type]})\n예비 등급: ${g} (${tot}/100, 보수 채점)\n확인되면: ${nUnk?RG.lo+"~"+RG.hi+"점, 오차 줄이려면 "+RG.drv.slice(0,3).map(d=>d.k).join("·")+" 확인":"없음"}\n- 입지 ${s1}/30, 배후 ${s2}/30, 공실 조건 ${s3}/20, 경제성 ${s4}/20\n입력: 역까지 ${x.m===null?"모름":x.m+"m"}, 세대·실 ${x.units??"모름"}, 입주율 ${x.occ===null?"모름":x.occ+"%"}, 상가 ${x.shops??"?"}실 중 공실 ${x.vac??"?"}, ${posNm} ${x.area??"?"}㎡, 호가 월세 ${x.rent??"?"}만, 용도 ${x.use?x.use+"종 근생":"모름"}, 배기 ${x.duct==="y"?"가능":x.duct==="n"?"불가":"모름"}\n기존 업종: ${ex}\n공실률 비교(${MKT.at}, 한국부동산원): 이 건물 ${MK.mine===null?"미입력":MK.mine+"%"} / ${MK.ref[0]} ${MK.ref[1]}%\n\n[맞는 업종]${split?" (2칸 분할 시)":""}\n${recs.map((c,i)=>(i+1)+". "+c.n).join("\n")}${mText}\n\n[확인 필요]\n${chk.map(c=>"- "+c).join("\n")}`+planText;
+  $('copybox').value=`[공실공 간이진단]\n현장: ${x.name} (${TYPE_NM[x.type]})\n예비 등급: ${wide?g+"~"+gHi+" (판정 보류)":g} (${tot}/100, 보수 채점)\n확인되면: ${nUnk?RG.lo+"~"+RG.hi+"점, 오차 줄이려면 "+RG.drv.slice(0,3).map(d=>d.k).join("·")+" 확인":"없음"}\n- 입지 ${s1}/30, 배후 ${s2}/30, 공실 조건 ${s3}/20, 경제성 ${s4}/20\n입력: 역까지 ${x.m===null?"모름":x.m+"m"}, 세대·실 ${x.units??"모름"}, 입주율 ${x.occ===null?"모름":x.occ+"%"}, 상가 ${x.shops??"?"}실 중 공실 ${x.vac??"?"}, ${posNm} ${x.area??"?"}㎡, 호가 월세 ${x.rent??"?"}만, 용도 ${x.use?x.use+"종 근생":"모름"}, 배기 ${x.duct==="y"?"가능":x.duct==="n"?"불가":"모름"}\n기존 업종: ${ex}\n공실률 비교(${MKT.at}, 한국부동산원): 이 건물 ${MK.mine===null?"미입력":MK.mine+"%"} / ${MK.ref[0]} ${MK.ref[1]}%\n\n[맞는 업종]${split?" (2칸 분할 시)":""}\n${recs.map((c,i)=>(i+1)+". "+c.n).join("\n")}${mText}\n\n[확인 필요]\n${chk.map(c=>"- "+c).join("\n")}`+planText;
   saveRecent(snapshot());renderRecent();
   window.peTrack&&peTrack("diagnose",{type:x.type,region:x.region||null,rows:rows.length});
   last={site:x.name,grade:g,score:tot,inputs:snapshot()};
