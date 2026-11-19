@@ -2691,6 +2691,13 @@ ${(rt.others || []).map(d => `<tr><td>참고: ${RTMS_N[d.type] || ''}</td><td cl
   const groups = Object.keys(R.groups || {});
   const rows = groups.map(g => `<tr class="gh"><td>${esc(g)}</td><td class="r">${eok1(R.groups[g])}</td><td class="r">${(R.groups[g] / S * 100).toFixed(1)}%</td></tr>` +
     (R.lines || []).filter(l => l.g === g).map(l => `<tr><td class="ind">${esc(l.n)}${tag(l.basis)}<div class="bs">${esc(String(l.basis || '').replace(/^\[[^\]]+\]\s*/, ''))}</div></td><td class="r">${eok1(l.v)}</td><td class="r">${(l.v / S * 100).toFixed(1)}%</td></tr>`).join('')).join('');
+  // 매출 행(2026-11-19): 보고서 수지표에 매출 구성과 사업비 합계를 표시
+  const rr = R.p.kind === 'lh' || R.p.kind === 'exit' ? 100 : f.saleRate, mainName = R.p.res ? '주거 분양' : `${esc(R.p.name)} 분양`;
+  const revL = (R.p.kind === 'coop' ? [['조합원 분담금', R.memberRev, `조합원 평당 ${fmt(price)}만`], ['일반분양', R.genRev, `일반분양가 평당 ${fmt(R.gen)}만 × 분양률 ${rr}%`]]
+    : [[mainName, R.mainRev - (R.pubRev || 0), `${fmt(R.mainPy * (1 - (R.pub || 0)))}평 × 평당 ${fmt(price)}만 × 분양률 ${rr}%`], ['임대·공공매입', R.pubRev, `주거 면적의 ${Math.round((R.pub || 0) * 100)}% · 분양률 무관`]])
+    .concat([['상가', R.retailRev, `${fmt(R.retailPy)}평 · 분양률 ${rr}%`]]).filter(x => x[1] > 0);
+  const revRows = `<tr class="gh"><td>매출</td><td class="r">${eok1(R.S)}</td><td class="r">100%</td></tr>` + revL.map(x => `<tr><td class="ind">${x[0]}<div class="bs">${x[2]}</div></td><td class="r">${eok1(x[1])}</td><td class="r">${(x[1] / S * 100).toFixed(1)}%</td></tr>`).join('');
+  const costT = R.S - R.profit;
   const big = Object.keys(R.groups || {}).filter(g => !/매출|수입/.test(g)).sort((a, b) => R.groups[b] - R.groups[a])[0];
   const dp = [-10, -5, 0, 5, 10];
   const sens = dp.map(d => { const m = model(f, price * (1 + d / 100)).margin; return `<td class="c" style="background:${m >= tm ? '#D3F0DB' : m >= 0 ? '#FFF3BF' : '#FFE3E3'}">${m.toFixed(1)}%</td>`; }).join('');
@@ -2759,7 +2766,8 @@ table{width:100%;border-collapse:collapse;font-size:12.5px}td,th{padding:6px 4px
 ${mkHTML}${rtHTML}<h2><span>${N(0)}</span>종합의견</h2><div class="box op">${opinion}</div></section>
 <section class="pg"><div class="hd"><b>수지들 사업성 검토 보고서</b><span>2/4</span></div>
 <h2><span>${N(1)}</span>사업수지표</h2><div class="sub">억원 · VAT 별도 · 사업기간 ${R.totalMonths}개월(인허가 ${R.permitM} + 공사 ${R.months} + 정산 3) · 공사비 평당 ${fmt(R.unit)}만</div>
-<table><tr><th style="text-align:left">항목</th><th class="r">금액</th><th class="r">매출 대비</th></tr>${rows}
+<table><tr><th style="text-align:left">항목</th><th class="r">금액</th><th class="r">매출 대비</th></tr>${revRows}${rows}
+<tr class="gh"><td>사업비 합계</td><td class="r">${eok1(costT)}</td><td class="r">${(costT / S * 100).toFixed(1)}%</td></tr>
 <tr class="gh"><td>사업이익</td><td class="r">${eok1(R.profit)}</td><td class="r">${mg.toFixed(1)}%</td></tr></table></section>
 <section class="pg"><div class="hd"><b>수지들 사업성 검토 보고서</b><span>3/4</span></div>
 <h2><span>${N(2)}</span>민감도 — 분양가 변화에 따른 이익률</h2><table><tr>${dp.map(d => `<th class="c">${d > 0 ? '+' : ''}${d === 0 ? '기준' : d + '%'}</th>`).join('')}</tr><tr>${sens}</tr></table>
