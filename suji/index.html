@@ -2671,8 +2671,36 @@ function buildReportHTML(f, R) {
   const p5 = model(f, price * 0.95).margin;
   const nEst = (R.lines || []).filter(l => /^\[추정\]/.test(l.basis || '')).length;
   const today = new Date().toLocaleDateString('ko-KR');
+  // 주변 분양가 비교: 앱에 들어 있는 공공 자료(청약홈 시군구 분양가 중앙값, 없으면 HUG 지역 평균). 아파트·주상복합만 직접 비교
+  const mk = (() => { try { return hugOf(f); } catch { return null; } })();
+  const cmp = mk && ['apt', 'mixed'].includes(R.p.id);
+  const gap = (a, b) => ((a / b - 1) * 100);
+  const gTxt = (a, b) => { const g = gap(a, b); return `${g >= 0 ? '+' : ''}${g.toFixed(0)}%`; };
+  let mkHTML = '', mkOp = '';
+  if (mk) {
+    const hasR = !!(mk.lo && mk.hi), lo = hasR ? mk.lo : mk.v, hi = hasR ? mk.hi : mk.v;
+    const pts = [['손익분기', R.be, '#868A92'], [`필요(${tm}%)`, R.t10, '#14161A']].concat(hasPrice ? [['입력', price, '#3B5BDB']] : []);
+    const mn = Math.min(lo, ...pts.map(x => x[1])) * 0.93, mx = Math.max(hi, ...pts.map(x => x[1])) * 1.07, pos = v => ((v - mn) / (mx - mn) * 100).toFixed(1);
+    const g = gap(R.t10, mk.v);
+    const pos2 = g <= -10 ? ['주변보다 낮은 분양가로도 목표 이익 가능', '#2F9E44'] : g <= 5 ? ['주변 분양가 수준에서 목표 이익 가능', '#2F9E44'] : g <= 15 ? ['주변보다 다소 높아야 목표 이익', '#F59F00'] : ['주변보다 크게 높아야 목표 이익 — 분양 리스크', '#E03131'];
+    mkHTML = `<h2><span>02</span>주변 분양가 대비 검토</h2>
+<div class="box"><div style="display:flex;justify-content:space-between;font-size:12.5px"><span>${esc(mk.full)}</span></div>
+<div style="position:relative;height:46px;margin:22px 4px 8px"><div style="position:absolute;top:18px;left:0;right:0;height:8px;background:#E3E4E8;border-radius:4px"></div>
+${hasR ? `<div style="position:absolute;top:18px;height:8px;left:${pos(lo)}%;width:${(pos(hi) - pos(lo)).toFixed(1)}%;background:#BAC8FF;border-radius:4px"></div>` : ''}
+<div style="position:absolute;top:12px;left:${pos(mk.v)}%;width:2px;height:20px;background:#3B5BDB"></div><div style="position:absolute;top:-6px;left:${pos(mk.v)}%;transform:translateX(-50%);font-size:10.5px;color:#3B5BDB;white-space:nowrap">${hasR ? '주변 중앙' : '지역 평균'} ${fmt(mk.v)}</div>
+${pts.map(x => `<div style="position:absolute;top:30px;left:${pos(x[1])}%;transform:translateX(-50%);font-size:10.5px;color:${x[2]};white-space:nowrap;text-align:center">▲<br>${x[0]} ${fmt(x[1])}</div>`).join('')}</div>
+<div style="height:14px"></div>
+<table><tr><td>${hasR ? '주변 분양가 범위 (평당)' : '지역 평균 분양가 (평당)'}</td><td class="r">${hasR ? `${fmt(lo)}~${fmt(hi)}만 · 중앙 ${fmt(mk.v)}만` : `${fmt(mk.v)}만 (범위 자료 없음)`}</td></tr>
+<tr><td>손익분기 분양가</td><td class="r">${fmt(R.be)}만 (주변 중앙 대비 ${gTxt(R.be, mk.v)})</td></tr>
+<tr><td>필요 분양가 (이익률 ${tm}%)</td><td class="r"><b>${fmt(R.t10)}만 (${gTxt(R.t10, mk.v)})</b></td></tr>
+${hasPrice ? `<tr><td>입력 분양가</td><td class="r">${fmt(price)}만 (${gTxt(price, mk.v)})</td></tr>` : ''}</table>
+${cmp ? `<div style="margin-top:8px;font-weight:800;color:${pos2[1]}">${pos2[0]}</div>` : `<div style="margin-top:8px;font-size:12px;color:#C05621">이 자료는 민영아파트 분양가(공급면적 기준)라 ${esc(R.p.name)}에는 직접 비교가 어렵습니다. 참고로만 보세요.</div>`}
+<div class="bs" style="margin-top:6px">주변 분양가는 공공 자료의 통계값이며 이 사업의 적정 가격이나 감정가가 아닙니다. 입지·브랜드·평형·시점에 따라 달라집니다.</div></div>`;
+    if (cmp) mkOp = `<b>[시장성]</b> 필요 분양가 평당 ${fmt(R.t10)}만은 ${esc(mk.n || '')} 주변 분양가 중앙값(${fmt(mk.v)}만)보다 ${gTxt(R.t10, mk.v)}입니다. ${pos2[0]}.`;
+  }
   const opinion = [
     `<b>[사업성]</b> ${v[2]}`,
+    mkOp,
     `<b>[핵심 변수]</b> 분양가가 5% 내려가면 이익률이 ${mg.toFixed(1)}%에서 ${p5.toFixed(1)}%로 바뀝니다.${big ? ` 비용 중 가장 큰 항목은 ${esc(big)}(총매출의 ${(R.groups[big] / S * 100).toFixed(0)}%)입니다.` : ''}`,
     !hasPrice ? `<b>[권고]</b> 예상 분양가를 넣어 다시 계산하면, 그 분양가에서 살 수 있는 땅값 상한과 판정이 나옵니다.` : cap15 >= 0 ? `<b>[권고]</b> 토지를 ${fmt(cap15)}억 이하로 확보할 수 있을 때 목표 이익률 ${tm}%가 나옵니다(입력 토지비 ${fmt(f.landEok)}억).` : `<b>[권고]</b> 토지비가 0원이어도 목표 이익률 ${tm}%가 나오지 않아 분양가·상품 구성을 다시 검토해야 합니다.`,
     nEst ? `<b>[확인]</b> 추정값 ${nEst}개가 포함되어 있습니다. 설계 개요와 실제 매입가를 넣어 다시 계산하면 정확해집니다.` : ''
@@ -2698,7 +2726,7 @@ table{width:100%;border-collapse:collapse;font-size:12.5px}td,th{padding:6px 4px
 <div class="k"><div class="l">손익분기 분양가</div><div class="v">평당 ${fmt(R.be)}만</div><div class="s">이익 0원 기준</div></div>
 <div class="k"><div class="l">땅값 상한 (이익률 ${tm}%)</div><div class="v">${!hasPrice ? '—' : cap15 >= 0 ? fmt(cap15) + '억' : '불가'}</div><div class="s">${hasPrice ? '목표 이익률 역산 · 감정가 아님' : '분양가를 넣으면 계산됩니다'}</div></div>
 <div class="k"><div class="l">예상 이익률</div><div class="v">${mg.toFixed(1)}%</div><div class="s">${hasPrice ? '입력 분양가' : '필요 분양가'} 평당 ${fmt(price)}만 · 분양률 ${f.saleRate}%</div></div></div>
-<h2><span>02</span>종합의견</h2><div class="box op">${opinion}</div></section>
+${mkHTML}<h2><span>${mk ? '03' : '02'}</span>종합의견</h2><div class="box op">${opinion}</div></section>
 <section class="pg"><div class="hd"><b>수지들 사업성 검토 보고서</b><span>2/4</span></div>
 <h2><span>03</span>사업수지표</h2><div class="sub">억원 · VAT 별도 · 사업기간 ${R.totalMonths}개월(인허가 ${R.permitM} + 공사 ${R.months} + 정산 3) · 공사비 평당 ${fmt(R.unit)}만</div>
 <table><tr><th style="text-align:left">항목</th><th class="r">금액</th><th class="r">매출 대비</th></tr>${rows}
