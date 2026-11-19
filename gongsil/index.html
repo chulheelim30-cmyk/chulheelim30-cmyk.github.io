@@ -597,12 +597,17 @@ function renderNew(x,rows,vr){
   return rx;
 }
 // 지도·위치
-let MAP=null,MK=null;
+let MAP=null,MK=null,AUTO_W=false,STN=null;
+// 전국 도시철도 역사 (국가철도공단 표준데이터 2026.6)
+async function nearSt(lat,lon){try{if(!STN)STN=await (await fetch("data/stations.json")).json();}catch(e){return null;}
+  let b=null;for(const r of STN){const d=distM(lat,lon,r[1],r[2]);if(!b||d<b.d)b={nm:r[0],ln:r[3],d};}return b;}
 function setLoc(lat,lon,mode){LOC={lat,lon};if(MAP){if(MK)MK.setLatLng([lat,lon]);else MK=L.marker([lat,lon]).addTo(MAP);if(mode!=="click")MAP.setView([lat,lon],Math.max(MAP.getZoom(),16));}
   $('locTxt').textContent="주변 점포 분석 중…";AREA=null;
   AREA_P=analyze(lat,lon).then(a=>{AREA=a;const on=[];
     if(mode!=="restore")document.querySelectorAll('#exist .chip').forEach(c=>{const K=CHIPK[c.dataset.k];if(K&&K.some(k=>a.c50.has(k))&&!c.classList.contains('on')){c.classList.add('on');on.push(c.textContent);}});
-    $('locTxt').textContent=`반경 500m 생활 업종 점포 ${a.n500.toLocaleString()}곳.`+(on.length?` 50m 안에 있는 ${on.join("·")}을(를) 4단계 '장사 중인 가게'에 표시했습니다. 맞는지 확인해 주세요.`:"");return a;})
+    return nearSt(lat,lon).then(st=>{let w="";if(st){const wm=Math.round(st.d*1.3/10)*10;if($('walkm').value===""||AUTO_W){$('walkm').value=wm;$('walk').value="";AUTO_W=true;}
+      w=` 가장 가까운 역은 ${st.nm}역(${st.ln}), 직선 ${Math.round(st.d)}m → 도보 약 ${wm}m로 넣었습니다(직선×1.3 추정, 실제와 다르면 고쳐 주세요).`;}
+    $('locTxt').textContent=`반경 500m 생활 업종 점포 ${a.n500.toLocaleString()}곳.`+(on.length?` 50m 안에 있는 ${on.join("·")}을(를) 4단계 '장사 중인 가게'에 표시했습니다. 맞는지 확인해 주세요.`:"")+w;prog();return a;});})
    .catch(()=>{$('locTxt').textContent="주변 데이터를 불러오지 못했습니다. 위치 없이도 진단할 수 있습니다.";});}
 function initMap(){if(!window.L||MAP)return;MAP=L.map('map',{scrollWheelZoom:false}).setView([37.45,126.95],11);
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'}).addTo(MAP);
@@ -629,6 +634,7 @@ function addRow(v){v=v||{};const d=document.createElement('div');d.className='ur
   d.querySelector('.upos').value=v.pos||"front";d.querySelector('.uarea').value=v.area??"";d.querySelector('.urent').value=v.rent??"";
   d.querySelector('.del').addEventListener('click',()=>d.remove());$('extra').appendChild(d);}
 $('addRow').addEventListener('click',()=>addRow());
+$('walkm').addEventListener('input',()=>AUTO_W=false);
 const FIELDS=["name","type","region","walk","walkm","units","occ","shops","vac","pos","area","rent","use","duct"];
 function snapshot(){const o={};FIELDS.forEach(k=>o[k]=$(k).value);o.exist=[...document.querySelectorAll('#exist .chip.on')].map(c=>c.dataset.k);
   o.rows=[...document.querySelectorAll('#extra .urow')].map(r=>({pos:r.querySelector('.upos').value,area:r.querySelector('.uarea').value,rent:r.querySelector('.urent').value}));o.loc=LOC;return o;}
