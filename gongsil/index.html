@@ -611,7 +611,7 @@ function setLoc(lat,lon,mode){LOC={lat,lon};if(MAP){if(MK)MK.setLatLng([lat,lon]
     return Promise.all([nearSt(lat,lon),nearApt(lat,lon)]).then(([st,ap])=>{let w="";a.apt=ap;
       if(ap&&ap.near&&$('type').value==="mixed"&&($('units').value===""||AUTO_U)){$('units').value=ap.near.hh;AUTO_U=true;w+=` 가까운 단지 ${ap.near.nm}(${ap.near.hh.toLocaleString()}세대)를 세대수에 넣었습니다. 다른 단지면 고쳐 주세요.`;}
       if(ap&&ap.n)w+=` 반경 500m 아파트 ${ap.n}개 단지 ${ap.hh.toLocaleString()}세대 확인.`;if(st){const wm=Math.round(st.d*1.3/10)*10;if($('walkm').value===""||AUTO_W){$('walkm').value=wm;$('walk').value="";AUTO_W=true;}
-      w=` 가장 가까운 역은 ${st.nm}역(${st.ln}), 직선 ${Math.round(st.d)}m → 도보 약 ${wm}m로 넣었습니다(직선×1.3 추정, 실제와 다르면 고쳐 주세요).`;}
+      w+=` 가장 가까운 역은 ${st.nm}역(${st.ln}), 직선 ${Math.round(st.d)}m → 도보 약 ${wm}m로 넣었습니다(직선×1.3 추정, 실제와 다르면 고쳐 주세요).`;}
     $('locTxt').textContent=`반경 500m 생활 업종 점포 ${a.n500.toLocaleString()}곳.`+(on.length?` 50m 안에 있는 ${on.join("·")}을(를) 4단계 '장사 중인 가게'에 표시했습니다. 맞는지 확인해 주세요.`:"")+w;prog();return a;});})
    .catch(()=>{$('locTxt').textContent="주변 데이터를 불러오지 못했습니다. 위치 없이도 진단할 수 있습니다.";});}
 function initMap(){if(!window.L||MAP)return;MAP=L.map('map',{scrollWheelZoom:false}).setView([37.45,126.95],11);
