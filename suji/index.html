@@ -3019,6 +3019,39 @@ function loadForm() {
   } catch {}
   return DEFAULT;
 }
+
+// 내 사업지 저장·불러오기 (2026-11-19): 이 브라우저에만 저장(서버로 보내지 않음), 최대 50개
+const SITES_KEY = 'suji_sites_v1';
+function SavedSites({ f, setF, live }) {
+  const read = () => { try { const a = JSON.parse(localStorage.getItem(SITES_KEY) || '[]'); return Array.isArray(a) ? a : []; } catch { return []; } };
+  const [list, setList] = useState(read);
+  const [open, setOpen] = useState(false);
+  const [msg, setMsg] = useState('');
+  const write = a => { try { localStorage.setItem(SITES_KEY, JSON.stringify(a)); } catch {} setList(a); };
+  const save = () => {
+    const name = (f.name || '').trim() || '이름 없는 사업';
+    const item = { id: Date.now().toString(36), name, at: new Date().toLocaleDateString('ko-KR'), m: live && isFinite(live.margin) ? +live.margin.toFixed(1) : null, f };
+    const ex = list.find(x => x.name === name);
+    if (ex && !window.confirm(`'${name}'이(가) 이미 있습니다. 덮어쓸까요?`)) return;
+    write([item, ...list.filter(x => x.name !== name)].slice(0, 50));
+    setMsg('저장했습니다'); setTimeout(() => setMsg(''), 1500);
+  };
+  const load = x => { if (!window.confirm(`'${x.name}'을(를) 불러올까요? 지금 입력값은 바뀝니다.`)) return; setF({ ...DEFAULT, ...x.f, bases: { ...DEFAULT.bases, ...((x.f && x.f.bases) || {}) } }); setOpen(false); };
+  const del = x => { if (window.confirm(`'${x.name}'을(를) 삭제할까요?`)) write(list.filter(y => y.id !== x.id)); };
+  const btn = 'px-2.5 py-1.5 rounded-lg text-[11px] font-bold border';
+  return React.createElement("div", { className: "col-span-2" },
+    React.createElement("div", { className: "flex gap-2 items-center" },
+      React.createElement("button", { type: "button", className: btn + ' bg-slate-900 text-white border-slate-900', onClick: save }, "이 사업지 저장"),
+      React.createElement("button", { type: "button", className: btn + ' bg-white text-slate-700 border-slate-300', onClick: () => { setList(read()); setOpen(!open); } }, `검토한 사업지 불러오기 (${list.length})`),
+      msg && React.createElement("span", { className: "text-[11px] text-emerald-600 font-bold" }, msg)),
+    open && React.createElement("div", { className: "mt-2 border border-slate-200 rounded-lg divide-y divide-slate-100 max-h-72 overflow-auto" },
+      list.length ? list.map(x => React.createElement("div", { key: x.id, className: "flex items-center gap-2 px-2.5 py-2 text-[12px]" },
+        React.createElement("div", { className: "flex-1 min-w-0" }, React.createElement("div", { className: "font-bold truncate" }, x.name), React.createElement("div", { className: "text-[10.5px] text-slate-500" }, `${x.at}${x.m != null ? ` · 저장 당시 이익률 ${x.m}%` : ''}`)),
+        React.createElement("button", { type: "button", className: btn + ' bg-white border-slate-300', onClick: () => load(x) }, "불러오기"),
+        React.createElement("button", { type: "button", className: btn + ' bg-white border-red-200 text-red-600', onClick: () => del(x) }, "삭제"))) :
+        React.createElement("p", { className: "px-2.5 py-3 text-[11px] text-slate-500" }, "저장한 사업지가 없습니다. 입력 후 '이 사업지 저장'을 누르세요."),
+      React.createElement("p", { className: "px-2.5 py-2 text-[10.5px] text-slate-400" }, "이 기기의 브라우저에만 저장됩니다. 브라우저 데이터를 지우면 함께 지워집니다.")));
+}
 function App() {
   const [f, setF] = useState(loadForm);
   useEffect(() => { const t = setTimeout(() => { try { localStorage.setItem(FORM_KEY, JSON.stringify(f)); } catch {} }, 300); return () => clearTimeout(t); }, [f]);
@@ -3356,7 +3389,7 @@ function App() {
     className: inputCls,
     value: f.name,
     onChange: e => set('name')(e.target.value)
-  })), /*#__PURE__*/React.createElement("label", {
+  })), React.createElement(SavedSites, { f, setF, live }), /*#__PURE__*/React.createElement("label", {
     className: "block"
   }, /*#__PURE__*/React.createElement("span", {
     className: "block text-[11px] font-bold text-slate-600 mb-1"
