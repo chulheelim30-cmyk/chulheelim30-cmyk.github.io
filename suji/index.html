@@ -2858,7 +2858,8 @@ function App() {
   const [copied, setCopied] = useState('');
   const [showMatrix, setShowMatrix] = useState(false);
   const usage = useUsage();
-  const [admin, setAdmin] = useState(false); // 소유자도 기본은 고객 화면. 관리자 모드를 켤 때만 전체 보기
+  const [admin, setAdmin0] = useState(() => { try { return localStorage.getItem('suji_admin') !== '0'; } catch { return true; } });
+  const setAdmin = v => { setAdmin0(v); try { localStorage.setItem('suji_admin', v ? '1' : '0'); } catch {} }; // 소유자도 기본은 고객 화면. 관리자 모드를 켤 때만 전체 보기
   const pro = usage.owner && admin; // 항목별 수지표는 유료(결제 연결 시 결제 여부 추가)
   const set = k => v => setF(p => ({
     ...p,
@@ -3958,7 +3959,8 @@ function App() {
     className: "text-[11px] text-slate-300 leading-relaxed"
   }, "\uCDE8\uB4DD\uC138\xB7\uB3C4\uAE09\xB7\uBD84\uC591\uB300\uD589\xB7PF \uC218\uC218\uB8CC\xB7\uC774\uC790 \uB4F1 ", R.lines.length, "\uAC1C \uD56D\uBAA9\uC758 \uAE08\uC561, \uC0B0\uCD9C\uADFC\uAC70(\uACC4\uC0B0\uC2DD), \uC694\uC728 \uC9C1\uC811 \uC218\uC815, \uC815\uBC00 \uBAA8\uB4DC, \uC0C1\uC138 \uC218\uC9C0\uD45C \uC5D1\uC140 \uBCF5\uC0AC"), /*#__PURE__*/React.createElement("button", {
     onClick: () => setPay(true),
-    className: "w-full py-2.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-900 text-xs font-extrabold"
+    className: "w-full py-2.5 rounded-lg text-sm font-extrabold",
+    style: { background: '#C5F04A', color: '#0E1116' }
   }, "\uC694\uAE08\uC81C \uC54C\uC544\uBCF4\uAE30")))), /*#__PURE__*/React.createElement("div", {
     className: "grid grid-cols-2 gap-2"
   }, typeof navigator !== 'undefined' && navigator.share && /*#__PURE__*/React.createElement("button", {
