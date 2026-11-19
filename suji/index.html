@@ -1482,9 +1482,12 @@ function model(f, price, o = {}) {
     }
     // 중도금: 시공사 보증 집단대출이지만 실질은 계약자 개인 신용대출(요즘 4~5%대). 무이자 조건이면 시행사가 이자 부담 (2026-11-19)
     if (x.finSPct > 0) add('금융비', '중도금 무이자 등', S * x.finSPct / 100, `[입력] 매출 × ${x.finSPct}%`);
-    else if (finS > 0 && x.midCond !== 'defer') { const mr = x.midRate > 0 ? x.midRate : 4.5, mm = Math.round(months * 0.38), mp = ['apt', 'mixed', 'jitaek'].includes(p.id) ? 60 : 50;
+    else if (finS > 0) { const mr = x.midRate > 0 ? x.midRate : 4.5, mm = Math.round(months * 0.38), mp = ['apt', 'mixed', 'jitaek'].includes(p.id) ? 60 : 50;
       // 평균 기간: 중도금은 착공 후 나눠 내고 입주 때 상환 → 실제 수지 월별 CF(덕소 v5.9, 42개월·4.5% → 매출의 3.6%)로 보정한 공사기간의 약 38%
-      add('금융비', '중도금 무이자 이자', salesBase * mp / 100 * mr / 100 * mm / 12, `[실사업] 분양매출 × 중도금 ${mp}% × ${mr}%(계약자 집단대출, 시공사 보증) × 평균 ${mm}개월(실제 수지 월별 CF 기준, 공사기간의 약 38%)`); }
+      const mi = salesBase * mp / 100 * mr / 100 * mm / 12;
+      if (x.midCond !== 'defer') add('금융비', '중도금 무이자 이자', mi, `[실사업] 분양매출 × 중도금 ${mp}% × ${mr}%(계약자 집단대출, 시공사 보증) × 평균 ${mm}개월(실제 수지 월별 CF 기준, 공사기간의 약 38%)`);
+      // 이자후불제: 공사 중 시행사가 이자를 대신 내고, 준공 후 계약자 잔금(담보대출 실행) 때 돌려받음 → 비용은 0, 선납액만큼 자금 부담
+      else add('금융비', '중도금 이자후불제 (선납 후 환급)', 0, `[실사업] 공사 중 시행사 선납 약 ${eok1(mi)} → 준공 후 계약자 잔금(담보대출 실행) 때 환급 · 비용 0, 자금 부담만 있음`); }
     // PF = 총사업비 × PF비율 → 총사업비 = PF 외 비용 ÷ (1 − PF비율 × PF비용률)
     const pfCostRate = pfFee / 100 + rate / 100 * ((months + 3) / 12) * (drawPct / 100);
     const nonPf = lines.reduce((a, l) => a + l.v, 0);
@@ -3884,7 +3887,7 @@ function App() {
     value: f.opsPct,
     step: 0.1,
     onChange: set('opsPct')
-  }), (live.p.finS ?? 4) > 0 && React.createElement("label", { className: "block" }, React.createElement("span", { className: "block text-[11px] font-bold text-slate-600 mb-1" }, "중도금 조건"), React.createElement("select", { className: inputCls, value: f.midCond || 'free', onChange: e => set('midCond')(e.target.value) }, React.createElement("option", { value: 'free' }, "무이자 (시행사가 이자 부담)"), React.createElement("option", { value: 'defer' }, "이자후불제 (계약자 부담)"))), (live.p.finS ?? 4) > 0 && f.midCond !== 'defer' && React.createElement(Num, { label: "중도금 대출 금리 (0=4.5%)", unit: "%", value: f.midRate, step: 0.1, onChange: set('midRate') }), /*#__PURE__*/React.createElement(Num, {
+  }), (live.p.finS ?? 4) > 0 && React.createElement("label", { className: "block" }, React.createElement("span", { className: "block text-[11px] font-bold text-slate-600 mb-1" }, "중도금 조건"), React.createElement("select", { className: inputCls, value: f.midCond || 'free', onChange: e => set('midCond')(e.target.value) }, React.createElement("option", { value: 'free' }, "무이자 (시행사가 이자 부담)"), React.createElement("option", { value: 'defer' }, "이자후불제 (시행사 선납 → 준공 후 환급)"))), (live.p.finS ?? 4) > 0 && f.midCond !== 'defer' && React.createElement(Num, { label: "중도금 대출 금리 (0=4.5%)", unit: "%", value: f.midRate, step: 0.1, onChange: set('midRate') }), /*#__PURE__*/React.createElement(Num, {
     label: `중도금 무이자 직접 입력 (매출 대비, 0=자동 계산)`,
     unit: "%",
     value: f.finSPct,
