@@ -2529,7 +2529,7 @@ function LandLookup({ f, setF }) {
   const apply = () => (setApplied(true), setF(o => ({
     ...o,
     city: city || o.city,
-    sgg: ok[0] ? sggFromAddr(ok[0].addr) : o.sgg,
+    sgg: ok[0] ? sggFromAddr(ok[0].addr) : o.sgg, lawd: ok[0] && ok[0].pnu ? String(ok[0].pnu).slice(0, 5) : o.lawd,
     region: (CITIES.find(c => c.id === (city || o.city)) || {}).reg || o.region,
     sitePy: Math.round(py),
     zone: zoneId || o.zone,
@@ -2649,7 +2649,11 @@ function solveLand(f, price, target) {
   return lo;
 }
 // ── 보고서(2026-11-19): 계산 결과로 5개 섹션 보고서를 만들어 인쇄·PDF 저장. AI 없이 양식을 채움 ──
-function buildReportHTML(f, R) {
+// 주변 실거래(국토교통부 실거래가 공개 API, Supabase 서버 함수 rtms가 대신 조회 — 인증키는 서버 비밀값)
+const RTMS_URL = 'https://guwnuaeainixryxdxids.supabase.co/functions/v1/rtms';
+const RTMS_TYPE = { officetel: 'offi', apt: 'apt', mixed: 'apt', logistics: 'indu' };
+const RTMS_N = { offi: '오피스텔 매매', apt: '아파트 매매', indu: '공장·창고 매매' };
+function buildReportHTML(f, R, rt) {
   const esc = t => String(t == null ? '' : t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
   const tm = R.tm || f.targetMargin || 10, price = R.price, pu = R.p.priceUnit || '분양면적';
   const mg = R.margin, hasPrice = !!f.price;
@@ -2659,6 +2663,18 @@ function buildReportHTML(f, R) {
     : ['재검토 필요', '#E03131', `입력 분양가로는 손실(이익률 ${mg.toFixed(1)}%)이 예상됩니다.`];
   const cap = t => { const x = solveLand(f, price, t); return x < 0 ? '불가' : `${fmt(x)}억`; };
   const cap15 = solveLand(f, price, tm);
+  let rtHTML = '', rtOp = '';
+  if (rt && !rt.error && rt.all && rt.all.n) {
+    const use = rt.recent5y && rt.recent5y.n >= 5 ? rt.recent5y : rt.all, lab = use === rt.recent5y ? '최근 5년 안 준공' : '전체(기존 건물 포함)';
+    const eff = R.sc && R.sc.eff ? R.sc.eff : 0, conv = eff && rt.basis === '전용면적' ? Math.round(use.med * eff) : 0;
+    const g = conv ? ((R.t10 / conv - 1) * 100) : null;
+    rtHTML = `<h2><span>02-1</span>주변 실거래 (${RTMS_N[rt.type] || ''})</h2><div class="box"><table>
+<tr><td>기간 · 건수</td><td class="r">${rt.from.slice(0,4)}.${rt.from.slice(4)}~${rt.to.slice(0,4)}.${rt.to.slice(4)} · ${rt.all.n}건 (최근 5년 안 준공 ${rt.recent5y.n}건)</td></tr>
+<tr><td>${lab} ${rt.basis} 평당</td><td class="r">중앙 ${fmt(use.med)}만 (중간 50%: ${fmt(use.p25)}~${fmt(use.p75)}만)</td></tr>
+${conv ? `<tr><td>${esc(R.p.priceUnit || '분양면적')} 기준 환산 (전용률 ${Math.round(eff * 100)}%)</td><td class="r"><b>약 ${fmt(conv)}만</b></td></tr><tr><td>필요 분양가와 비교</td><td class="r">${fmt(R.t10)}만 (${g >= 0 ? '+' : ''}${g.toFixed(0)}%)</td></tr>` : ''}
+</table><div class="bs" style="margin-top:6px">${esc(rt.src)} · 조회 ${esc(rt.at)} · 해제 거래 제외. 기존 건물 매매가라 새 분양가는 보통 이보다 높습니다. 시세·감정가가 아닌 통계 참고값입니다.</div></div>`;
+    if (conv) rtOp = `<b>[실거래]</b> 주변 ${RTMS_N[rt.type] || ''} ${lab} 중앙값을 ${esc(R.p.priceUnit || '분양면적')} 기준으로 바꾸면 평당 약 ${fmt(conv)}만으로, 필요 분양가는 이보다 ${g >= 0 ? g.toFixed(0) + '% 높습니다' : Math.abs(g).toFixed(0) + '% 낮습니다'}.`;
+  } else if (rt && rt.error) rtHTML = `<div class="bs" style="margin:8px 0">주변 실거래를 불러오지 못했습니다(${esc(rt.error)}).</div>`;
   const tag = b => { const m = /^\[(공공|실사업|추정|입력)\]/.exec(b || ''); const c = { 공공: '#2B6CB0', 실사업: '#2F855A', 추정: '#C05621', 입력: '#6B46C1' }; return m ? `<span class="tg" style="color:${c[m[1]]};background:${c[m[1]]}14">${m[1]}</span>` : ''; };
   const S = R.S || 1;
   const groups = Object.keys(R.groups || {});
@@ -2701,6 +2717,7 @@ ${cmp ? `<div style="margin-top:8px;font-weight:800;color:${pos2[1]}">${pos2[0]}
   const opinion = [
     `<b>[사업성]</b> ${v[2]}`,
     mkOp,
+    rtOp,
     `<b>[핵심 변수]</b> 분양가가 5% 내려가면 이익률이 ${mg.toFixed(1)}%에서 ${p5.toFixed(1)}%로 바뀝니다.${big ? ` 비용 중 가장 큰 항목은 ${esc(big)}(총매출의 ${(R.groups[big] / S * 100).toFixed(0)}%)입니다.` : ''}`,
     !hasPrice ? `<b>[권고]</b> 예상 분양가를 넣어 다시 계산하면, 그 분양가에서 살 수 있는 땅값 상한과 판정이 나옵니다.` : cap15 >= 0 ? `<b>[권고]</b> 토지를 ${fmt(cap15)}억 이하로 확보할 수 있을 때 목표 이익률 ${tm}%가 나옵니다(입력 토지비 ${fmt(f.landEok)}억).` : `<b>[권고]</b> 토지비가 0원이어도 목표 이익률 ${tm}%가 나오지 않아 분양가·상품 구성을 다시 검토해야 합니다.`,
     nEst ? `<b>[확인]</b> 추정값 ${nEst}개가 포함되어 있습니다. 설계 개요와 실제 매입가를 넣어 다시 계산하면 정확해집니다.` : ''
@@ -2726,7 +2743,7 @@ table{width:100%;border-collapse:collapse;font-size:12.5px}td,th{padding:6px 4px
 <div class="k"><div class="l">손익분기 분양가</div><div class="v">평당 ${fmt(R.be)}만</div><div class="s">이익 0원 기준</div></div>
 <div class="k"><div class="l">땅값 상한 (이익률 ${tm}%)</div><div class="v">${!hasPrice ? '—' : cap15 >= 0 ? fmt(cap15) + '억' : '불가'}</div><div class="s">${hasPrice ? '목표 이익률 역산 · 감정가 아님' : '분양가를 넣으면 계산됩니다'}</div></div>
 <div class="k"><div class="l">예상 이익률</div><div class="v">${mg.toFixed(1)}%</div><div class="s">${hasPrice ? '입력 분양가' : '필요 분양가'} 평당 ${fmt(price)}만 · 분양률 ${f.saleRate}%</div></div></div>
-${mkHTML}<h2><span>${mk ? '03' : '02'}</span>종합의견</h2><div class="box op">${opinion}</div></section>
+${mkHTML}${rtHTML}<h2><span>${mk ? '03' : '02'}</span>종합의견</h2><div class="box op">${opinion}</div></section>
 <section class="pg"><div class="hd"><b>수지들 사업성 검토 보고서</b><span>2/4</span></div>
 <h2><span>03</span>사업수지표</h2><div class="sub">억원 · VAT 별도 · 사업기간 ${R.totalMonths}개월(인허가 ${R.permitM} + 공사 ${R.months} + 정산 3) · 공사비 평당 ${fmt(R.unit)}만</div>
 <table><tr><th style="text-align:left">항목</th><th class="r">금액</th><th class="r">매출 대비</th></tr>${rows}
@@ -3123,7 +3140,12 @@ function App() {
     window.peTrack && window.peTrack("report");
     const w = window.open('', '_blank');
     if (!w) return window.alert('팝업이 막혀 있습니다. 팝업을 허용해 주세요');
-    w.document.write(buildReportHTML(result, R)); w.document.close();
+    w.document.write('<p style="font-family:sans-serif;padding:24px">보고서를 만드는 중입니다… 주변 실거래를 불러오고 있어요.</p>');
+    const t = RTMS_TYPE[R.p.id];
+    const done = rt => { w.document.open(); w.document.write(buildReportHTML(result, R, rt)); w.document.close(); };
+    if (!t || !result.lawd) return done(null);
+    const ac = new AbortController(); const tm = setTimeout(() => ac.abort(), 15000);
+    fetch(`${RTMS_URL}?type=${t}&lawd=${result.lawd}&months=12`, { signal: ac.signal }).then(r => r.json()).then(d => done(d && !d.error ? d : { error: d && d.error })).catch(() => done({ error: '시간 초과' })).finally(() => clearTimeout(tm));
   };
   const share = async () => {
     if (!pro) return setPay(true);
