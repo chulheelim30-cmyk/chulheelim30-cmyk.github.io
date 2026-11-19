@@ -1268,7 +1268,7 @@ function scale(x) {
     gfa = above + (BM > 0 ? BM : above * p.bsmt);
   }
   const whole = p.area === 'gfa';
-  const base = whole ? gfa : p.res ? above * 0.98 : gfa * 0.97; // 통매각: 연면적 / 아파트류: 공급면적 / 그 외: 계약면적
+  const base = whole ? gfa : p.res ? above * 0.95 : gfa * 0.97; // 통매각: 연면적 / 아파트류: 공급면적(지상 연면적의 95% — 지상 커뮤니티·관리동 등 비분양 면적 감안, 2026-11-19 98%→95%) / 그 외: 계약면적
   const eff = x.effPct > 0 ? x.effPct / 100 : p.effRatio; // 전용률: 입력값 우선(2026-11-19)
   const unitPy = (x.size || p.size) / 3.3058 / eff;
   let mainPy = base * (1 - p.retailShare),
@@ -2694,8 +2694,8 @@ ${(rt.others || []).map(d => `<tr><td>참고: ${RTMS_N[d.type] || ''}</td><td cl
   // 매출 행(2026-11-19): 보고서 수지표에 매출 구성과 사업비 합계를 표시
   const rr = R.p.kind === 'lh' || R.p.kind === 'exit' ? 100 : f.saleRate, mainName = R.p.res ? '주거 분양' : `${esc(R.p.name)} 분양`;
   const revL = (R.p.kind === 'coop' ? [['조합원 분담금', R.memberRev, `조합원 평당 ${fmt(price)}만`], ['일반분양', R.genRev, `일반분양가 평당 ${fmt(R.gen)}만 × 분양률 ${rr}%`]]
-    : [[mainName, R.mainRev - (R.pubRev || 0), `${fmt(R.mainPy * (1 - (R.pub || 0)))}평 × 평당 ${fmt(price)}만 × 분양률 ${rr}%`], ['임대·공공매입', R.pubRev, `주거 면적의 ${Math.round((R.pub || 0) * 100)}% · 분양률 무관`]])
-    .concat([['상가', R.retailRev, `${fmt(R.retailPy)}평 · 분양률 ${rr}%`]]).filter(x => x[1] > 0);
+    : [[mainName, R.mainRev - (R.pubRev || 0), `${esc(pu)} ${fmt(R.mainPy * (1 - (R.pub || 0)))}평 × 평당 ${fmt(price)}만 × 분양률 ${rr}%${R.sc && !R.sc.archSale && !R.sc.whole ? ` · ${esc(pu)}은 ${R.p.res ? `지상 연면적 ${fmt(R.sc.above)}평의 95%` : `연면적의 97%`}에서 상가분 제외 [추정] (연면적 ${fmt(R.sc.gfa)}평 중 지하는 매출 없음)` : ''}`], ['임대·공공매입', R.pubRev, `주거 면적의 ${Math.round((R.pub || 0) * 100)}% · 분양률 무관`]])
+    .concat([['상가', R.retailRev, `${esc(pu)} ${fmt(R.retailPy)}평 · 분양률 ${rr}%`]]).filter(x => x[1] > 0);
   const revRows = `<tr class="gh"><td>매출</td><td class="r">${eok1(R.S)}</td><td class="r">100%</td></tr>` + revL.map(x => `<tr><td class="ind">${x[0]}<div class="bs">${x[2]}</div></td><td class="r">${eok1(x[1])}</td><td class="r">${(x[1] / S * 100).toFixed(1)}%</td></tr>`).join('');
   const costT = R.S - R.profit;
   const big = Object.keys(R.groups || {}).filter(g => !/매출|수입/.test(g)).sort((a, b) => R.groups[b] - R.groups[a])[0];
