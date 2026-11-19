@@ -2467,6 +2467,7 @@ function qcForm(f, id) {
   const curFixed = fixed.includes(PRODUCTS.find(q => q.id === f.product).kind);
   return {
     ...f,
+    ...Object.fromEntries(ARCH_KEYS.map(k => [k, 0])), // 건축개요는 고른 상품의 설계라 다른 상품 비교에는 쓰지 않음
     product: id,
     size: np.size,
     price: 0,
