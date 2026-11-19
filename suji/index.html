@@ -4350,5 +4350,5 @@ function put(){var r=document.getElementById("root");(r&&r.parentNode?r.parentNo
 if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",put);else put();
 })();
 </script>
-<script>if('serviceWorker' in navigator) window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js').catch(() => {}); });</script>
+<script>if('serviceWorker' in navigator) window.addEventListener('load', () => { const had = !!navigator.serviceWorker.controller; navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).then(r => r.update()).catch(() => {}); navigator.serviceWorker.addEventListener('controllerchange', () => { if (had && !window.__swr) { window.__swr = 1; location.reload(); } }); });</script>
 </body></html>
