@@ -310,7 +310,7 @@ peTrack("visit");})();
     <h2>MD 배치도</h2>
     <div id="rIso"></div>
     <div class="legend" id="rLegend"></div>
-    <p class="note">숫자는 호실 번호, 색은 업종 분야(음식·생활·의료·운동/교육·리테일·업무)입니다. 면적을 넣으면 칸 크기가 면적에 맞춰집니다.</p>
+    <p class="note">층별 평면도입니다. 칸 너비는 입력한 면적에 비례하고, 색은 업종 분야(음식·생활·의료·운동/교육·리테일·업무)입니다. 실제 호실 위치는 평면도를 받아 정식 리포트에서 맞춥니다.</p>
   </div>
 
 
@@ -496,6 +496,40 @@ function renderIso3D(out,x){
   if(iso3)try{iso3.dispose()}catch(e){}iso3=rd;
   return true;
   }catch(err){console.log(err);return false;}
+}
+let LAST_MD=null;
+// 층별 MD 평면도 (2D): 층마다 한 판, 1층은 안쪽 줄·전면 줄, 칸 너비는 면적 비례
+function renderPlan(out,x){
+  const W=360,LW=46,PW=W-LW-8,items=out.map((o,i)=>({...o,no:i+1,ar:o.r.area||40}));
+  const esc=t=>String(t).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+  const wrap=(t,w)=>{const mx=Math.max(3,Math.floor((w-10)/11.5)),L=[];let cur="";for(const part of t.replace(/\s*\(.*?\)/g,"").split(/(?<=[·\/ ])/)){if((cur+part).length>mx&&cur){L.push(cur.trim());cur=part;}else cur+=part;}if(cur)L.push(cur.trim());
+    return L.flatMap(l=>l.length>mx?[l.slice(0,mx),l.slice(mx)]:[l]).slice(0,2).map((l,k,a)=>k===1&&L.length>2?l.slice(0,mx-1)+"…":l);};
+  let y=8,svg="";
+  const chunk=a=>{const L=[];for(let i=0;i<a.length;i+=4)L.push(a.slice(i,i+4));return L;},lineMax=(...g)=>Math.max(1,...g.flatMap(a=>chunk(a).map(l=>l.reduce((s,o)=>s+o.ar,0))));
+  const row=(arr,h,label,TOT)=>{ // 한 줄 배치(너무 많으면 줄바꿈)
+    const lines=[];let cur=[],sum=0;arr.forEach(o=>{if(cur.length>=4){lines.push(cur);cur=[];}cur.push(o);});if(cur.length)lines.push(cur);
+    lines.forEach((ln,li)=>{const tot=TOT||ln.reduce((a,o)=>a+o.ar,0);let xx=LW;
+      if(li===0&&label)svg+=`<text x="4" y="${y+16}" font-size="11" fill="#6b7280">${label}</text>`;
+      ln.forEach(o=>{const w=Math.max(54,PW*o.ar/tot),ww=Math.min(w,LW+PW-xx);const ct=CAT[o.pick?o.pick.cat:"none"],col=ct[1];
+        svg+=`<g><rect x="${xx+2}" y="${y}" width="${ww-4}" height="${h}" rx="8" fill="${col}" fill-opacity=".14" stroke="${col}" stroke-width="1.5"/>`
+          +`<circle cx="${xx+14}" cy="${y+14}" r="9" fill="${col}"/><text x="${xx+14}" y="${y+18}" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">${o.no}</text>`;
+        const nm=o.pick?o.pick.n:"비F&B·분할 검토",tl=wrap(nm,ww);
+        tl.forEach((l,k)=>svg+=`<text x="${xx+8}" y="${y+38+k*14}" font-size="12" font-weight="700" fill="#13233D">${esc(l)}</text>`);
+        svg+=`<text x="${xx+8}" y="${y+h-8}" font-size="10" fill="#6b7280">${o.r.area!==null?o.r.area+"㎡":""}${ww>=100||o.r.area===null?(o.r.area!==null?" · ":"")+ct[0]:""}</text></g>`;xx+=ww;});
+      y+=h+6;});};
+  const up=items.filter(o=>o.r.pos==="upper"),fi=items.filter(o=>o.r.pos==="inner"),ff=items.filter(o=>o.r.pos==="front");
+  if(up.length){svg+=`<rect x="${LW-4}" y="${y-4}" width="${PW+10}" height="${Math.ceil(up.length/4)*(82+6)+4}" rx="10" fill="#E9E3D6" fill-opacity=".5"/>`;
+    svg+=`<text x="4" y="${y+4}" font-size="12" font-weight="700" fill="#13233D">2층↑</text>`;y+=6;row(up,76,"",lineMax(up));y+=10;}
+  const f1=Math.ceil(fi.length/4)*(76+6)+Math.ceil(ff.length/4)*(82+6);
+  if(fi.length||ff.length){svg+=`<rect x="${LW-4}" y="${y-4}" width="${PW+10}" height="${f1+4}" rx="10" fill="#E9E3D6" fill-opacity=".5"/>`;
+    svg+=`<text x="4" y="${y+4}" font-size="12" font-weight="700" fill="#13233D">1층</text>`;y+=6;
+    const T1=lineMax(fi,ff);if(fi.length)row(fi,70,"안쪽",T1);if(ff.length)row(ff,76,"전면",T1);}
+  // 도로
+  svg+=`<rect x="${LW-4}" y="${y+2}" width="${PW+10}" height="26" rx="6" fill="#5d6470"/><line x1="${LW+6}" y1="${y+15}" x2="${LW+PW-4}" y2="${y+15}" stroke="#F6F3EC" stroke-width="2" stroke-dasharray="10 8"/>`;
+  svg+=`<text x="${LW+PW/2}" y="${y+44}" font-size="11" fill="#B08D57" font-weight="700" text-anchor="middle">▲ 도로·역 방향 (1층 전면이 면한 쪽)</text>`;y+=52;
+  const can3d=!!window.THREE;
+  $('rIso').innerHTML=`<svg viewBox="0 0 ${W} ${y}" width="100%" role="img" aria-label="층별 MD 배치도" style="display:block">${svg}</svg>`+(can3d?`<button type="button" class="ghost" id="iso3Btn" style="margin-top:8px;padding:9px;font-size:14px">3D로 보기</button>`:"");
+  if(can3d)$('iso3Btn').onclick=()=>{if(!renderIso3D(out,x))renderIso(out,x);const b=document.createElement('button');b.type="button";b.className="ghost";b.style.cssText="margin-top:8px;padding:9px;font-size:14px";b.textContent="평면도로 보기";b.onclick=()=>{renderPlan(out,x);renderLegend(out);};$('rIso').appendChild(b);renderLegend(out);};
 }
 function renderLegend(out){const items=out.map((o,i)=>({...o,no:i+1}));
   $('rLegend').innerHTML=items.map(o=>{const ct=CAT[o.pick?o.pick.cat:"none"];return `<div class="lg"><div class="no" style="background:${ct[1]}">${o.no}</div><div><b>${o.pick?o.pick.n:"비F&B·분할 검토"}</b>${o.pick&&o.pick.nw?' <span class="tag new">새 포맷</span>':''} <span style="color:var(--muted);font-size:12px">${POSNM[o.r.pos]}${o.r.area!==null?" · "+o.r.area+"㎡":""} · ${ct[0]}</span>${o.pick?`<div class="tm">${o.pick.tm.map(t=>"<span>"+t+"</span>").join("")}</div>${o.pick.img?`<img src="${o.pick.img}" alt="${o.pick.n} 예시" loading="lazy">`:""}`:""}</div></div>`;}).join("");
@@ -928,7 +962,7 @@ $('f').addEventListener('submit',async e=>{
     $('pNote').textContent=(nUnk&&pot>PL.final.t?`지금은 모르는 값을 가장 낮게 본 상태입니다. 현장 확인값이 좋게 나오면 최대 ${pot}점(${grade(pot)}등급)까지 갑니다. `:"")+(PL.final.g==="A"?"임대인이 바꿀 수 있는 것만으로 A등급까지 갈 수 있습니다. ":`기획으로 ${PL.final.g}등급까지 올릴 수 있습니다. ${PL.lim.length?"남은 한계: "+PL.lim.join("·")+" — 팝업·단기 임대로 유동을 먼저 만들거나 업무시설 전환을 함께 검토합니다. ":"A까지 남은 차이는 아직 확인 전인 값(입주율·호실표 등)에서 나옵니다. "}`)+"점수는 같은 채점 모델로 계산한 추정치이며, 단계별 실행은 정식 리포트에서 현장 기준으로 다시 잡습니다.";
     planText="\n\n[등급 올리기 기획 플랜] "+g+" "+tot+"점 → "+PL.final.g+" "+PL.final.t+"점\n"+PL.steps.map((st,i)=>`${i+1}. ${st.nm} (${st.who}) ${st.d>=0?"+":""}${st.d} → ${st.t}점 ${st.g}`).join("\n")+planText;}
   $('result').style.display="block";
-  if(!renderIso3D(out,x))renderIso(out,x);else setTimeout(()=>{try{const cv=$('rIso').querySelector('canvas'),t=document.createElement('canvas');t.width=24;t.height=24;const g=t.getContext('2d');g.drawImage(cv,0,0,24,24);const d=g.getImageData(0,0,24,24).data;let v=0;for(let i=4;i<d.length;i+=4)v+=Math.abs(d[i]-d[0])+Math.abs(d[i+1]-d[1]);if(v<200)renderIso(out,x);}catch(_){renderIso(out,x);}renderLegend(out);},700);
+  renderPlan(out,x);LAST_MD={out,x};
   renderLegend(out);renderTime(out);const areaText=renderArea(x);const NWL=renderNew(x,rows,vr);planText+=areaText+(NWL.length?"\n\n[원인별 처방]\n"+NWL.map(r=>"- "+r.t+": "+r.a[0]).join("\n"):"");
   $('rDate').textContent=new Date().toLocaleDateString('ko-KR');
   const MK=renderMarket(x,vr);
