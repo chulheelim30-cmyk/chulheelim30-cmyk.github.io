@@ -297,7 +297,7 @@ peTrack("visit");})();
   <div class="card" id="arCard" style="display:none">
     <h2>주변 500m 상권 데이터 <span class="tag">공공 데이터</span></h2>
     <div id="rArea"></div>
-    <p class="note">출처: 소상공인시장진흥공단 상가(상권)정보, 2026년 9월 영업 중 점포 기준. '보통'은 같은 반경 점포 수에 전국 평균 업종 비중을 곱한 값입니다. 신고 지연·미등록 점포가 있어 현장과 다를 수 있습니다. 아파트 세대수는 K-apt(2026.11) 중 위치가 확인된 단지만 더해 실제보다 적게 나올 수 있습니다.</p>
+    <p class="note">출처: 소상공인시장진흥공단 상가(상권)정보, 2026년 9월 영업 중 점포 기준. '보통'은 같은 반경 점포 수에 도시 지역 평균 업종 비중을 곱한 값입니다. 신고 지연·미등록 점포가 있어 현장과 다를 수 있습니다. 아파트 세대수는 K-apt(2026.11) 중 위치가 확인된 단지만 더해 실제보다 적게 나올 수 있습니다.</p>
   </div>
 
   <div class="card plan">
@@ -540,9 +540,9 @@ function getTile(k){if(!(k in TC)){const T=META.T,[ty,tx]=k.split("_").map(Numbe
 const distM=(a,b,c,d)=>6371000*Math.hypot((d-b)*Math.PI/180*Math.cos((a+c)/360*Math.PI),(c-a)*Math.PI/180);
 async function analyze(lat,lon){const M=await getMeta(),T=M.T,R=500,dl=R/111000,dn=R/(111000*Math.cos(lat*Math.PI/180));
   const ks=new Set();for(const a of[lat-dl,lat+dl])for(const b of[lon-dn,lon+dn])ks.add(Math.floor(a/T)+"_"+Math.floor(b/T));
-  const pts=(await Promise.all([...ks].map(getTile))).flat();const c500={},c50=new Set();let n500=0,n300=0;
-  for(const p of pts){const d=distM(lat,lon,p[0],p[1]);if(d>R)continue;const code=M.codes[p[2]];if(M.share[p[2]]==null)continue;n500++;if(d<=300)n300++;c500[code]=(c500[code]||0)+1;if(d<=50)c50.add(code);}
-  return {lat,lon,n500,n300,c500,c50};}
+  const pts=(await Promise.all([...ks].map(getTile))).flat();const c500={},c200={},c50=new Set();let n500=0,n300=0;
+  for(const p of pts){const d=distM(lat,lon,p[0],p[1]);if(d>R)continue;const code=M.codes[p[2]];if(M.share[p[2]]==null)continue;n500++;if(d<=300)n300++;c500[code]=(c500[code]||0)+1;if(d<=200)c200[code]=(c200[code]||0)+1;if(d<=50)c50.add(code);}
+  return {lat,lon,n500,n300,c500,c200,c50};}
 // 후보 업종 ↔ 상권업종 소분류 코드
 const CK={"버거·치킨 (소형 매장)":["I21004","I21006"],"편의점":["G20405"],"도시락":["I20101"],"아침 토스트":["I21005"],"샐러드·포케":["I21005"],"저가 커피":["I21201"],"베이글·디저트 테이크아웃":["I21001","I21008"],"대형 카페·베이커리":["I21201"],
  "1인 식당 (국밥·덮밥)":["I20101","I20102","I20302"],"분식·떡볶이":["I21007"],"치킨호프·포차":["I21103","I21104"],"세탁·코인빨래방":["S20901","S20902"],"미용실":["S20701"],"네일·속눈썹 1인 샵":["S20703","S20702"],"무인 사진관":["M11301"],
@@ -551,20 +551,33 @@ const CK={"버거·치킨 (소형 매장)":["I21004","I21006"],"편의점":["G20
 const CHIPK={coffee:["I21201"],cvs:["G20405"],kimbap:["I21007"],dosirak:["I20101","I20102"],burger:["I21004","I21006"],laundry:["S20901","S20902"],pharmacy:["G21501","Q10201","Q10202","Q10210","Q10211"],fitness:["P10603","R10307"],hair:["S20701"],unmanned:["G20507"],academy:["P10501","P10609","P10611","P10615"]};
 function lqCodes(K){if(!AREA||AREA.n500<30||!K||!K.length)return null;let k=0,sh=0;K.forEach(c=>{k+=AREA.c500[c]||0;sh+=META.share[META.ci[c]]||0;});const e=AREA.n500*sh;if(e<1&&k===0)return null;return {k,e,lq:e>0?k/e:9};}
 const lqOf=c=>lqCodes(CK[c.n]);
+// 같은 규모 아파트 단지 상가(전국, 단지 좌표 200m 안) 업종 보유율 — 공실공 기준표
+let PEER=null;
+async function getPeer(){if(!PEER)try{PEER=await (await fetch("data/peer_apt.json")).json();}catch(e){PEER={};}return PEER;}
+function peerOf(x){if(x.type!=="mixed"||!PEER||!AREA)return null;const hh=x.units??(AREA.apt&&AREA.apt.near?AREA.apt.near.hh:null);if(!hh)return null;
+  const k=hh<500?"0-500":hh<1000?"500-1000":hh<2000?"1000-2000":"2000-99999";const P=PEER[k];if(!P)return null;
+  const rows=P.c.map(([c,p,m])=>({c,nm:META.nm[META.ci[c]],p,m,k:AREA.c200[c]||0}));return {hh,key:k,n:P.n,rows};}
+function peerFit(c,x){const pe=peerOf(x),K=CK[c.n];if(!pe||!K)return null;const r=pe.rows.filter(o=>K.includes(o.c));if(!r.length)return null;
+  const p=Math.max(...r.map(o=>o.p)),m=r.reduce((a,o)=>a+o.m,0),k=K.reduce((a,cd)=>a+(AREA.c200[cd]||0),0);return {p,m,k};}
 function satList(){if(!AREA||AREA.n500<30)return [];const L=[];META.codes.forEach((c,i)=>{const sh=META.share[i];if(sh==null)return;const e=AREA.n500*sh,k=AREA.c500[c]||0;if(e>=2&&k>=5&&k/e>=1.8)L.push({nm:META.nm[i],k,e,lq:k/e});});return L.sort((a,b)=>b.lq-a.lq).slice(0,5);}
 // 상가에 들어오기 어려운 업종(주유·숙박·자동차·장례 등)은 빈자리 목록에서 제외
 const GAP_X=/^(G2(02|03|14|05(01|02))|G206|I1|S20[34]|S21|R103(06|08|09|12)|R104(08|09|10|14)|Q101|L1)/;
 function gapAll(){if(!AREA||AREA.n500<80)return [];const L=[];META.codes.forEach((c,i)=>{const sh=META.share[i];if(sh==null||GAP_X.test(c))return;const e=AREA.n500*sh,k=AREA.c500[c]||0;if(e>=2&&k/e<=0.4)L.push({nm:META.nm[i],k,e});});return L.sort((a,b)=>(b.e-b.k)-(a.e-a.k)).slice(0,10);}
 function renderArea(x){const box=$('arCard');if(!AREA){box.style.display="none";return "";}box.style.display="";
-  const sat=satList();const gaps=CANDS.filter(c=>c.t.includes(x.type)).map(c=>({c,q:lqOf(c)})).filter(o=>o.q&&o.q.lq<=0.5&&o.q.e>=1.5).sort((a,b)=>b.q.e-a.q.e).slice(0,5);
+  const sat=satList();const gaps=peerOf(x)?[]:CANDS.filter(c=>c.t.includes(x.type)).map(c=>({c,q:lqOf(c)})).filter(o=>o.q&&o.q.lq<=0.4&&o.q.e>=2).sort((a,b)=>b.q.e-a.q.e).slice(0,5);
   const mx=Math.max(3,...sat.map(s=>s.lq));
   const bar=(n,v,t)=>`<div class="sc" style="grid-template-columns:minmax(0,1fr) 80px 76px"><span style="font-size:13px">${n}</span><div class="bar"><i style="width:${Math.min(100,v/mx*100)}%;background:var(--bad)"></i></div><span style="text-align:right;font-size:13px">${t}</span></div>`;
   $('rArea').innerHTML=`<p style="margin:0 0 8px;font-size:14px">반경 500m 생활 업종 점포 <b>${AREA.n500.toLocaleString()}곳</b> (300m 안 ${AREA.n300.toLocaleString()}곳)${AREA.apt&&AREA.apt.n?` · 아파트 ${AREA.apt.n}개 단지 ${AREA.apt.hh.toLocaleString()}세대`:""}${AREA.n500<30?" — 점포가 적어 업종 비교는 생략했습니다.":""}</p>`
    +(AREA.trade?`<p style="margin:0 0 8px;font-size:14px">이 시군구 상업업무용 건물 매매 최근 12개월 <b>${AREA.trade.all.n}건</b>, 3.3㎡당 중간값 <b>${AREA.trade.all.med.toLocaleString()}만 원</b> (하위 25% ${AREA.trade.all.p25.toLocaleString()} ~ 상위 25% ${AREA.trade.all.p75.toLocaleString()}만 원, 건물면적 기준)</p>`:"")
    +(sat.length?`<div style="font-size:13px;font-weight:700;color:var(--bad);margin-top:6px">포화 업종 (보통보다 1.8배 이상)</div>`+sat.map(s=>bar(s.nm,s.lq,`${s.k}곳 · ${s.lq.toFixed(1)}배`)).join(""):"")
    +(gaps.length?`<div style="font-size:13px;font-weight:700;color:var(--ok);margin-top:10px">빈자리 업종 (보통보다 절반 이하)</div><ul class="chk">`+gaps.map(o=>`<li>${o.c.n}: ${o.q.k}곳 (보통 ${Math.round(o.q.e)}곳)</li>`).join("")+"</ul>":"")
-   +(()=>{const ga=gapAll();return ga.length?`<details style="margin-top:8px;font-size:14px"><summary style="cursor:pointer;color:var(--navy)">전체 업종 ${META.share.filter(v=>v!=null).length}개 기준 부족 업종 더 보기</summary><ul class="chk">${ga.map(g=>`<li>${g.nm}: ${g.k}곳 (보통 ${Math.round(g.e)}곳)</li>`).join("")}</ul><p class="note" style="margin-top:4px">데이터상 비어 있는 업종 목록입니다. 층·면적·설비 적합도는 따지지 않았으니 후보 탐색용으로만 보세요.</p></details>`:"";})();
-  return `\n[주변 500m] 점포 ${AREA.n500}곳`+(sat.length?` / 포화: ${sat.map(s=>s.nm+" "+s.k+"곳("+s.lq.toFixed(1)+"배)").join(", ")}`:"")+(gaps.length?` / 빈자리: ${gaps.map(o=>o.c.n).join(", ")}`:"");}
+   +(()=>{const ga=peerOf(x)?[]:gapAll();return ga.length?`<details style="margin-top:8px;font-size:14px"><summary style="cursor:pointer;color:var(--navy)">전체 업종 ${META.share.filter(v=>v!=null).length}개 기준 부족 업종 더 보기</summary><ul class="chk">${ga.map(g=>`<li>${g.nm}: ${g.k}곳 (보통 ${Math.round(g.e)}곳)</li>`).join("")}</ul><p class="note" style="margin-top:4px">데이터상 비어 있는 업종 목록입니다. 층·면적·설비 적합도는 따지지 않았으니 후보 탐색용으로만 보세요.</p></details>`:"";})();
+  const pe=peerOf(x);if(pe){const L=pe.rows.slice(0,18);
+    $('rArea').innerHTML+=`<div style="font-size:13px;font-weight:700;color:var(--navy);margin-top:12px">같은 규모(${pe.key.replace("-99999","+").replace("-","~")}세대) 단지 상가 ${pe.n.toLocaleString()}곳의 표준 MD와 비교</div>
+     <table class="tgrid" style="margin-top:6px"><tr><th style="text-align:left">업종</th><th>보유율</th><th>평균</th><th>이 단지</th><th></th></tr>${L.map(o=>{const st=o.k===0&&o.p>=0.4?'<b style="color:var(--ok)">빈자리</b>':o.k>=Math.max(2,o.m*2+1)?'<b style="color:var(--bad)">많음</b>':'';
+       return `<tr><td class="n" style="max-width:none">${o.nm}</td><td style="text-align:center">${Math.round(o.p*100)}%</td><td style="text-align:center">${o.m.toFixed(1)}</td><td style="text-align:center">${o.k}</td><td>${st}</td></tr>`;}).join("")}</table>
+     <p class="note" style="margin-top:4px">보유율: 비슷한 규모 단지 상가 중 그 업종이 200m 안에 1곳 이상 있는 비율. '이 단지'는 찍은 위치 200m 안 점포 수입니다. 위치를 단지 상가 건물에 정확히 찍어야 맞게 나옵니다.</p>`;}
+  return `\n[주변 500m] 점포 ${AREA.n500}곳`+(pe?` / 단지 표준 MD 빈자리: ${pe.rows.filter(o=>o.k===0&&o.p>=0.4).map(o=>o.nm).join(", ")||"없음"}`:"")+(sat.length?` / 포화: ${sat.map(s=>s.nm+" "+s.k+"곳("+s.lq.toFixed(1)+"배)").join(", ")}`:"")+(gaps.length?` / 빈자리: ${gaps.map(o=>o.c.n).join(", ")}`:"");}
 // 원인 → 처방 (데이터·입력으로 확인된 원인에만)
 const SRC={lh:["국토부·LH 비주택 리모델링 매입임대 (2026.4)","https://www.newsis.com/view/NISX20260402_0003574477"],tax:["행안부 2026 지방세제 개편 (취득세 감면)","https://news.mtn.co.kr/news-detail/2026082609095997877"],
  jisan:["산업통상부 지식산업센터 공실 대책 (2026.9.10)","https://www.motir.go.kr/kor/article/ATCL3f49a5a8c/172182/view"],data:["소상공인시장진흥공단 상가(상권)정보","https://www.data.go.kr/data/15083033/fileData.do"],rt:["국토교통부 상업업무용 부동산 매매 실거래가","https://rt.molit.go.kr"]};
@@ -577,7 +590,10 @@ function renderNew(x,rows,vr){
   if(sat.length){const fnb=sat.filter(s=>/카페|음식|한식|치킨|주점|분식|빵|피자|버거|국|구이|중국|일식/.test(s.nm));
     rx.push({t:"업종 포화",ev:`반경 500m에 ${sat.slice(0,3).map(s=>`${s.nm} ${s.k}곳(보통의 ${s.lq.toFixed(1)}배)`).join(", ")}. 같은 업종을 또 넣으면 기존 가게와 손님을 나눠 가져 둘 다 버티기 어렵습니다.`,
       a:["포화 업종과 겹치는 후보는 추천 점수를 크게 깎았습니다."+(fnb.length?` 특히 ${fnb.map(s=>s.nm).join("·")}은(는) 1층 전면이라도 피하세요.`:""),"임차 문의가 포화 업종이면 렌트프리를 늘려 받기보다 다른 업종을 기다리는 쪽이 장기 공실 위험이 낮습니다."],s:["data"]});}
-  if(AREA&&AREA.n500>=30){const g=CANDS.filter(okC).map(c=>({c,q:lqOf(c)})).filter(o=>o.q&&o.q.lq<=0.5&&o.q.e>=1.5).sort((a,b)=>b.q.e-a.q.e).slice(0,3);
+  {const pe=peerOf(x);if(pe){const g=pe.rows.filter(o=>o.k===0&&o.p>=0.5).slice(0,6);
+    if(g.length)rx.push({op:1,t:"단지 표준 MD 빈자리",ev:`비슷한 규모(${pe.hh.toLocaleString()}세대) 단지 상가 ${pe.n.toLocaleString()}곳 대부분에 있는데 여기엔 없는 업종: ${g.map(o=>`${o.nm}(${Math.round(o.p*100)}%)`).join(", ")}.`,
+      a:["단지 상가는 생활 필수 업종이 먼저 채워져야 주민이 단지 안에서 소비합니다. 위 업종부터 임차인을 찾으세요.","보유율이 높은데 없는 업종은 수요가 단지 밖으로 새고 있다는 뜻이라, 임차인 설득 근거로 이 표를 그대로 쓸 수 있습니다."],s:["data"]});}}
+  if(AREA&&AREA.n500>=30&&!peerOf(x)){const g=CANDS.filter(okC).map(c=>({c,q:lqOf(c)})).filter(o=>o.q&&o.q.lq<=0.5&&o.q.e>=1.5).sort((a,b)=>b.q.e-a.q.e).slice(0,3);
     if(g.length)rx.push({op:1,t:"빈자리 업종",ev:`주변 점포 규모에 비해 ${g.map(o=>`${o.c.n}(${o.q.k}곳, 보통 ${Math.round(o.q.e)}곳)`).join(", ")}이 부족합니다.`,a:g.map(o=>`${o.c.n}: ${o.c.w}`),s:["data"]});}
   if(over){const k=CANDS.filter(c=>okC(c)&&(c.tr===2||c.cat==="office")&&c.f.some(f=>f!=="front")).slice(0,3);
     rx.push({t:"상가 과잉",ev:`상가 1실당 배후 ${(x.units/x.shops).toFixed(1)}세대·실 (10 미만이면 과잉). 업종을 바꿔도 건물 안 손님이 모자라 같은 손님을 나눠 갖게 됩니다.`,
@@ -613,7 +629,7 @@ async function nearSt(lat,lon){try{if(!STN)STN=await (await fetch("data/stations
   let b=null;for(const r of STN){const d=distM(lat,lon,r[1],r[2]);if(!b||d<b.d)b={nm:r[0],ln:r[3],d};}return b;}
 function setLoc(lat,lon,mode){LOC={lat,lon};if(MAP){if(MK)MK.setLatLng([lat,lon]);else MK=L.marker([lat,lon]).addTo(MAP);if(mode!=="click")MAP.setView([lat,lon],Math.max(MAP.getZoom(),16));}
   $('locTxt').textContent="주변 점포 분석 중…";AREA=null;
-  AREA_P=analyze(lat,lon).then(a=>{AREA=a;const on=[];
+  getPeer();AREA_P=analyze(lat,lon).then(a=>{AREA=a;const on=[];
     if(mode!=="restore")document.querySelectorAll('#exist .chip').forEach(c=>{const K=CHIPK[c.dataset.k];if(K&&K.some(k=>a.c50.has(k))&&!c.classList.contains('on')){c.classList.add('on');on.push(c.textContent);}});
     return Promise.all([nearSt(lat,lon),nearApt(lat,lon),tradeOf(lat,lon)]).then(([st,ap,tr])=>{let w="";a.apt=ap;a.trade=tr;
       if(ap&&ap.near&&$('type').value==="mixed"&&($('units').value===""||AUTO_U)){$('units').value=ap.near.hh;AUTO_U=true;w+=` 가까운 단지 ${ap.near.nm}(${ap.near.hh.toLocaleString()}세대)를 세대수에 넣었습니다. 다른 단지면 고쳐 주세요.`;}
@@ -770,9 +786,11 @@ function fitScore(c,r,x,st){
   if(r.pos==="front"){s+=c.pay*0.7;if(!st.front&&(c.tr===2||c.fill))s-=3;if(c.fill)s-=1.8;if(c.pay===3)why.push("1층 전면 임대료를 감당할 부담력");}
   s+=c.tr*0.7;if(c.tr===2)why.push("요즘 공실을 채우는 새 포맷");else if(c.tr===1)why.push("출점이 늘어나는 업종");
   s-=(st.cats[c.cat]||0)*0.8;
+  const pf=peerFit(c,x);if(pf){if(pf.k===0&&pf.p>=0.4){s+=4*pf.p;why.unshift(`같은 규모 단지 상가 ${Math.round(pf.p*100)}%에 있는 업종인데 이 단지 200m 안엔 없음`);}
+    else if(pf.k>=Math.max(2,pf.m*2+1)){s-=2.5;why.push(`단지 200m 안 ${pf.k}곳 — 같은 규모 단지 평균(${pf.m.toFixed(1)}곳)보다 많음`);}}
   const q=lqOf(c);if(q){if(q.lq>=3&&q.k>=4){s-=4;why.unshift(`반경 500m 같은 업종 ${q.k}곳(보통의 ${q.lq.toFixed(1)}배) — 포화 주의`);}
     else if(q.lq>=1.8){s-=2;why.push(`반경 500m 같은 업종 ${q.k}곳(보통 ${Math.round(q.e)}곳) — 경쟁 많음`);}
-    else if(q.lq<=0.5&&q.e>=1.5){s+=2;why.unshift(`반경 500m에 ${q.k}곳뿐(보통 ${Math.round(q.e)}곳) — 빈자리`);}}
+    else if(!pf&&q.lq<=0.4&&q.e>=2){s+=2;why.unshift(`반경 500m에 ${q.k}곳뿐(보통 ${Math.round(q.e)}곳) — 빈자리`);}}
   if(c.d&&x.duct==="")s-=0.7;if(c.u2&&x.use==="")s-=0.7;
   if(r.pos!=="front"&&x.type!=="small"&&x.shops&&x.units&&x.units/x.shops<10){if(c.cat==="fnb")s-=1;if(c.tr===2||c.cat==="office"){s+=1.2;why.push("상가 과잉 건물에서 손님을 나눠 갖지 않음");}}
   return {s,why};
@@ -783,6 +801,7 @@ function candFor(r,x,used){let c=CANDS.filter(c=>(!c.cond||c.cond(x))&&c.t.inclu
   if(r.area!==null)c=c.filter(c=>r.area>=c.a[0]*0.85&&r.area<=c.a[1]*1.2);return c;}
 $('f').addEventListener('submit',async e=>{
   e.preventDefault();
+  if(LOC)await getPeer();
   if(AREA_P&&!AREA){const b=document.querySelector('#f .go');b.disabled=true;b.textContent="주변 데이터 불러오는 중…";try{await AREA_P;}catch(_){}b.disabled=false;b.textContent="간이진단 보기";}
   const x={m:null,name:$('name').value.trim()||"(현장명 미입력)",type:$('type').value,walk:num($('walk').value),units:num($('units').value),occ:num($('occ').value),
     region:$('region').value,shops:num($('shops').value),vac:num($('vac').value),pos:$('pos').value,area:num($('area').value),rent:num($('rent').value),use:$('use').value,duct:$('duct').value,
