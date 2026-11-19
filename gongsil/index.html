@@ -560,13 +560,14 @@ function renderArea(x){const box=$('arCard');if(!AREA){box.style.display="none";
   const mx=Math.max(3,...sat.map(s=>s.lq));
   const bar=(n,v,t)=>`<div class="sc" style="grid-template-columns:minmax(0,1fr) 80px 76px"><span style="font-size:13px">${n}</span><div class="bar"><i style="width:${Math.min(100,v/mx*100)}%;background:var(--bad)"></i></div><span style="text-align:right;font-size:13px">${t}</span></div>`;
   $('rArea').innerHTML=`<p style="margin:0 0 8px;font-size:14px">반경 500m 생활 업종 점포 <b>${AREA.n500.toLocaleString()}곳</b> (300m 안 ${AREA.n300.toLocaleString()}곳)${AREA.apt&&AREA.apt.n?` · 아파트 ${AREA.apt.n}개 단지 ${AREA.apt.hh.toLocaleString()}세대`:""}${AREA.n500<30?" — 점포가 적어 업종 비교는 생략했습니다.":""}</p>`
+   +(AREA.trade?`<p style="margin:0 0 8px;font-size:14px">이 시군구 상업업무용 건물 매매 최근 12개월 <b>${AREA.trade.all.n}건</b>, 3.3㎡당 중간값 <b>${AREA.trade.all.med.toLocaleString()}만 원</b> (하위 25% ${AREA.trade.all.p25.toLocaleString()} ~ 상위 25% ${AREA.trade.all.p75.toLocaleString()}만 원, 건물면적 기준)</p>`:"")
    +(sat.length?`<div style="font-size:13px;font-weight:700;color:var(--bad);margin-top:6px">포화 업종 (보통보다 1.8배 이상)</div>`+sat.map(s=>bar(s.nm,s.lq,`${s.k}곳 · ${s.lq.toFixed(1)}배`)).join(""):"")
    +(gaps.length?`<div style="font-size:13px;font-weight:700;color:var(--ok);margin-top:10px">빈자리 업종 (보통보다 절반 이하)</div><ul class="chk">`+gaps.map(o=>`<li>${o.c.n}: ${o.q.k}곳 (보통 ${Math.round(o.q.e)}곳)</li>`).join("")+"</ul>":"")
    +(()=>{const ga=gapAll();return ga.length?`<details style="margin-top:8px;font-size:14px"><summary style="cursor:pointer;color:var(--navy)">전체 업종 ${META.share.filter(v=>v!=null).length}개 기준 부족 업종 더 보기</summary><ul class="chk">${ga.map(g=>`<li>${g.nm}: ${g.k}곳 (보통 ${Math.round(g.e)}곳)</li>`).join("")}</ul><p class="note" style="margin-top:4px">데이터상 비어 있는 업종 목록입니다. 층·면적·설비 적합도는 따지지 않았으니 후보 탐색용으로만 보세요.</p></details>`:"";})();
   return `\n[주변 500m] 점포 ${AREA.n500}곳`+(sat.length?` / 포화: ${sat.map(s=>s.nm+" "+s.k+"곳("+s.lq.toFixed(1)+"배)").join(", ")}`:"")+(gaps.length?` / 빈자리: ${gaps.map(o=>o.c.n).join(", ")}`:"");}
 // 원인 → 처방 (데이터·입력으로 확인된 원인에만)
 const SRC={lh:["국토부·LH 비주택 리모델링 매입임대 (2026.4)","https://www.newsis.com/view/NISX20260402_0003574477"],tax:["행안부 2026 지방세제 개편 (취득세 감면)","https://news.mtn.co.kr/news-detail/2026082609095997877"],
- jisan:["산업통상부 지식산업센터 공실 대책 (2026.9.10)","https://www.motir.go.kr/kor/article/ATCL3f49a5a8c/172182/view"],data:["소상공인시장진흥공단 상가(상권)정보","https://www.data.go.kr/data/15083033/fileData.do"]};
+ jisan:["산업통상부 지식산업센터 공실 대책 (2026.9.10)","https://www.motir.go.kr/kor/article/ATCL3f49a5a8c/172182/view"],data:["소상공인시장진흥공단 상가(상권)정보","https://www.data.go.kr/data/15083033/fileData.do"],rt:["국토교통부 상업업무용 부동산 매매 실거래가","https://rt.molit.go.kr"]};
 function renderNew(x,rows,vr){
   const rx=[];const okC=c=>c.t.includes(x.type)&&!(x.duct==="n"&&c.d)&&!c.c.some(k=>x.exist.includes(k))&&!(lqOf(c)&&lqOf(c).lq>=1.8);
   const people=x.units!==null?x.units*((x.occ??50)/100)*(x.type==="jisan"?3:1.3):null;
@@ -587,6 +588,9 @@ function renderNew(x,rows,vr){
         "지원시설 면적 비중 2년 한시 확대: "+(cap?"수도권·산단 내 30%→50%":"비수도권 50%→70%")+" (기존 설립승인 센터만). 생산시설로 묶여 있던 빈 호실을 상가·편의시설로 돌릴 여지가 생깁니다.",
         "생산시설 빈 호실: 업종 분류 때문에 못 받던 임차인(AI 앱 개발, 도심형 마이크로 풀필먼트센터, 드론 촬영 등)을 다시 접촉합니다.",
         cap?"통째로 비면: 수도권은 LH 비주택 리모델링 매입임대로 청년·신혼부부 임대주택 매각을 검토합니다. 일반공업지역 오피스텔 전환 한시 허용·주차장 추가 확보 면제는 2026년 8월 시행됐고, 전환 사업자에게 호당 7천만 원(연 3%대) 기금대출이 신설됩니다.":"통째로 비면: 비수도권은 공공임대형 지산(중기부)·휴폐업공장 리모델링(산업부) 사업 대상에 포함하는 방안이 추진됩니다. 준주택 전환 시 호당 7천만 원(연 3%대) 기금대출이 신설됩니다."],s:["jisan"]});}
+  if(AREA&&AREA.trade&&x.rent&&x.area){const val=AREA.trade.all.med*x.area/3.3058,yl=x.rent*12/val*100;
+    if(yl>=8)rx.push({t:"호가가 시세보다 높을 가능성",ev:`호가 월세 ${x.rent}만 원은 이 칸(${x.area}㎡)을 시군구 매매 중간 시세(3.3㎡당 ${AREA.trade.all.med.toLocaleString()}만 원)로 샀을 때 연 ${yl.toFixed(1)}% 수익에 해당합니다. 매매 시세에 비해 월세 기대가 높은 편이라 임차인이 붙기 어렵습니다.`,
+      a:["주변 실제 임대 계약(중개사무소 2~3곳)을 확인해 호가를 맞추거나, 월세는 두고 렌트프리·인테리어 지원으로 첫해 부담을 낮춥니다.","시세는 시군구 전체·건물면적 기준이라 1층 전면·역세권은 더 높을 수 있습니다. 같은 동·같은 층 거래로 다시 확인하세요."],s:["rt"]});}
   if(vr!==null&&vr>=0.5)rx.push({t:"통 공실",ev:`상가 ${Math.round(vr*100)}%가 비어 있습니다. 한 칸씩 따로 임대하면 '빈 건물'이라는 인상 때문에 계약이 계속 미뤄집니다.`,
     a:["개별 임대 전에 층별 업종 구성(MD)을 먼저 정하고, 1층 전면 앵커 1곳을 조건을 낮춰서라도 먼저 넣습니다.","정식 계약 전 빈 칸은 1~4주 팝업으로 돌려 사람이 드나드는 건물로 만듭니다. 브랜드 점포개발팀에 보여 줄 유동 근거도 생깁니다."],s:[]});
   if(weak&&!over){const p=CANDS.filter(c=>okC(c)&&c.dem.includes("목적")&&c.f.some(f=>f!=="front")).slice(0,4);
@@ -597,7 +601,10 @@ function renderNew(x,rows,vr){
   return rx;
 }
 // 지도·위치
-let MAP=null,MK=null,AUTO_W=false,STN=null,APT=null,AUTO_U=false;
+let MAP=null,MK=null,AUTO_W=false,STN=null,APT=null,AUTO_U=false,SGG=null;
+// 시군구 상업업무용 매매 실거래 (국토부, 서버 함수 rtms가 인증키로 대신 조회)
+async function tradeOf(lat,lon){try{if(!SGG)SGG=await (await fetch("data/sgg.json")).json();let b=null;for(const r of SGG){const d=distM(lat,lon,r[1],r[2]);if(!b||d<b.d)b={c:r[0],d};}
+  if(!b)return null;const j=await (await fetch("https://guwnuaeainixryxdxids.supabase.co/functions/v1/rtms?type=nrg&months=12&lawd="+b.c)).json();return j&&j.all&&j.all.n?j:null;}catch(e){return null;}}
 // 아파트 단지 (K-apt 2026.11, 상가정보 건물명으로 좌표 매칭된 약 63% 세대만)
 async function nearApt(lat,lon){try{if(!APT)APT=await (await fetch("data/apts.json")).json();}catch(e){return null;}
   let n=0,hh=0,b=null;for(const r of APT){const d=distM(lat,lon,r[1],r[2]);if(d<=500){n++;hh+=r[3];}if(!b||d<b.d)b={nm:r[0],hh:r[3],d};}return {n,hh,near:b&&b.d<=200?b:null};}
@@ -608,7 +615,7 @@ function setLoc(lat,lon,mode){LOC={lat,lon};if(MAP){if(MK)MK.setLatLng([lat,lon]
   $('locTxt').textContent="주변 점포 분석 중…";AREA=null;
   AREA_P=analyze(lat,lon).then(a=>{AREA=a;const on=[];
     if(mode!=="restore")document.querySelectorAll('#exist .chip').forEach(c=>{const K=CHIPK[c.dataset.k];if(K&&K.some(k=>a.c50.has(k))&&!c.classList.contains('on')){c.classList.add('on');on.push(c.textContent);}});
-    return Promise.all([nearSt(lat,lon),nearApt(lat,lon)]).then(([st,ap])=>{let w="";a.apt=ap;
+    return Promise.all([nearSt(lat,lon),nearApt(lat,lon),tradeOf(lat,lon)]).then(([st,ap,tr])=>{let w="";a.apt=ap;a.trade=tr;
       if(ap&&ap.near&&$('type').value==="mixed"&&($('units').value===""||AUTO_U)){$('units').value=ap.near.hh;AUTO_U=true;w+=` 가까운 단지 ${ap.near.nm}(${ap.near.hh.toLocaleString()}세대)를 세대수에 넣었습니다. 다른 단지면 고쳐 주세요.`;}
       if(ap&&ap.n)w+=` 반경 500m 아파트 ${ap.n}개 단지 ${ap.hh.toLocaleString()}세대 확인.`;if(st){const wm=Math.round(st.d*1.3/10)*10;if($('walkm').value===""||AUTO_W){$('walkm').value=wm;$('walk').value="";AUTO_W=true;}
       w+=` 가장 가까운 역은 ${st.nm}역(${st.ln}), 직선 ${Math.round(st.d)}m → 도보 약 ${wm}m로 넣었습니다(직선×1.3 추정, 실제와 다르면 고쳐 주세요).`;}
@@ -899,6 +906,7 @@ $('f').addEventListener('submit',async e=>{
     $('mA').textContent=won(A);$('mB').textContent=won(B);
     $('mBlabel').textContent=`월세 ${won(nr)}(−${Math.round(d*100)}%) + 렌트프리 ${rf}개월`;
     $('mNote').textContent=`${rRows.length>1?`호가를 넣은 ${rRows.length}칸 합계(월 ${won(rentSum)}) 기준. `:""}조정안이 첫해 ${won(B-A)} 더 받습니다. 가정: 호가를 고수하면 6개월 더 비어 있음, 조정안은 렌트프리 뒤 바로 계약. 보수적으로 보려면 조정안도 1~2개월 공실을 더하세요. 실제 적정 임대가는 주변 실거래와 현장 확인 후 정합니다.`;
+    if(AREA&&AREA.trade&&x.rent&&x.area){const yl=x.rent*12/(AREA.trade.all.med*x.area/3.3058)*100;$('mNote').textContent+=` 참고: 대표 칸 호가를 시군구 상업용 매매 중간 시세로 환산하면 연 수익률 ${yl.toFixed(1)}%${yl>=8?" — 시세 대비 월세가 높은 편":""}.`;}
     $('rMoneyCard').style.display="";
     mText=`\n[임대 조건 비교, 가정]\n호가 고수+6개월 공실: ${won(A)} / 조정안(월세 ${won(nr)}, 렌트프리 ${rf}개월): ${won(B)}`;
   }else{$('rMoneyCard').style.display="none";}
