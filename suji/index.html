@@ -4055,23 +4055,28 @@ function App() {
     className: "grid grid-cols-2 gap-2"
   }, /*#__PURE__*/React.createElement("button", {
     onClick: report,
-    className: "col-span-2 py-3 rounded-lg text-sm font-extrabold inline-flex items-center justify-center gap-1.5",
-    style: { background: '#14161A', color: '#C5F04A', border: '1px solid #C5F04A' }
-  }, "보고서 만들기 (PDF)"), typeof navigator !== 'undefined' && navigator.share && /*#__PURE__*/React.createElement("button", {
-    onClick: share,
-    className: "col-span-2 py-2.5 rounded-lg text-xs font-extrabold inline-flex items-center justify-center gap-1.5",
-    style: { background: '#FEE500', color: '#191919' }
-  }, "카톡·문자로 보내기 (엑셀 파일)"), /*#__PURE__*/React.createElement("button", {
+    className: "col-span-2 rounded-xl",
+    style: { background: '#C5F04A', color: '#0E1116', padding: '14px 12px', gap: 2, border: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }
+  }, /*#__PURE__*/React.createElement("span", { style: { fontSize: 16, fontWeight: 800, letterSpacing: '-0.01em' } }, "사업성 검토 보고서 만들기", !pro ? " 🔒" : ""), /*#__PURE__*/React.createElement("span", { style: { fontSize: 11, fontWeight: 600, opacity: 0.7 } }, "PDF · 4쪽 · 판정·종합의견·민감도 포함")), /*#__PURE__*/React.createElement("button", {
+    onClick: typeof navigator !== 'undefined' && navigator.share ? share : copy,
+    className: "rounded-xl inline-flex items-center justify-center",
+    style: { background: '#161B22', color: '#E8EAED', border: '1px solid #2E3541', padding: '12px 8px', gap: 6, fontSize: 13, fontWeight: 700 }
+  }, /*#__PURE__*/React.createElement("span", { style: { width: 18, height: 18, borderRadius: 6, background: '#FEE500', color: '#191919', fontSize: 10, fontWeight: 900, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' } }, "톡"), typeof navigator !== 'undefined' && navigator.share ? "카톡·문자 보내기" : "공유용 복사"), /*#__PURE__*/React.createElement("button", {
     onClick: copy,
-    className: "py-2.5 bg-white border border-slate-300 rounded-lg text-xs font-bold inline-flex items-center justify-center gap-1.5"
+    className: "rounded-xl inline-flex items-center justify-center",
+    style: { background: '#161B22', color: '#E8EAED', border: '1px solid #2E3541', padding: '12px 8px', gap: 6, fontSize: 13, fontWeight: 700 }
   }, copied === 'ok' ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement(Check, {
-    size: 14,
-    className: "text-emerald-600"
+    size: 15,
+    style: { color: '#C5F04A' }
   }), "\uBCF5\uC0AC \uC644\uB8CC") : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement(Copy, {
-    size: 14
-  }), "\uC218\uC9C0\uD45C \uBCF5\uC0AC(\uC5D1\uC140)")), /*#__PURE__*/React.createElement("button", {
+    size: 15
+  }), "엑셀로 복사")), /*#__PURE__*/React.createElement("p", {
+    className: "col-span-2",
+    style: { margin: 0, fontSize: 11, color: '#7C8592', textAlign: 'center' }
+  }, "보내기는 엑셀 파일(.csv)로, 복사는 엑셀에 바로 붙여 넣기용입니다"), /*#__PURE__*/React.createElement("button", {
     onClick: () => go('sens'),
-    className: "py-2.5 bg-slate-900 text-white rounded-lg text-xs font-bold"
+    className: "col-span-2 rounded-xl",
+    style: { background: 'transparent', color: '#C5F04A', border: 0, padding: '6px 0', fontSize: 13, fontWeight: 700 }
   }, "3.\uBBFC\uAC10\uB3C4 \uBCF4\uAE30 \u2192")), copied === 'fail' && /*#__PURE__*/React.createElement("p", {
     className: "text-[11px] text-red-600"
   }, "\uBCF5\uC0AC\uAC00 \uB9C9\uD614\uC2B5\uB2C8\uB2E4."), /*#__PURE__*/React.createElement("p", {
