@@ -3925,6 +3925,7 @@ if(b.regNo){
   rows.push(["사업자등록번호 "+b.regNo, b.taxType, b.ecommerce?("통신판매업 신고 "+b.ecommerce):(b.taxType==="간이과세자"?"통신판매업 신고 면제(간이과세자)":(b.regNo?"통신판매업 신고 진행 중":""))]);
   rows.push([b.address]);
   rows.push([b.tel&&("전화 "+b.tel), b.email&&("이메일 "+b.email), b.hosting&&("호스팅 "+b.hosting)]);
+  rows.push(["필지·용도지역·공시지가: 국토교통부 공간정보 오픈플랫폼(브이월드) 오픈API 이용"]);
 }else{rows.push([(b.brand||"수지들")+" · 사업자 등록 준비 중"]);}
 rows.forEach(function(r){var t=r.filter(Boolean).join(" · ");if(t)f.appendChild(el("div","",t));});
 function put(){var r=document.getElementById("root");(r&&r.parentNode?r.parentNode:document.body).appendChild(f);}
