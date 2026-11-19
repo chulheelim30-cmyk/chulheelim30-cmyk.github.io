@@ -1337,12 +1337,12 @@ function model(f, price, o = {}) {
   // 지목별 전용부담금 (2026-11-19). 진흥지역·보전산지 여부를 모르므로 높은 쪽(보수)으로 계산
   const ljJiga = x.jigaEok > 0 && x.sitePy > 0 ? x.jigaEok * 1e8 / (x.sitePy * 3.3058) : 0; // 평균 공시지가 원/㎡
   if (x.ljFarmM2 > 0) {
-    const u = ljJiga ? Math.min(50000, ljJiga * 0.3) : 50000;
-    add('제세·부담금', '농지보전부담금', x.ljFarmM2 * u / 1e8, `[공공] 전·답·과 ${fmt(Math.round(x.ljFarmM2))}㎡ × ${ljJiga ? '공시지가 30%' : '상한'} ${fmt(Math.round(u))}원(㎡당 상한 5만원, 진흥지역 밖은 20%)`);
+    const won = x.ljFarmWon > 0 ? x.ljFarmWon : x.ljFarmM2 * (ljJiga ? Math.min(50000, ljJiga * 0.3) : 50000);
+    add('제세·부담금', '농지보전부담금', won / 1e8, `[공공] 전·답·과 ${fmt(Math.round(x.ljFarmM2))}㎡ × 필지별 공시지가 30%(㎡당 상한 5만원)${x.ljFarmCapM2 > 0 ? ` · 공시지가 없는 ${fmt(Math.round(x.ljFarmCapM2))}㎡는 상한` : ''} · 농업진흥지역 밖이면 20%`);
   }
   if (x.ljForestM2 > 0) {
-    const u = 10840 + (ljJiga ? Math.min(8340, ljJiga * 0.01) : 8340);
-    add('제세·부담금', '대체산림자원조성비', x.ljForestM2 * u / 1e8, `[공공] 임야 ${fmt(Math.round(x.ljForestM2))}㎡ × ${fmt(Math.round(u))}원(2026 보전산지 10,840원 + 공시지가 1%, 준보전은 8,340원)`);
+    const won = x.ljForestWon > 0 ? x.ljForestWon : x.ljForestM2 * (10840 + (ljJiga ? Math.min(8340, ljJiga * 0.01) : 8340));
+    add('제세·부담금', '대체산림자원조성비', won / 1e8, `[공공] 임야 ${fmt(Math.round(x.ljForestM2))}㎡ × (보전산지 10,840원 + 필지별 공시지가 1%, 상한 8,340원)${x.ljForestCapM2 > 0 ? ` · 공시지가 없는 ${fmt(Math.round(x.ljForestCapM2))}㎡는 상한` : ''} · 준보전산지면 8,340원 + 1%`);
   }
   if (x.ljPubM2 > 0 || x.ljGraveM2 > 0) add('토지비', '국공유지·묘지 협의 (금액 미반영)', 0, `[추정] ${x.ljPubM2 > 0 ? `국공유지 ${fmt(Math.round(x.ljPubM2))}㎡ 매입·교환 ` : ''}${x.ljGraveM2 > 0 ? `묘지 ${fmt(Math.round(x.ljGraveM2))}㎡ 분묘 이장 ` : ''}비용·기간 직접 확인 → 기타 사업비에 입력`);
   add('공사비', '직접공사비', B, `연면적 ${fmt(gfa)}평 × ${fmt(unit)}만`);
@@ -1800,16 +1800,45 @@ async function vwLookup(addr) {
   };
 }
 // 지목별 면적 → 부담금 계산용 (2026-11-19)
-const ljSum = (rows, m2Of, pubOf) => {
-  const s = { ljFarmM2: 0, ljForestM2: 0, ljPubM2: 0, ljGraveM2: 0 };
+const ljSum = (rows, m2Of, pubOf, jigaOf = () => 0) => {
+  // 필지마다 자기 공시지가로 계산 (2026-11-19 수정). 공시지가가 없으면 상한 단가(보수)
+  const s = { ljFarmM2: 0, ljForestM2: 0, ljPubM2: 0, ljGraveM2: 0, ljFarmWon: 0, ljForestWon: 0, ljFarmCapM2: 0, ljForestCapM2: 0, ljByJimok: {} };
   rows.forEach(r => {
-    const j = String(r.jimok || '').trim().charAt(0), m = +m2Of(r) || 0;
-    if (pubOf(r)) s.ljPubM2 += m;
-    else if ('전답과'.includes(j) && j) s.ljFarmM2 += m;
-    else if (j === '임') s.ljForestM2 += m;
+    const j = String(r.jimok || '').trim().charAt(0), m = +m2Of(r) || 0, g = +jigaOf(r) || 0, pub = !!pubOf(r);
+    let won = 0;
+    if (j && '전답과'.includes(j)) { won = m * (g ? Math.min(50000, g * 0.3) : 50000); s.ljFarmM2 += m; s.ljFarmWon += won; if (!g) s.ljFarmCapM2 += m; }
+    else if (j === '임') { won = m * (10840 + (g ? Math.min(8340, g * 0.01) : 8340)); s.ljForestM2 += m; s.ljForestWon += won; if (!g) s.ljForestCapM2 += m; }
+    if (pub) s.ljPubM2 += m; // 국공유지도 사서 전용하면 부담금은 사업자가 냄 → 금액은 위에서 그대로 계산
     if (j === '묘') s.ljGraveM2 += m;
+    const k = j || '?', b = s.ljByJimok[k] || (s.ljByJimok[k] = { n: 0, m2: 0, won: 0, pubM2: 0 });
+    b.n++; b.m2 += m; b.won += won; if (pub) b.pubM2 += m;
   });
   return s;
+};
+const LJ_NAME = { 대: '대', 전: '전', 답: '답', 과: '과수원', 임: '임야', 묘: '묘지', 도: '도로', 구: '구거', 천: '하천', 잡: '잡종지', 장: '공장용지', 목: '목장용지', 철: '철도용지', 제: '제방', '?': '지목 미확인' };
+// 사업개요: 지목별 면적·부담금 표 (필지별 검증용)
+const JimokBox = ({ f }) => {
+  const by = f.ljByJimok;
+  if (!by || !Object.keys(by).length) return null;
+  const ks = Object.keys(by).sort((a, b) => by[b].m2 - by[a].m2);
+  const tot = ks.reduce((a, k) => a + by[k].m2, 0), won = ks.reduce((a, k) => a + by[k].won, 0);
+  const c = { padding: '3px 6px', borderBottom: '1px solid #2E3541', fontSize: 11 };
+  const cap = (f.ljFarmCapM2 || 0) + (f.ljForestCapM2 || 0);
+  return React.createElement("div", { style: { background: '#13171D', border: '1px solid #2E3541', borderRadius: 10, padding: 10 } },
+    React.createElement("p", { style: { color: '#E8EAED', fontSize: 12, fontWeight: 700, marginBottom: 6 } }, "지목별 면적 · 전용부담금", React.createElement(Tip, { t: "전·답·과수원은 농지보전부담금(공시지가 30%, ㎡당 상한 5만원 · 농업진흥지역 밖이면 20%), 임야는 대체산림자원조성비(보전산지 단가 + 공시지가 1%)를 필지마다 계산해 더합니다. 진흥지역·보전산지 여부는 토지이용계획확인원으로 확인하세요." })),
+    React.createElement("table", { style: { width: '100%', borderCollapse: 'collapse', color: '#C9CED6' } },
+      React.createElement("thead", null, React.createElement("tr", { style: { color: '#9AA3AF' } }, ['지목', '필지', '면적(㎡)', '부담금'].map(h => React.createElement("th", { key: h, style: { ...c, textAlign: h === '지목' ? 'left' : 'right', fontWeight: 600 } }, h)))),
+      React.createElement("tbody", null, ks.map(k => React.createElement("tr", { key: k },
+        React.createElement("td", { style: c }, LJ_NAME[k] || k, by[k].pubM2 > 0 ? React.createElement("span", { style: { color: '#FACC15', marginLeft: 4, fontSize: 10 } }, `국공유 ${Math.round(by[k].pubM2).toLocaleString('ko-KR')}㎡`) : null),
+        React.createElement("td", { style: { ...c, textAlign: 'right' } }, by[k].n),
+        React.createElement("td", { style: { ...c, textAlign: 'right' } }, Math.round(by[k].m2).toLocaleString('ko-KR')),
+        React.createElement("td", { style: { ...c, textAlign: 'right', color: by[k].won > 0 ? '#E8EAED' : '#6B7280' } }, by[k].won > 0 ? `${(by[k].won / 1e8).toFixed(2)}억` : k === '묘' ? '이장비 별도' : '—'))),
+        React.createElement("tr", { style: { fontWeight: 700, color: '#E8EAED' } },
+          React.createElement("td", { style: c }, "합계"), React.createElement("td", { style: { ...c, textAlign: 'right' } }, ks.reduce((a, k) => a + by[k].n, 0)),
+          React.createElement("td", { style: { ...c, textAlign: 'right' } }, Math.round(tot).toLocaleString('ko-KR')),
+          React.createElement("td", { style: { ...c, textAlign: 'right' } }, `${(won / 1e8).toFixed(2)}억`)))),
+    cap > 0 && React.createElement("p", { style: { color: '#9AA3AF', fontSize: 10, marginTop: 4 } }, `공시지가가 없는 ${Math.round(cap).toLocaleString('ko-KR')}㎡는 상한 단가로 계산했어요(보수). 지번으로 불러오면 필지별 공시지가가 들어갑니다.`),
+    by['?'] && React.createElement("p", { style: { color: '#FCA5A5', fontSize: 10, marginTop: 2 } }, "지목을 모르는 필지가 있어요. 토지조서 확인 화면에서 지목을 채우면 부담금이 계산됩니다."));
 };
 // ── 토지조서 → 필지 일괄 입력 (사진: 무료 OCR, 붙여넣기: 엑셀 표) ──
 const JIMOK = '대전답과목임광염장학주창도철제천구유양수공체사종묘잡';
@@ -2131,6 +2160,7 @@ function LandSheet({ f, setF }) {
     setF(o => ({
       ...o,
       sitePy: Math.round(py),
+      jigaEok: 0, // 다른 땅의 공시지가가 남지 않게 (2026-11-19)
       ...ljSum(rows, r => r.incl, r => isPublicOwner(r.owner)),
       ...(city ? { city, region: (CITIES.find(c => c.id === city) || {}).reg || o.region } : {})
     }));
@@ -2260,7 +2290,7 @@ function LandLookup({ f, setF }) {
     sitePy: Math.round(py),
     zone: zoneId || o.zone,
     jigaEok,
-    ...ljSum(ok, r => r.m2, r => /^(도|구|천|철|제)$/.test(r.jimok)),
+    ...ljSum(ok, r => r.m2, r => /^(도|구|천|철|제)$/.test(r.jimok), r => r.jiga),
     ...(jigaEok > 0 && (o.landEok === DEFAULT.landEok || o.landEst) ? { landEok: Math.round(jigaEok / (LAND_REAL / 100)), landEst: true } : {})
   })));
   const landIsExample = f.landEok === DEFAULT.landEok || !!f.landEst;
@@ -2830,7 +2860,7 @@ function App() {
   }, ZONES.map(z => /*#__PURE__*/React.createElement("option", {
     key: z.id,
     value: z.id
-  }, z.n)))))), /*#__PURE__*/React.createElement("div", {
+  }, z.n))))), React.createElement(JimokBox, { f })), /*#__PURE__*/React.createElement("div", {
     className: "grid grid-cols-2 gap-2 text-center"
   }, /*#__PURE__*/React.createElement("button", {
     onClick: () => go('cost'),
