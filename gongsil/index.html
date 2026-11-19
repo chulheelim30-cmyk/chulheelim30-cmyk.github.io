@@ -371,7 +371,7 @@ peTrack("visit");})();
   <p class="note" style="text-align:center">공실공은 분석과 문서 작성만 합니다. 임대 알선·계약은 임대인 또는 공인중개사가 진행합니다.</p>
 </div>
 
-<footer>익명 이용 통계(방문·진단 횟수)만 집계합니다. 입력한 내용은 '정식 진단 신청'을 누른 경우에만 저장됩니다.<br>© 공실공 · 간이진단 v9 (2026.11) · 상가정보 2026년 9월 · 공실률 통계 2026년 3분기</footer>
+<footer>익명 이용 통계(방문·진단 횟수)만 집계합니다. 입력한 내용은 '정식 진단 신청'을 누른 경우에만 저장됩니다.<br>© 공실공 · 간이진단 v10 (2026.11) · 상가정보 2026년 9월 · 공실률 통계 2026년 3분기</footer>
 </div>
 <div class="dock"><a href="#reqBox">정식 진단 신청하기</a></div>
 
@@ -550,14 +550,16 @@ const CK={"버거·치킨 (소형 매장)":["I21004","I21006"],"편의점":["G20
  "스크린골프·실내 스포츠":["R10311"],"학원":["P10501","P10609","P10611","P10615"],"스터디카페·공유 작업실":["R10202"],"무인 매장":["G20507"],"반찬·밀키트·정육":["G20509","G20503"],"소형 마트·청과":["G20404","G20506"],"생활용품·드럭스토어":["G20499","G21503"],"세무·노무·법무 사무소":["M10402","M10307","M10303"]};
 const CHIPK={coffee:["I21201"],cvs:["G20405"],kimbap:["I21007"],dosirak:["I20101","I20102"],burger:["I21004","I21006"],laundry:["S20901","S20902"],pharmacy:["G21501","Q10201","Q10202","Q10210","Q10211"],fitness:["P10603","R10307"],hair:["S20701"],unmanned:["G20507"],academy:["P10501","P10609","P10611","P10615"]};
 function lqCodes(K){if(!AREA||AREA.n500<30||!K||!K.length)return null;let k=0,sh=0;K.forEach(c=>{k+=AREA.c500[c]||0;sh+=META.share[META.ci[c]]||0;});const e=AREA.n500*sh;if(e<1&&k===0)return null;return {k,e,lq:e>0?k/e:9};}
-const lqOf=c=>lqCodes(CK[c.n]);
+const lqOf=c=>lqCodes(c.k||CK[c.n]);
 // 같은 규모 아파트 단지 상가(전국, 단지 좌표 200m 안) 업종 보유율 — 공실공 기준표
-let PEER=null;
+let PEER=null,CAND_P=null;
+// 업종 기준표 확장: 상가정보 소분류 124개에 층 분포(실데이터)·면적·설비·시간대를 붙인 목록
+function getCands(){if(!CAND_P)CAND_P=fetch("data/cands.json").then(r=>r.json()).then(j=>{j.c.forEach(c=>CANDS.push(c));return j;}).catch(()=>null);return CAND_P;}
 async function getPeer(){if(!PEER)try{PEER=await (await fetch("data/peer_apt.json")).json();}catch(e){PEER={};}return PEER;}
 function peerOf(x){if(x.type!=="mixed"||!PEER||!AREA)return null;const hh=x.units??(AREA.apt&&AREA.apt.near?AREA.apt.near.hh:null);if(!hh)return null;
   const k=hh<500?"0-500":hh<1000?"500-1000":hh<2000?"1000-2000":"2000-99999";const P=PEER[k];if(!P)return null;
   const rows=P.c.map(([c,p,m])=>({c,nm:META.nm[META.ci[c]],p,m,k:AREA.c200[c]||0}));return {hh,key:k,n:P.n,rows};}
-function peerFit(c,x){const pe=peerOf(x),K=CK[c.n];if(!pe||!K)return null;const r=pe.rows.filter(o=>K.includes(o.c));if(!r.length)return null;
+function peerFit(c,x){const pe=peerOf(x),K=c.k||CK[c.n];if(!pe||!K)return null;const r=pe.rows.filter(o=>K.includes(o.c));if(!r.length)return null;
   const p=Math.max(...r.map(o=>o.p)),m=r.reduce((a,o)=>a+o.m,0),k=K.reduce((a,cd)=>a+(AREA.c200[cd]||0),0);return {p,m,k};}
 function satList(){if(!AREA||AREA.n500<30)return [];const L=[];META.codes.forEach((c,i)=>{const sh=META.share[i];if(sh==null)return;const e=AREA.n500*sh,k=AREA.c500[c]||0;if(e>=2&&k>=5&&k/e>=1.8)L.push({nm:META.nm[i],k,e,lq:k/e});});return L.sort((a,b)=>b.lq-a.lq).slice(0,5);}
 // 상가에 들어오기 어려운 업종(주유·숙박·자동차·장례 등)은 빈자리 목록에서 제외
@@ -640,7 +642,7 @@ function setLoc(lat,lon,mode){LOC={lat,lon};if(MAP){if(MK)MK.setLatLng([lat,lon]
 function initMap(){if(!window.L||MAP)return;MAP=L.map('map',{scrollWheelZoom:false}).setView([37.45,126.95],11);
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'}).addTo(MAP);
   MAP.on('click',e=>setLoc(e.latlng.lat,e.latlng.lng,"click"));if(LOC)setLoc(LOC.lat,LOC.lon,"restore");}
-addEventListener('load',initMap);
+addEventListener('load',initMap);getCands();
 $('gpsBtn').addEventListener('click',()=>{if(!navigator.geolocation){$('locTxt').textContent="이 기기에서는 위치를 쓸 수 없습니다.";return;}$('locTxt').textContent="위치 확인 중…";
   navigator.geolocation.getCurrentPosition(p=>setLoc(p.coords.latitude,p.coords.longitude),()=>{$('locTxt').textContent="위치 권한이 없어 확인하지 못했습니다. 지도에서 직접 눌러 주세요.";},{enableHighAccuracy:true,timeout:8000});});
 $('addrBtn').addEventListener('click',async()=>{const q=$('addrQ').value.trim();if(!q)return;$('locTxt').textContent="주소 찾는 중…";
@@ -786,11 +788,12 @@ function fitScore(c,r,x,st){
   if(r.pos==="front"){s+=c.pay*0.7;if(!st.front&&(c.tr===2||c.fill))s-=3;if(c.fill)s-=1.8;if(c.pay===3)why.push("1층 전면 임대료를 감당할 부담력");}
   s+=c.tr*0.7;if(c.tr===2)why.push("요즘 공실을 채우는 새 포맷");else if(c.tr===1)why.push("출점이 늘어나는 업종");
   s-=(st.cats[c.cat]||0)*0.8;
-  const pf=peerFit(c,x);if(pf){if(pf.k===0&&pf.p>=0.4){s+=4*pf.p;why.unshift(`같은 규모 단지 상가 ${Math.round(pf.p*100)}%에 있는 업종인데 이 단지 200m 안엔 없음`);}
+  const pf=peerFit(c,x);if(!pf&&peerOf(x)){s-=1.5;}
+  if(pf){if(pf.k===0&&pf.p>=0.4){s+=4*pf.p;why.unshift(`같은 규모 단지 상가 ${Math.round(pf.p*100)}%에 있는 업종인데 이 단지 200m 안엔 없음`);}
     else if(pf.k>=Math.max(2,pf.m*2+1)){s-=2.5;why.push(`단지 200m 안 ${pf.k}곳 — 같은 규모 단지 평균(${pf.m.toFixed(1)}곳)보다 많음`);}}
   const q=lqOf(c);if(q){if(q.lq>=3&&q.k>=4){s-=4;why.unshift(`반경 500m 같은 업종 ${q.k}곳(보통의 ${q.lq.toFixed(1)}배) — 포화 주의`);}
     else if(q.lq>=1.8){s-=2;why.push(`반경 500m 같은 업종 ${q.k}곳(보통 ${Math.round(q.e)}곳) — 경쟁 많음`);}
-    else if(!pf&&q.lq<=0.4&&q.e>=2){s+=2;why.unshift(`반경 500m에 ${q.k}곳뿐(보통 ${Math.round(q.e)}곳) — 빈자리`);}}
+    else if(!pf&&!peerOf(x)&&q.lq<=0.4&&q.e>=3){s+=1.5;why.unshift(`반경 500m에 ${q.k}곳뿐(보통 ${Math.round(q.e)}곳) — 빈자리`);}}
   if(c.d&&x.duct==="")s-=0.7;if(c.u2&&x.use==="")s-=0.7;
   if(r.pos!=="front"&&x.type!=="small"&&x.shops&&x.units&&x.units/x.shops<10){if(c.cat==="fnb")s-=1;if(c.tr===2||c.cat==="office"){s+=1.2;why.push("상가 과잉 건물에서 손님을 나눠 갖지 않음");}}
   return {s,why};
@@ -801,7 +804,7 @@ function candFor(r,x,used){let c=CANDS.filter(c=>(!c.cond||c.cond(x))&&c.t.inclu
   if(r.area!==null)c=c.filter(c=>r.area>=c.a[0]*0.85&&r.area<=c.a[1]*1.2);return c;}
 $('f').addEventListener('submit',async e=>{
   e.preventDefault();
-  if(LOC)await getPeer();
+  await getCands();if(LOC)await getPeer();
   if(AREA_P&&!AREA){const b=document.querySelector('#f .go');b.disabled=true;b.textContent="주변 데이터 불러오는 중…";try{await AREA_P;}catch(_){}b.disabled=false;b.textContent="간이진단 보기";}
   const x={m:null,name:$('name').value.trim()||"(현장명 미입력)",type:$('type').value,walk:num($('walk').value),units:num($('units').value),occ:num($('occ').value),
     region:$('region').value,shops:num($('shops').value),vac:num($('vac').value),pos:$('pos').value,area:num($('area').value),rent:num($('rent').value),use:$('use').value,duct:$('duct').value,
@@ -895,10 +898,10 @@ $('f').addEventListener('submit',async e=>{
       const sc=candFor(r,x,used).map(c=>({c,...fitScore(c,r,x,st)})).sort((a,b)=>b.s-a.s);
       const pick=sc[0]?sc[0].c:null;
       if(pick){used.n.add(pick.n);pick.c.forEach(k=>used.c.add(k));pick.tm.forEach(t=>{st.times.add(t);st.tc[t]=(st.tc[t]||0)+1;});if(r.pos==="front")st.front=(st.front||0)+1;st.cats[pick.cat]=(st.cats[pick.cat]||0)+1;}
-      out[r.i]={r,pick,alt:sc[1]?sc[1].c:null,why:sc[0]?sc[0].why:[],sc:sc[0]?sc[0].s:0};
+      out[r.i]={r,pick,alt:sc[1]?sc[1].c:null,alt2:sc[2]?sc[2].c:null,why:sc[0]?sc[0].why:[],sc:sc[0]?sc[0].s:0};
     }
     $('recTitle').textContent=rows.length>1?"호실별 MD 배치안":"MD 제안";
-    $('rPlan').innerHTML='<ol class="rec">'+out.map((o,i)=>`<li><b>${i===0?"대표 호실":"호실 "+(i+1)} · ${POSNM[o.r.pos]}${o.r.area!==null?" "+o.r.area+"㎡":""}${o.r.rent!==null?" · 호가 "+o.r.rent+"만":""}</b><div>${o.pick?o.pick.n+(o.pick.nw?' <span class="tag new">새 포맷</span>':'')+(o.pick.d&&x.duct===""?' <span class="tag w">배기 확인</span>':''):"F&B 과밀 → 비F&B·분할·통합 임대 검토"}</div>${o.pick?`<div class="ex">${o.why.length?"선정 이유: "+o.why.slice(0,3).join(", ")+" · ":""}필요 설비: ${o.pick.eq}${o.alt?" · 2안: "+o.alt.n:""}</div>`:""}</li>`).join("")+'</ol><p class="note" style="margin-top:0">1층 전면 칸부터 앵커 업종을 배정하고, 같은 손님을 나눠 갖는 업종은 한 건물에 하나만 넣었습니다.</p><h2 style="margin-top:14px">대표 호실 업종 후보</h2>';
+    $('rPlan').innerHTML='<ol class="rec">'+out.map((o,i)=>`<li><b>${i===0?"대표 호실":"호실 "+(i+1)} · ${POSNM[o.r.pos]}${o.r.area!==null?" "+o.r.area+"㎡":""}${o.r.rent!==null?" · 호가 "+o.r.rent+"만":""}</b><div>${o.pick?o.pick.n+(o.pick.nw?' <span class="tag new">새 포맷</span>':'')+(o.pick.d&&x.duct===""?' <span class="tag w">배기 확인</span>':''):"F&B 과밀 → 비F&B·분할·통합 임대 검토"}</div>${o.pick?`<div class="ex">${o.why.length?"선정 이유: "+o.why.slice(0,3).join(", ")+" · ":""}필요 설비: ${o.pick.eq}${o.alt?" · 2안: "+o.alt.n:""}${o.alt2?" · 3안: "+o.alt2.n:""}</div>`:""}</li>`).join("")+'</ol><p class="note" style="margin-top:0">1층 전면 칸부터 앵커 업종을 배정하고, 같은 손님을 나눠 갖는 업종은 한 건물에 하나만 넣었습니다.</p><h2 style="margin-top:14px">대표 호실 업종 후보</h2>';
     planText="\n\n[호실별 배치안]\n"+out.map((o,i)=>`${i===0?"대표":"호실"+(i+1)} ${POSNM[o.r.pos]} ${o.r.area??"?"}㎡ → ${o.pick?o.pick.n:"비F&B·분할 검토"}`).join("\n");
   }
   {const PL=planUp(x,rows,tot);
