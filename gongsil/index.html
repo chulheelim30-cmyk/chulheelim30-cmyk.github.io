@@ -505,14 +505,14 @@ function renderLegend(out){const items=out.map((o,i)=>({...o,no:i+1}));
 function scoreV(v,md){
   const s1=Math.min(30,wScore(v.m)+(md.sign||0));
   const people=v.units*(v.occ/100)*(v.type==="jisan"?3:1.3);
-  let s2=6+24*Math.min(1,people/400)+(md.anchor||0)+(md.purpose?3:0)+(md.popup||0);
+  let s2=6+24*Math.min(1,people/400)+(md.anchor||0)+(md.purpose?3:0)+(md.popup||0)+(md.peer?3:0)+(md.jsup?2:0);
   const sh=v.shops-(md.conv||0);
   if(v.type!=="small"&&sh>0){const r=v.units/sh;if(r<10)s2-=Math.min(8,(10-r)*1.2);}
   s2=Math.max(4,Math.min(30,s2));
-  let s3={front:20,inner:md.purpose?17:13,upper:md.purpose?15:8}[v.pos];if(v.duct!=="y")s3-=3;
-  let vr=sh>0?Math.max(0,v.vac-(md.conv||0))/sh:0.5;if(md.rent)vr*=0.5;
-  const s4=Math.min(20,16-8*Math.min(1,vr)+(md.rent?4:0));
-  return {s1,s2,s3,s4,t:s1+s2+s3+s4};
+  let s3={front:20,inner:md.purpose?17:13,upper:md.purpose?15:8}[v.pos];if(v.duct!=="y")s3-=3;if(md.jsup)s3+=3;s3=Math.min(20,s3);
+  let vr=sh>0?Math.max(0,v.vac-(md.conv||0))/sh:0.5;if(md.rent)vr*=0.5;if(md.master)vr*=0.7;
+  const s4=Math.min(20,16-8*Math.min(1,vr)+(md.rent?4:0)+(md.master?3:0));
+  return {s1,s2,s3,s4,t:Math.min(100,s1+s2+s3+s4+(md.bonus||0))};
 }
 function planUp(x,rows,cur){
   const v={type:x.type,pos:x.pos,m:x.m??700,units:x.units??150,occ:x.occ??50,duct:x.duct==="y"?"y":"n"};
@@ -520,9 +520,15 @@ function planUp(x,rows,cur){
   const md={};const steps=[];let prev=cur,base=scoreV(v,md).t;
   const push=(nm,who,how)=>{const r=scoreV(v,md).t;const d=Math.round(r-base);base=r;if(d<=0)return;const t=Math.min(100,prev+d);steps.push({nm,who,how,d,t,g:grade(t)});prev=t;};
   if(x.duct!=="y"){v.duct="y";push("배기·급배수 선시공","임대인","음식 업종이 들어올 수 있게 덕트·급배수를 미리 깔아 둡니다. 비용은 현장 견적.");}
-  if(x.type!=="small"&&v.units/v.shops<10){const k=Math.max(1,Math.min(Math.round(v.vac*0.5),Math.ceil(v.shops-v.units/10)));md.conv=k;push(`상가 과잉 정리 (${x.units===null||!x.shops?"약 ":""}${k}실${x.units===null||!x.shops?", 호실표 확인 후 확정":""})`,"임대인·공실공",`공실 ${k}실을 셀프스토리지·공유키친·공유오피스처럼 손님을 나눠 갖지 않는 포맷으로 돌리거나 2칸씩 통합 임대합니다.`);}
-  if(v.vac>0){md.rent=1;push("적정 임대가 + 렌트프리","임대인","주변 시세 기준 임대가와 2~3개월 렌트프리로 첫 계약 속도를 올립니다. 비워 두는 것보다 첫해 수입이 큽니다.");}
+  if(x.type!=="small"&&v.units/v.shops<10){const k=Math.max(1,Math.min(v.vac,Math.ceil(v.shops-v.units/10)));md.conv=k;push(`상가 과잉 정리 (${x.units===null||!x.shops?"약 ":""}${k}실${x.units===null||!x.shops?", 호실표 확인 후 확정":""})`,"임대인·공실공",`공실 ${k}실을 셀프스토리지·공유키친·공유오피스처럼 손님을 나눠 갖지 않는 포맷으로 돌리거나 2칸씩 통합 임대합니다.`);}
+  {const upN=rows.filter(r=>r.pos==="upper").length,vr0=v.shops?v.vac/v.shops:0;
+   if(x.type!=="small"&&x.type!=="retail"&&(upN>0||vr0>=0.3)&&v.vac>=2){const k=Math.max(1,upN,Math.round(v.vac*0.4));md.conv=(md.conv||0)+k;md.bonus=(md.bonus||0)+4;
+     push(`2층 이상 공실 ${k}실 용도 전환`,"임대인·공실공",x.type==="jisan"?"지원시설 면적 한시 확대(산단 내·수도권 30→50%, 비수도권 50→70%)를 활용해 생산시설 공실을 상가·편의시설로, 반대로 팔리지 않는 상가는 업무·생산시설로 돌립니다. 통째로 비면 LH 매입임대·준주택 전환까지 검토합니다.":"손님이 오지 않는 2층 이상 상가는 상가로 버티지 말고 업무(사무실·공유오피스)나 주거(근생→오피스텔 용도변경, 대수선 취득세 100% 감면·수도권 LH 매입임대)로 돌려 상가 수를 줄입니다.");}}
+  if(x.type!=="small"&&v.vac>=2){md.master=1;md.bonus=(md.bonus||0)+2;push("통합 임대관리(마스터리스)","관리단·공실공","구분소유자 동의를 받아 운영사 한 곳이 빈 칸을 일괄 임대하고 업종을 배정합니다. 소유자마다 따로 내놓아 같은 업종이 겹치고 호가가 제각각인 집합상가 공실의 가장 큰 원인을 끊습니다.");}
+  if(v.vac>0){md.rent=1;push("적정 임대가 + 렌트프리","임대인","주변 시세 기준 임대가로 맞추고, 앵커는 렌트프리 6개월·인테리어 지원까지 열어 첫 계약을 당깁니다. 1년 더 비우는 손실이 렌트프리보다 큽니다.");}
   if(rows.some(r=>r.pos==="front")){md.anchor=4;push("1층 전면 앵커 먼저 유치","임대인·관계 중개법인","인지도 높은 업종 1곳을 먼저 계약하면 외부 손님이 들어오고, 나머지 칸 협상이 쉬워집니다.");}
+  {const pe=peerOf(x);const g=pe?pe.rows.filter(o=>o.k===0&&o.p>=0.4).slice(0,4):[];if(g.length){md.peer=1;md.bonus=(md.bonus||0)+Math.min(5,g.length*1.5);push(`${pe.lbl} 표준 MD 빈자리부터 채우기`,"공실공",`${pe.desc} 대부분에 있는 ${g.map(o=>o.nm).join("·")}이 없습니다. 수요가 검증된 업종이라 임차인 설득이 쉽고, 건물 안 소비가 밖으로 새는 것을 막습니다.`);}}
+  if(x.type==="jisan"){md.jsup=1;md.bonus=(md.bonus||0)+4;push("지산 제도 변경 활용","임대인·관리단","2026.9 대책으로 지원시설은 제한업종 외 모든 시설·외부 손님이 허용되는 방향입니다. 그동안 막혔던 의원·학원·체육시설·외부 손님 대상 식음 업종을 1~2층에 적극 유치합니다(시행 시점은 관리기관 확인).");}
   if(rows.some(r=>r.pos!=="front")||x.pos!=="front"){md.purpose=1;push("안쪽·2층에 목적형 업종 배치","공실공","의원·PT·학원·사무소처럼 일부러 찾아오는 업종을 노출이 약한 칸에 넣어 외부 손님을 끌어오고 위치 약점을 지웁니다.");}
   if(v.vac>=2&&(v.units*(v.occ/100)*(v.type==="jisan"?3:1.3))<400){md.popup=3;push("빈 칸에 팝업·단기 임대로 유동 만들기","공실공·임대인","정식 계약 전까지 1~3개월 팝업·플리마켓을 돌려 사람이 드나드는 건물로 만듭니다. 브랜드 점포개발팀에 보여 줄 유동 근거도 생깁니다.");}
   if(v.m>200){md.sign=Math.min(4,Math.round(30-wScore(v.m)));if(md.sign>0)push("역 방향 유도 사인·파사드 정비","임대인","역 출구에서 상가가 보이도록 유도 사인과 간판 위치를 통일합니다.");}
@@ -540,9 +546,9 @@ function getTile(k){if(!(k in TC)){const T=META.T,[ty,tx]=k.split("_").map(Numbe
 const distM=(a,b,c,d)=>6371000*Math.hypot((d-b)*Math.PI/180*Math.cos((a+c)/360*Math.PI),(c-a)*Math.PI/180);
 async function analyze(lat,lon){const M=await getMeta(),T=M.T,R=500,dl=R/111000,dn=R/(111000*Math.cos(lat*Math.PI/180));
   const ks=new Set();for(const a of[lat-dl,lat+dl])for(const b of[lon-dn,lon+dn])ks.add(Math.floor(a/T)+"_"+Math.floor(b/T));
-  const pts=(await Promise.all([...ks].map(getTile))).flat();const c500={},c200={},c50=new Set();let n500=0,n300=0;
-  for(const p of pts){const d=distM(lat,lon,p[0],p[1]);if(d>R)continue;const code=M.codes[p[2]];if(M.share[p[2]]==null)continue;n500++;if(d<=300)n300++;c500[code]=(c500[code]||0)+1;if(d<=200)c200[code]=(c200[code]||0)+1;if(d<=50)c50.add(code);}
-  return {lat,lon,n500,n300,c500,c200,c50};}
+  const pts=(await Promise.all([...ks].map(getTile))).flat();const c500={},c200={},c40={},c50=new Set();let n500=0,n300=0;
+  for(const p of pts){const d=distM(lat,lon,p[0],p[1]);if(d>R)continue;const code=M.codes[p[2]];if(M.share[p[2]]==null)continue;n500++;if(d<=300)n300++;c500[code]=(c500[code]||0)+1;if(d<=200)c200[code]=(c200[code]||0)+1;if(d<=40&&p[3]!==3)c40[code]=(c40[code]||0)+1;if(d<=50)c50.add(code);}
+  return {lat,lon,n500,n300,c500,c200,c40,c50};}
 // 후보 업종 ↔ 상권업종 소분류 코드
 const CK={"버거·치킨 (소형 매장)":["I21004","I21006"],"편의점":["G20405"],"도시락":["I20101"],"아침 토스트":["I21005"],"샐러드·포케":["I21005"],"저가 커피":["I21201"],"베이글·디저트 테이크아웃":["I21001","I21008"],"대형 카페·베이커리":["I21201"],
  "1인 식당 (국밥·덮밥)":["I20101","I20102","I20302"],"분식·떡볶이":["I21007"],"치킨호프·포차":["I21103","I21104"],"세탁·코인빨래방":["S20901","S20902"],"미용실":["S20701"],"네일·속눈썹 1인 샵":["S20703","S20702"],"무인 사진관":["M11301"],
@@ -555,12 +561,22 @@ const lqOf=c=>lqCodes(c.k||CK[c.n]);
 let PEER=null,CAND_P=null;
 // 업종 기준표 확장: 상가정보 소분류 124개에 층 분포(실데이터)·면적·설비·시간대를 붙인 목록
 function getCands(){if(!CAND_P)CAND_P=fetch("data/cands.json").then(r=>r.json()).then(j=>{j.c.forEach(c=>CANDS.push(c));return j;}).catch(()=>null);return CAND_P;}
-async function getPeer(){if(!PEER)try{PEER=await (await fetch("data/peer_apt.json")).json();}catch(e){PEER={};}return PEER;}
-function peerOf(x){if(x.type!=="mixed"||!PEER||!AREA)return null;const hh=x.units??(AREA.apt&&AREA.apt.near?AREA.apt.near.hh:null);if(!hh)return null;
+async function getPeer(){if(!PEER)try{const [a,b]=await Promise.all([fetch("data/peer_apt.json").then(r=>r.json()),fetch("data/peer_bld.json").then(r=>r.json())]);PEER={...a,...b};}catch(e){PEER={};}return PEER;}
+function peerOf(x){if(!PEER||!AREA)return null;
+  if(x.type==="officetel"||x.type==="jisan"){const loc=Object.values(AREA.c40).reduce((a,b)=>a+b,0),big=(x.shops??loc)>=12,k=x.type+"-"+(big?"l":"s"),P=PEER[k];if(!P)return null;
+    const nm=x.type==="jisan"?"지식산업센터":"오피스텔";
+    return {key:k,n:P.n,rows:P.c.map(([c,p,m])=>({c,nm:META.nm[META.ci[c]],p,m,k:AREA.c40[c]||0})),lbl:"건물",
+      title:`같은 유형(${nm}, 상가 ${big?"12실 이상":"12실 미만"}) 건물 ${P.n.toLocaleString()}곳의 1~2층 표준 MD와 비교`,col:"이 건물",
+      note:`보유율: 이름으로 확인된 전국 ${nm} 중 1~2층·지하에 그 업종이 있는 건물 비율. '이 건물'은 찍은 위치 40m 안 1~2층 점포 수라 건물 위에 정확히 찍어야 맞습니다. 온라인 판매업 등록이 섞인 업종(의류·화장품 소매 등)은 실제 매장보다 많게 잡힐 수 있습니다.`,
+      desc:`같은 유형 ${nm} 건물 ${P.n.toLocaleString()}곳`};}
+  if(x.type!=="mixed")return null;const hh=x.units??(AREA.apt&&AREA.apt.near?AREA.apt.near.hh:null);if(!hh)return null;
   const k=hh<500?"0-500":hh<1000?"500-1000":hh<2000?"1000-2000":"2000-99999";const P=PEER[k];if(!P)return null;
-  const rows=P.c.map(([c,p,m])=>({c,nm:META.nm[META.ci[c]],p,m,k:AREA.c200[c]||0}));return {hh,key:k,n:P.n,rows};}
-function peerFit(c,x){const pe=peerOf(x),K=c.k||CK[c.n];if(!pe||!K)return null;const r=pe.rows.filter(o=>K.includes(o.c));if(!r.length)return null;
-  const p=Math.max(...r.map(o=>o.p)),m=r.reduce((a,o)=>a+o.m,0),k=K.reduce((a,cd)=>a+(AREA.c200[cd]||0),0);return {p,m,k};}
+  const rows=P.c.map(([c,p,m])=>({c,nm:META.nm[META.ci[c]],p,m,k:AREA.c200[c]||0}));return {hh,key:k,n:P.n,rows,lbl:"단지",col:"이 단지",
+    title:`같은 규모(${k.replace("-99999","+").replace("-","~")}세대) 단지 상가 ${P.n.toLocaleString()}곳의 표준 MD와 비교`,
+    note:"보유율: 비슷한 규모 단지 상가 중 그 업종이 200m 안에 1곳 이상 있는 비율. '이 단지'는 찍은 위치 200m 안 점포 수입니다. 위치를 단지 상가 건물에 정확히 찍어야 맞게 나옵니다.",
+    desc:`비슷한 규모(${hh.toLocaleString()}세대) 단지 상가 ${P.n.toLocaleString()}곳`};}
+function peerFit(c,x){const pe=peerOf(x),K=c.k||CK[c.n];if(!pe||!K)return null;const LC=pe.lbl==="건물"?AREA.c40:AREA.c200;const r=pe.rows.filter(o=>K.includes(o.c));if(!r.length)return null;
+  const p=Math.max(...r.map(o=>o.p)),m=r.reduce((a,o)=>a+o.m,0),k=K.reduce((a,cd)=>a+(LC[cd]||0),0);return {p,m,k,lbl:pe.lbl};}
 function satList(){if(!AREA||AREA.n500<30)return [];const L=[];META.codes.forEach((c,i)=>{const sh=META.share[i];if(sh==null)return;const e=AREA.n500*sh,k=AREA.c500[c]||0;if(e>=2&&k>=5&&k/e>=1.8)L.push({nm:META.nm[i],k,e,lq:k/e});});return L.sort((a,b)=>b.lq-a.lq).slice(0,5);}
 // 상가에 들어오기 어려운 업종(주유·숙박·자동차·장례 등)은 빈자리 목록에서 제외
 const GAP_X=/^(G2(02|03|14|05(01|02))|G206|I1|S20[34]|S21|R103(06|08|09|12)|R104(08|09|10|14)|Q101|L1)/;
@@ -575,11 +591,11 @@ function renderArea(x){const box=$('arCard');if(!AREA){box.style.display="none";
    +(gaps.length?`<div style="font-size:13px;font-weight:700;color:var(--ok);margin-top:10px">빈자리 업종 (보통보다 절반 이하)</div><ul class="chk">`+gaps.map(o=>`<li>${o.c.n}: ${o.q.k}곳 (보통 ${Math.round(o.q.e)}곳)</li>`).join("")+"</ul>":"")
    +(()=>{const ga=peerOf(x)?[]:gapAll();return ga.length?`<details style="margin-top:8px;font-size:14px"><summary style="cursor:pointer;color:var(--navy)">전체 업종 ${META.share.filter(v=>v!=null).length}개 기준 부족 업종 더 보기</summary><ul class="chk">${ga.map(g=>`<li>${g.nm}: ${g.k}곳 (보통 ${Math.round(g.e)}곳)</li>`).join("")}</ul><p class="note" style="margin-top:4px">데이터상 비어 있는 업종 목록입니다. 층·면적·설비 적합도는 따지지 않았으니 후보 탐색용으로만 보세요.</p></details>`:"";})();
   const pe=peerOf(x);if(pe){const L=pe.rows.slice(0,18);
-    $('rArea').innerHTML+=`<div style="font-size:13px;font-weight:700;color:var(--navy);margin-top:12px">같은 규모(${pe.key.replace("-99999","+").replace("-","~")}세대) 단지 상가 ${pe.n.toLocaleString()}곳의 표준 MD와 비교</div>
-     <table class="tgrid" style="margin-top:6px"><tr><th style="text-align:left">업종</th><th>보유율</th><th>평균</th><th>이 단지</th><th></th></tr>${L.map(o=>{const st=o.k===0&&o.p>=0.4?'<b style="color:var(--ok)">빈자리</b>':o.k>=Math.max(2,o.m*2+1)?'<b style="color:var(--bad)">많음</b>':'';
+    $('rArea').innerHTML+=`<div style="font-size:13px;font-weight:700;color:var(--navy);margin-top:12px">${pe.title}</div>
+     <table class="tgrid" style="margin-top:6px"><tr><th style="text-align:left">업종</th><th>보유율</th><th>평균</th><th>${pe.col}</th><th></th></tr>${L.map(o=>{const st=o.k===0&&o.p>=0.4?'<b style="color:var(--ok)">빈자리</b>':o.k>=Math.max(2,o.m*2+1)?'<b style="color:var(--bad)">많음</b>':'';
        return `<tr><td class="n" style="max-width:none">${o.nm}</td><td style="text-align:center">${Math.round(o.p*100)}%</td><td style="text-align:center">${o.m.toFixed(1)}</td><td style="text-align:center">${o.k}</td><td>${st}</td></tr>`;}).join("")}</table>
-     <p class="note" style="margin-top:4px">보유율: 비슷한 규모 단지 상가 중 그 업종이 200m 안에 1곳 이상 있는 비율. '이 단지'는 찍은 위치 200m 안 점포 수입니다. 위치를 단지 상가 건물에 정확히 찍어야 맞게 나옵니다.</p>`;}
-  return `\n[주변 500m] 점포 ${AREA.n500}곳`+(pe?` / 단지 표준 MD 빈자리: ${pe.rows.filter(o=>o.k===0&&o.p>=0.4).map(o=>o.nm).join(", ")||"없음"}`:"")+(sat.length?` / 포화: ${sat.map(s=>s.nm+" "+s.k+"곳("+s.lq.toFixed(1)+"배)").join(", ")}`:"")+(gaps.length?` / 빈자리: ${gaps.map(o=>o.c.n).join(", ")}`:"");}
+     <p class="note" style="margin-top:4px">${pe.note}</p>`;}
+  return `\n[주변 500m] 점포 ${AREA.n500}곳`+(pe?` / ${pe?pe.lbl:""} 표준 MD 빈자리: ${pe.rows.filter(o=>o.k===0&&o.p>=0.4).map(o=>o.nm).join(", ")||"없음"}`:"")+(sat.length?` / 포화: ${sat.map(s=>s.nm+" "+s.k+"곳("+s.lq.toFixed(1)+"배)").join(", ")}`:"")+(gaps.length?` / 빈자리: ${gaps.map(o=>o.c.n).join(", ")}`:"");}
 // 원인 → 처방 (데이터·입력으로 확인된 원인에만)
 const SRC={lh:["국토부·LH 비주택 리모델링 매입임대 (2026.4)","https://www.newsis.com/view/NISX20260402_0003574477"],tax:["행안부 2026 지방세제 개편 (취득세 감면)","https://news.mtn.co.kr/news-detail/2026082609095997877"],
  jisan:["산업통상부 지식산업센터 공실 대책 (2026.9.10)","https://www.motir.go.kr/kor/article/ATCL3f49a5a8c/172182/view"],data:["소상공인시장진흥공단 상가(상권)정보","https://www.data.go.kr/data/15083033/fileData.do"],rt:["국토교통부 상업업무용 부동산 매매 실거래가","https://rt.molit.go.kr"]};
@@ -593,8 +609,8 @@ function renderNew(x,rows,vr){
     rx.push({t:"업종 포화",ev:`반경 500m에 ${sat.slice(0,3).map(s=>`${s.nm} ${s.k}곳(보통의 ${s.lq.toFixed(1)}배)`).join(", ")}. 같은 업종을 또 넣으면 기존 가게와 손님을 나눠 가져 둘 다 버티기 어렵습니다.`,
       a:["포화 업종과 겹치는 후보는 추천 점수를 크게 깎았습니다."+(fnb.length?` 특히 ${fnb.map(s=>s.nm).join("·")}은(는) 1층 전면이라도 피하세요.`:""),"임차 문의가 포화 업종이면 렌트프리를 늘려 받기보다 다른 업종을 기다리는 쪽이 장기 공실 위험이 낮습니다."],s:["data"]});}
   {const pe=peerOf(x);if(pe){const g=pe.rows.filter(o=>o.k===0&&o.p>=0.5).slice(0,6);
-    if(g.length)rx.push({op:1,t:"단지 표준 MD 빈자리",ev:`비슷한 규모(${pe.hh.toLocaleString()}세대) 단지 상가 ${pe.n.toLocaleString()}곳 대부분에 있는데 여기엔 없는 업종: ${g.map(o=>`${o.nm}(${Math.round(o.p*100)}%)`).join(", ")}.`,
-      a:["단지 상가는 생활 필수 업종이 먼저 채워져야 주민이 단지 안에서 소비합니다. 위 업종부터 임차인을 찾으세요.","보유율이 높은데 없는 업종은 수요가 단지 밖으로 새고 있다는 뜻이라, 임차인 설득 근거로 이 표를 그대로 쓸 수 있습니다."],s:["data"]});}}
+    if(g.length)rx.push({op:1,t:pe.lbl+" 표준 MD 빈자리",ev:`${pe.desc} 대부분에 있는데 여기엔 없는 업종: ${g.map(o=>`${o.nm}(${Math.round(o.p*100)}%)`).join(", ")}.`,
+      a:[pe.lbl==="단지"?"단지 상가는 생활 필수 업종이 먼저 채워져야 주민이 단지 안에서 소비합니다. 위 업종부터 임차인을 찾으세요.":"같은 유형 건물에 대부분 있는 업종은 입주사·주민 수요가 검증된 업종입니다. 1~2층 빈 칸은 이 업종부터 채우세요.","보유율이 높은데 없는 업종은 수요가 단지 밖으로 새고 있다는 뜻이라, 임차인 설득 근거로 이 표를 그대로 쓸 수 있습니다."],s:["data"]});}}
   if(AREA&&AREA.n500>=30&&!peerOf(x)){const g=CANDS.filter(okC).map(c=>({c,q:lqOf(c)})).filter(o=>o.q&&o.q.lq<=0.5&&o.q.e>=1.5).sort((a,b)=>b.q.e-a.q.e).slice(0,3);
     if(g.length)rx.push({op:1,t:"빈자리 업종",ev:`주변 점포 규모에 비해 ${g.map(o=>`${o.c.n}(${o.q.k}곳, 보통 ${Math.round(o.q.e)}곳)`).join(", ")}이 부족합니다.`,a:g.map(o=>`${o.c.n}: ${o.c.w}`),s:["data"]});}
   if(over){const k=CANDS.filter(c=>okC(c)&&(c.tr===2||c.cat==="office")&&c.f.some(f=>f!=="front")).slice(0,3);
@@ -789,8 +805,8 @@ function fitScore(c,r,x,st){
   s+=c.tr*0.7;if(c.tr===2)why.push("요즘 공실을 채우는 새 포맷");else if(c.tr===1)why.push("출점이 늘어나는 업종");
   s-=(st.cats[c.cat]||0)*0.8;
   const pf=peerFit(c,x);if(!pf&&peerOf(x)){s-=1.5;}
-  if(pf){if(pf.k===0&&pf.p>=0.4){s+=4*pf.p;why.unshift(`같은 규모 단지 상가 ${Math.round(pf.p*100)}%에 있는 업종인데 이 단지 200m 안엔 없음`);}
-    else if(pf.k>=Math.max(2,pf.m*2+1)){s-=2.5;why.push(`단지 200m 안 ${pf.k}곳 — 같은 규모 단지 평균(${pf.m.toFixed(1)}곳)보다 많음`);}}
+  if(pf){if(pf.k===0&&pf.p>=0.4){s+=4*pf.p;why.unshift(pf.lbl==="단지"?`같은 규모 단지 상가 ${Math.round(pf.p*100)}%에 있는 업종인데 이 단지 200m 안엔 없음`:`같은 유형 건물 ${Math.round(pf.p*100)}%에 있는 업종인데 이 건물엔 없음`);}
+    else if(pf.k>=Math.max(2,pf.m*2+1)){s-=2.5;why.push(`${pf.lbl==='단지'?'단지 200m':'이 건물'} 안 ${pf.k}곳 — 같은 유형 평균(${pf.m.toFixed(1)}곳)보다 많음`);}}
   const q=lqOf(c);if(q){if(q.lq>=3&&q.k>=4){s-=4;why.unshift(`반경 500m 같은 업종 ${q.k}곳(보통의 ${q.lq.toFixed(1)}배) — 포화 주의`);}
     else if(q.lq>=1.8){s-=2;why.push(`반경 500m 같은 업종 ${q.k}곳(보통 ${Math.round(q.e)}곳) — 경쟁 많음`);}
     else if(!pf&&!peerOf(x)&&q.lq<=0.4&&q.e>=3){s+=1.5;why.unshift(`반경 500m에 ${q.k}곳뿐(보통 ${Math.round(q.e)}곳) — 빈자리`);}}
