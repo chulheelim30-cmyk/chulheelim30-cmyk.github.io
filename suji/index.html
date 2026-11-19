@@ -474,8 +474,8 @@ const PRODUCTS = [{
   retailMult: 1.0,
   res: true,
   priceUnit: '공급면적',
-  effRatio: 0.72,
-  bsmt: 0.4,
+  effRatio: 0.77, // [공공] 2025~26 수도권 민영 모집공고 4곳 전용/공급 74.3~77.7%, 중앙 77% (2026-11-19, 기존 0.72)
+  bsmt: 0.42, // [공공] 모집공고 8곳 계약/공급 1.34~1.59(중앙 1.545)와 공급비율 92%에 맞춤: 1.42/0.92≈1.54 (기존 0.40)
   sizes: [39, 49, 59, 74, 84, 101, 114, 135],
   size: 84,
   sizeLabel: '전용',
@@ -1249,6 +1249,9 @@ function farInfo(x) {
   };
 }
 const farOf = x => farInfo(x).far;
+// [공공] 공급면적 ÷ 지상 연면적: LH 모집공고 4곳(진접2 A-7, 과천주암 C1, 왕숙2 A-3, 고양장항 S-1)의 공급 ÷ (공급+기타공용) 90.5~93.3%, 중앙 약 92%.
+// 기타공용을 모두 지상으로 본 값이라 실제보다 약간 낮게(보수적으로) 잡힘. 2026-11-19 98%→92%
+const SUPPLY_RES = 0.92;
 // 규모 산정: 실사용 대지 × 용적률 × 달성률 98% = 지상, 지하 = 지상 × 상품별 비율(실무 수지표 0.40~0.42)
 function scale(x) {
   const p = PRODUCTS.find(q => q.id === x.product);
@@ -1268,7 +1271,7 @@ function scale(x) {
     gfa = above + (BM > 0 ? BM : above * p.bsmt);
   }
   const whole = p.area === 'gfa';
-  const base = whole ? gfa : p.res ? above * 0.95 : gfa * 0.97; // 통매각: 연면적 / 아파트류: 공급면적(지상 연면적의 95% — 지상 커뮤니티·관리동 등 비분양 면적 감안, 2026-11-19 98%→95%) / 그 외: 계약면적
+  const base = whole ? gfa : p.res ? above * SUPPLY_RES : gfa * 0.97; // 통매각: 연면적 / 아파트류: 공급면적 / 그 외: 계약면적
   const eff = x.effPct > 0 ? x.effPct / 100 : p.effRatio; // 전용률: 입력값 우선(2026-11-19)
   const unitPy = (x.size || p.size) / 3.3058 / eff;
   let mainPy = base * (1 - p.retailShare),
@@ -1432,7 +1435,7 @@ function model(f, price, o = {}) {
     basis
   });
   add('토지비', '토지매입비', L, '입력값');
-  add('토지비', '취득세·채권·법무·중개', L * landAdd / 100, `토지비 × ${landAdd}%`);
+  add('토지비', '취득세·채권·법무·중개', L * landAdd / 100, `토지비 × ${landAdd}%${landAdd >= 4.6 ? ' (그중 토지 취득세 4.6% [공공] 지방세법 — 취득세 4%·농특세 0.2%·지방교육세 0.4%)' : ''}`);
   // 지목별 전용부담금 (2026-11-19). 진흥지역·보전산지 여부를 모르므로 높은 쪽(보수)으로 계산
   const ljJiga = x.jigaEok > 0 && x.sitePy > 0 ? x.jigaEok * 1e8 / (x.sitePy * 3.3058) : 0; // 평균 공시지가 원/㎡
   if (x.ljFarmM2 > 0) {
@@ -1447,8 +1450,17 @@ function model(f, price, o = {}) {
   add('공사비', '직접공사비', B, `연면적 ${fmt(gfa)}평${sc.arch ? '(건축개요 입력)' : '(대지·용적률 추정)'} × ${fmt(unit)}만`);
   add('공사비', '설계·감리·인입·미술 등', B * x.buildAddPct / 100, `직접공사비 × ${x.buildAddPct}%`);
   add('분양경비', p.kind === 'rent' ? '임차인 모집·임대 마케팅·M/H' : p.kind === 'lh' ? '매입 심의·인증 대응' : p.kind === 'exit' ? '매각 자문·중개 수수료·마케팅' : '분양대행·광고·촉진·M/H', salesBase * salesPct / 100, `${p.kind === 'coop' ? '일반분양 수입' : '매출'} × ${salesPct}%`);
-  add('제세·부담금', '보존등기·채권·각종 부담금', B * x.taxPct / 100, `직접공사비 × ${x.taxPct}%`);
-  if (p.res && p.school !== false) add('제세·부담금', '학교용지부담금', salesBase * 0.004, `${p.kind === 'coop' ? '일반분양 수입' : '매출'} × 0.4%`);
+  add('제세·부담금', '보존등기·채권·각종 부담금', B * x.taxPct / 100, `직접공사비 × ${x.taxPct}%${x.taxPct >= 3.16 ? ' (그중 보존등기 취득세 3.16% [공공] 지방세법 원시취득 — 취득세 2.8%·농특세 0.2%·지방교육세 0.16%, 나머지는 채권·상하수도 원인자부담금 등)' : ''}`);
+  if (p.res && p.school !== false) add('제세·부담금', '학교용지부담금', salesBase * 0.004, `[공공] ${p.kind === 'coop' ? '일반분양 수입' : '매출'} × 0.4% (학교용지법 제5조의2)`);
+  // [공공] 광역교통시설부담금(대도시권 광역교통 관리에 관한 특별법 제11조·제11조의3, 시행령 제16조의2): 표준건축비 × 부과율 × 건축연면적 − 공제액
+  // 표준건축비 1,138,400원/㎡(공공건설임대 표준건축비 60㎡ 초과·21층 이상, 국토부고시 제2023-64호), 부과율 수도권 4%·그 밖의 대도시권 2%,
+  // 건축연면적 = 주거 공급면적(지하층·주차장·부대복리·주민공동시설·국민주택규모 이하 임대 제외), 도시지역이면 50% 경감(법 제11조의2②8호), 공제액(도로·철도 등 부담분)은 0으로 봄
+  if (p.res && (p.kind === 'sale' || p.kind === 'coop') && units >= 20) {
+    const cid = cityOf(x).id, cap = ['seoul', 'gyeonggi', 'incheon', 'yongin'].includes(cid) || x.region === 'seoul' || x.region === 'metro' ? 4 : 2;
+    const urban = !['pm', 'mp', 'mb', 'ag', 'ne'].includes(x.zone), m2 = mainPy * (1 - pub) * 3.3058;
+    const v = 1138400 * cap / 100 * m2 * (urban ? 0.5 : 1) / 1e8;
+    add('제세·부담금', '광역교통시설부담금', v, `[공공] 표준건축비 113.8만/㎡ × ${cap}%${cap === 2 ? '(대도시권 밖이면 해당 없음)' : '(수도권)'} × 주거 ${fmt(Math.round(m2))}㎡${urban ? ' × 50%(도시지역 경감)' : ''} · 공제액 미반영`);
+  }
   add('사업추진비', p.kind === 'coop' ? '업무대행·조합운영·신탁·예비비' : '신탁·PM·운영·예비비', S * opsPct / 100, `매출 × ${opsPct}%`);
   if (fs.trust) add('사업추진비', '차입형 신탁보수', S * fs.trust / 100, `매출 × ${fs.trust}% (차입형 토지신탁)`);
   if (x.etcEok > 0) add('사업추진비', '기타 사업비(공공기여·철거·명도 등)', x.etcEok, '입력값');
@@ -2694,7 +2706,7 @@ ${(rt.others || []).map(d => `<tr><td>참고: ${RTMS_N[d.type] || ''}</td><td cl
   // 매출 행(2026-11-19): 보고서 수지표에 매출 구성과 사업비 합계를 표시
   const rr = R.p.kind === 'lh' || R.p.kind === 'exit' ? 100 : f.saleRate, mainName = R.p.res ? '주거 분양' : `${esc(R.p.name)} 분양`;
   const revL = (R.p.kind === 'coop' ? [['조합원 분담금', R.memberRev, `조합원 평당 ${fmt(price)}만`], ['일반분양', R.genRev, `일반분양가 평당 ${fmt(R.gen)}만 × 분양률 ${rr}%`]]
-    : [[mainName, R.mainRev - (R.pubRev || 0), `${esc(pu)} ${fmt(R.mainPy * (1 - (R.pub || 0)))}평 × 평당 ${fmt(price)}만 × 분양률 ${rr}%${R.sc && !R.sc.archSale && !R.sc.whole ? ` · ${esc(pu)}은 ${R.p.res ? `지상 연면적 ${fmt(R.sc.above)}평의 95%` : `연면적의 97%`}에서 상가분 제외 [추정] (연면적 ${fmt(R.sc.gfa)}평 중 지하는 매출 없음)` : ''}`], ['임대·공공매입', R.pubRev, `주거 면적의 ${Math.round((R.pub || 0) * 100)}% · 분양률 무관`]])
+    : [[mainName, R.mainRev - (R.pubRev || 0), `${esc(pu)} ${fmt(R.mainPy * (1 - (R.pub || 0)))}평 × 평당 ${fmt(price)}만 × 분양률 ${rr}%${R.sc && !R.sc.archSale && !R.sc.whole ? ` · ${esc(pu)}은 ${R.p.res ? `지상 연면적 ${fmt(R.sc.above)}평의 ${Math.round(SUPPLY_RES * 100)}%(LH 모집공고 4곳 중앙값) [공공]` : `연면적의 97% [추정]`}에서 상가분 제외 (연면적 ${fmt(R.sc.gfa)}평 중 지하는 매출 없음)` : ''}`], ['임대·공공매입', R.pubRev, `주거 면적의 ${Math.round((R.pub || 0) * 100)}% · 분양률 무관`]])
     .concat([['상가', R.retailRev, `${esc(pu)} ${fmt(R.retailPy)}평 · 분양률 ${rr}%`]]).filter(x => x[1] > 0);
   const revRows = `<tr class="gh"><td>매출</td><td class="r">${eok1(R.S)}</td><td class="r">100%</td></tr>` + revL.map(x => `<tr><td class="ind">${x[0]}<div class="bs">${x[2]}</div></td><td class="r">${eok1(x[1])}</td><td class="r">${(x[1] / S * 100).toFixed(1)}%</td></tr>`).join('');
   const costT = R.S - R.profit;
