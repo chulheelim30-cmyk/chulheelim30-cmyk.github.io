@@ -1380,7 +1380,7 @@ const FIN = {
 const finOf = (x, p) => p.kind === 'sale' ? FIN[x.finStruct] || FIN.pf : FIN.pf;
 const autoMonths = gfa => gfa < 1000 ? 16 : gfa < 5000 ? 24 : gfa < 15000 ? 30 : gfa < 30000 ? 36 : 42;
 const DEFAULT = {
-  name: 'OO역 오피스텔 신축사업',
+  name: '',
   product: 'officetel',
   city: 'yongin',
   region: 'metro',
@@ -3237,7 +3237,7 @@ function ProTop({ f, set, setF, live }) {
       ok && it('필요 분양가', `${fmt(live.t10)}만`), ok && it('손익분기', `${fmt(live.be)}만`), ok && it('이익률', `${live.margin.toFixed(1)}%`, live.profit < 0 ? '#F87171' : '#C5F04A'), ok && it('사업이익', sEok1(live.profit), live.profit < 0 ? '#F87171' : '#E8EAED'));
   return React.createElement(React.Fragment, null,
     React.createElement("div", { className: "bg-white rounded-xl border border-slate-200 p-4 space-y-2", style: { order: 1 } },
-      React.createElement("label", { className: "block" }, React.createElement("span", { className: "block text-[11px] font-bold text-slate-600 mb-1" }, "사업명"), React.createElement("input", { className: inputCls, value: f.name, onChange: e => set('name')(e.target.value) })),
+      React.createElement("label", { className: "block" }, React.createElement("span", { className: "block text-[11px] font-bold text-slate-600 mb-1" }, "사업명"), React.createElement("input", { className: inputCls, value: f.name, placeholder: '예: OO역 오피스텔 신축사업', onChange: e => set('name')(e.target.value) })),
       React.createElement("div", { className: "grid grid-cols-2 gap-2.5" }, React.createElement(SavedSites, { f, setF, live }))));
 }
 // 내 사업지 저장·불러오기 (2026-11-19): 이 브라우저에만 저장(서버로 보내지 않음), 최대 50개
