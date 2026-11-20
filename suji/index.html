@@ -13,14 +13,14 @@ peTrack("visit");})();
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet"><style id="theme-pro">/* 프로 다크 건축 핀테크 (2026-11-20 베타) */
 :root{--cv:#0B0E13;--sf:#13171D;--in:#0E1116;--hv:#1A2029;--bd:#232A35;--lime:#C5F04A;--amb:#FDBA74;--red:#F87171;--blu:#93C5FD;--tx:#E8EAED;--mut:#8A94A3}
-html body .sj-shell.min-h-screen{background:var(--cv)!important}
+html,body,html body .min-h-screen{background:var(--cv)!important}
 html body .sj-shell .bg-white{background-color:var(--sf)!important}
 html body .sj-shell .bg-slate-50{background-color:var(--cv)!important}
 html body .sj-shell .bg-slate-100{background-color:var(--hv)!important}
 html body .sj-shell .border-slate-200,html body .sj-shell .border-slate-100,html body .sj-shell .border-slate-300{border-color:var(--bd)!important}
 html body .sj-shell input,html body .sj-shell select,html body .sj-shell textarea{background-color:var(--in)!important;border-color:#2B3442!important}
 html body .sj-shell input:focus,html body .sj-shell select:focus,html body .sj-shell textarea:focus{outline:none;box-shadow:0 0 0 2px var(--lime)!important;border-color:var(--lime)!important}
-.num,html body .sj-shell .tabular-nums{font-family:'Space Grotesk','Noto Sans KR',sans-serif!important;font-variant-numeric:tabular-nums}
+.num,html body .tabular-nums{font-family:'Space Grotesk','Noto Sans KR',sans-serif!important;font-variant-numeric:tabular-nums}
 .pc{background:var(--sf);border:1px solid var(--bd);border-radius:14px;padding:14px}
 .pc.hl{border-color:rgba(197,240,74,.45);box-shadow:0 0 24px rgba(197,240,74,.08)}
 .pc h3{font-size:13px;font-weight:800;color:var(--tx);margin:0}
@@ -3073,7 +3073,6 @@ function loadForm() {
   return DEFAULT;
 }
 
-// [관리자 모드 전용 미리보기] 프로 대시보드 — 관리자 모드를 켠 소유자에게만 보임
 
 // ── 프로 대시보드 (2026-11-20 베타): KPI 3개 + 사업수지 요약표 + 우측 패널(규모 미리보기·민감도·경고). 계산은 기존 model/analyze/solveLand 그대로 사용 ──
 const TAGS = { '공공': 'pub', '실사업': 'real', '추정': 'est', '입력': 'inp' };
@@ -3458,12 +3457,12 @@ function App() {
     className: "sel mt-3 px-4 py-2 bg-slate-900 text-white text-xs font-bold rounded-lg"
   }, "2.\uC0AC\uC5C5\uC218\uC9C0\uB85C \uC774\uB3D9"));
   return /*#__PURE__*/React.createElement("div", {
-    className: "min-h-screen bg-slate-50 text-slate-900" + (usage.owner && admin ? ' sj-shell' : ''),
+    className: "min-h-screen bg-slate-50 text-slate-900 sj-shell",
     style: {
       fontFamily: "'Pretendard','Noto Sans KR',system-ui,sans-serif"
     }
   }, /*#__PURE__*/React.createElement("header", {
-    className: "bg-slate-900 text-white" + (usage.owner && admin ? ' sj-head' : ''),
+    className: "bg-slate-900 text-white sj-head",
     style: { borderBottom: '1px solid #262C36' }
   }, /*#__PURE__*/React.createElement("div", {
     className: "max-w-4xl mx-auto px-4 py-3.5 flex items-center justify-between gap-3"
@@ -3496,7 +3495,7 @@ function App() {
   }, admin ? '관리자 모드 ON' : '관리자') : /*#__PURE__*/React.createElement("span", {
     className: `text-[11px] px-2 py-1 rounded font-bold ${usage.left ? 'bg-slate-700' : 'bg-red-600'}`
   }, "\uBB34\uB8CC \uBD84\uC11D ", usage.left, "/", FREE_LIMIT, "\uD68C"))), /*#__PURE__*/React.createElement("nav", {
-    className: "z-20" + (usage.owner && admin ? ' sj-nav' : ''),
+    className: "z-20 sj-nav",
     style: { position: 'fixed', left: 0, right: 0, bottom: 0, background: '#12161C', borderTop: '1px solid #262C36', paddingBottom: 'env(safe-area-inset-bottom)' }
   }, /*#__PURE__*/React.createElement("div", {
     className: "max-w-4xl mx-auto",
@@ -3514,9 +3513,9 @@ function App() {
       size: 19
     }), s.n.replace(/^\d\./, ''));
   }))), /*#__PURE__*/React.createElement("main", {
-    className: "max-w-4xl mx-auto px-4 py-4 space-y-3" + (usage.owner && admin ? ' sj-main' : ''),
+    className: "max-w-4xl mx-auto px-4 py-4 space-y-3 sj-main",
     style: { paddingBottom: 96 }
-  }, usage.owner && admin && (sheet === 'cost' || sheet === 'pf') && live && !live.empty && React.createElement(ProDash, { f, set, live, go }), sheet === 'cost' && vwOn() && React.createElement(LandLookup, { f, setF }), sheet === 'cost' && React.createElement(LandSheet, { f, setF }), sheet === 'cost' && React.createElement("div", { className: "bg-white rounded-xl border border-slate-200 p-4 space-y-3" },
+  }, (sheet === 'cost' || sheet === 'pf') && live && !live.empty && React.createElement(ProDash, { f, set, live, go }), sheet === 'cost' && vwOn() && React.createElement(LandLookup, { f, setF }), sheet === 'cost' && React.createElement(LandSheet, { f, setF }), sheet === 'cost' && React.createElement("div", { className: "bg-white rounded-xl border border-slate-200 p-4 space-y-3" },
     React.createElement("div", null,
       React.createElement("h2", { className: "text-sm font-extrabold flex items-center gap-1.5" }, React.createElement(Target, { size: 15, className: "text-emerald-600" }), "토지 기본정보", React.createElement(Tip, { t: "토지비·대지면적·용도지역으로 용적률·연면적을 잡고, 공사비와 2.사업수지가 모두 이 값을 씁니다." }), React.createElement("button", { type: "button", onClick: () => { if (window.confirm('입력한 값을 모두 지우고 처음부터 할까요?')) setF(DEFAULT); }, style: { marginLeft: 'auto', fontSize: 11, fontWeight: 700, padding: '3px 9px', borderRadius: 999, border: '1px solid #CBD5E1', color: '#64748B', background: 'transparent' } }, "새로 입력"))),
     React.createElement("div", { className: "grid grid-cols-2 gap-2.5" }, /*#__PURE__*/React.createElement(Num, {
