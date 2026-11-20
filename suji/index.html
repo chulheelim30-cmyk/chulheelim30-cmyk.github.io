@@ -1180,6 +1180,8 @@ const hugOf = x => {
 };
 const SEOUL_CORE = /^서울\|(강남구|서초구|송파구|용산구)$/; // 민간택지 분양가상한제 적용지역(2026.10 기준, 국토부 지정 — 바뀔 수 있음)
 const CORE_UNIT = 970;
+// 아파트·주상복합 공사비 지역 하한(2026-11-20) [추정]: 2025 정비사업 공사비 보도(전국 평균 3.3㎡당 808만·서울 재건축 968만)보다 낮게 잡은 보수 하한. 직접 입력하면 미적용
+const APT_FLOOR = { seoul: 850, metro: 720, local: 650 };
 const RATE_BY_REG = {
   seoul: 7.0,
   metro: 7.5,
@@ -1453,7 +1455,9 @@ function model(f, price, o = {}) {
   const unit0 = o.tier ? unitOf(x, x.product, x.tier - 1) : x.costMode === 'manual' ? x.costManual : x.costMode === 'db' ? dbUnitOf(x, x.product) : unitOf(x, x.product, x.tier - 1);
   // 서울 핵심지 아파트 공사비 하한(2026-11-20) [실사업·보도]: 2025 서울 재건축 평균 3.3㎡당 968만, 은마 930만, 압구정3 1,120만, 압구정5 1,139~1,168만 → 직접 입력이 아니면 평당 970만 미만으로 잡지 않음
   const coreHi = x.costMode !== 'manual' && SEOUL_CORE.test(x.sgg || '') && ['apt', 'mixed'].includes(p.id) && unit0 < CORE_UNIT;
-  const unit = coreHi ? CORE_UNIT : unit0;
+  const flo = x.costMode !== 'manual' && ['apt', 'mixed'].includes(p.id) ? (APT_FLOOR[x.region] || 0) : 0;
+  const unit = coreHi ? CORE_UNIT : Math.max(unit0, flo);
+  const floHi = !coreHi && unit > unit0;
   const sc = scale(x);
   const gfa = sc.gfa,
     L = x.landEok,
@@ -1506,7 +1510,7 @@ function model(f, price, o = {}) {
     add('제세·부담금', '대체산림자원조성비', won / 1e8, `[공공] 임야 ${fmt(Math.round(x.ljForestM2))}㎡ × (보전산지 10,840원 + 필지별 공시지가 1%, 상한 8,340원)${x.ljForestCapM2 > 0 ? ` · 공시지가 없는 ${fmt(Math.round(x.ljForestCapM2))}㎡는 상한` : ''} · 준보전산지면 8,340원 + 1%`);
   }
   if (x.ljPubM2 > 0 || x.ljGraveM2 > 0) add('토지비', '국공유지·묘지 협의 (금액 미반영)', 0, `[추정] ${x.ljPubM2 > 0 ? `국공유지 ${fmt(Math.round(x.ljPubM2))}㎡ 매입·교환 ` : ''}${x.ljGraveM2 > 0 ? `묘지 ${fmt(Math.round(x.ljGraveM2))}㎡ 분묘 이장 ` : ''}비용·기간 직접 확인 → 기타 사업비에 입력`);
-  add('공사비', '직접공사비', B, `${coreHi ? '[실사업] ' : ''}연면적 ${fmt(gfa)}평${sc.arch ? '(건축개요 입력)' : '(대지·용적률 추정)'} × ${fmt(unit)}만${coreHi ? ` — 서울 핵심지 아파트 하한 적용(기본값 ${fmt(Math.round(unit0))}만 → ${CORE_UNIT}만, 2025 서울 재건축 평균 3.3㎡당 968만·강남권 1,100만대 보도 기준)` : ''}`);
+  add('공사비', '직접공사비', B, `${coreHi ? '[실사업] ' : floHi ? '[추정] ' : ''}연면적 ${fmt(gfa)}평${sc.arch ? '(건축개요 입력)' : '(대지·용적률 추정)'} × ${fmt(unit)}만${coreHi ? ` — 서울 핵심지 아파트 하한 적용(기본값 ${fmt(Math.round(unit0))}만 → ${CORE_UNIT}만, 2025 서울 재건축 평균 3.3㎡당 968만·강남권 1,100만대 보도 기준)` : floHi ? ` — 지역 하한 적용(기본값 ${fmt(Math.round(unit0))}만 → ${fmt(unit)}만, 2025 정비사업 공사비 보도 전국 평균 808만보다 낮은 보수 하한)` : ''}`);
   add('공사비', '설계·감리·인입·미술 등', B * x.buildAddPct / 100, `직접공사비 × ${x.buildAddPct}%`);
   add('분양경비', p.kind === 'rent' ? '임차인 모집·임대 마케팅·M/H' : p.kind === 'lh' ? '매입 심의·인증 대응' : p.kind === 'exit' ? '매각 자문·중개 수수료·마케팅' : '분양대행·광고·촉진·M/H', salesBase * salesPct / 100, `${p.kind === 'coop' ? '일반분양 수입' : '매출'} × ${salesPct}%`);
   add('제세·부담금', '보존등기·채권·각종 부담금', B * x.taxPct / 100, `직접공사비 × ${x.taxPct}%${x.taxPct >= 3.16 ? ' (그중 보존등기 취득세 3.16% [공공] 지방세법 원시취득 — 취득세 2.8%·농특세 0.2%·지방교육세 0.16%, 나머지는 채권·상하수도 원인자부담금 등)' : ''}`);
@@ -2605,6 +2609,9 @@ function LandLookup({ f, setF }) {
   const mainZone = Object.keys(byZone).sort((a, b) => byZone[b] - byZone[a])[0] || '';
   const zoneId = ZONE_BY_NAME[mainZone];
   const city = ok[0] ? cityFromAddr(ok[0].addr) : '';
+  // 토지비 추정(2026-11-20, 보수): 공시지가÷현실화율과 같은 시군구·용도지역 토지 실거래 상위25% 평당가 중 큰 값 — 여러 필지를 모으는 사업부지는 중앙값보다 비싸게 사는 경우가 많음
+  const lrefA = landRefOf(ok[0] ? sggFromAddr(ok[0].addr) : '', zoneId);
+  const landGuess = Math.round(Math.max(jigaEok / (LAND_REAL / 100), lrefA ? lrefA.hi * py / 1e4 : 0));
   const apply = () => (setApplied(true), setF(o => ({
     ...o,
     city: city || o.city,
@@ -2614,7 +2621,7 @@ function LandLookup({ f, setF }) {
     zone: zoneId || o.zone,
     jigaEok,
     ...ljSum(ok, r => r.m2, r => /^(도|구|천|철|제)$/.test(r.jimok), r => r.jiga),
-    ...(jigaEok > 0 && (o.landEok === DEFAULT.landEok || o.landEst) ? { landEok: Math.round(jigaEok / (LAND_REAL / 100)), landEst: true } : {})
+    ...(jigaEok > 0 && (o.landEok === DEFAULT.landEok || o.landEst) ? { landEok: landGuess, landEst: true } : {})
   })));
   const landIsExample = f.landEok === DEFAULT.landEok || !!f.landEst;
   const fmt0 = v => Math.round(v).toLocaleString('ko-KR');
@@ -2664,7 +2671,7 @@ function LandLookup({ f, setF }) {
         }, applied ? "반영됨 ✓ 다시 반영" : "입력에 반영 (지역·대지면적" + (zoneId ? '·용도지역' : '') + ")"),
         applied && React.createElement("div", { style: { marginTop: 8, padding: 12, borderRadius: 10, border: landIsExample ? '2px solid #C5F04A' : '1px solid #2E3541', background: '#12161C' } },
           React.createElement("label", { style: { display: 'block' } },
-            React.createElement("span", { style: { display: 'block', fontSize: 14, fontWeight: 800, color: '#E8EAED', marginBottom: 6 } }, f.landEst ? "토지비: 공시지가로 추정해 넣었어요 — 실제 매입가로 바꿔 주세요" : landIsExample ? "다음: 토지비(매입가)를 넣어 주세요" : "토지비(매입가)"),
+            React.createElement("span", { style: { display: 'block', fontSize: 14, fontWeight: 800, color: '#E8EAED', marginBottom: 6 } }, f.landEst ? "토지비: 공시지가·주변 실거래(상위25%) 중 큰 값으로 추정했어요 — 실제 매입가로 바꿔 주세요" : landIsExample ? "다음: 토지비(매입가)를 넣어 주세요" : "토지비(매입가)"),
             React.createElement("div", { style: { display: 'flex', alignItems: 'center', gap: 8 } },
               React.createElement("input", {
                 type: "number", inputMode: "decimal", step: 1,
