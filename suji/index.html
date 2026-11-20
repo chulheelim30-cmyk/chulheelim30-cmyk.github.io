@@ -3220,19 +3220,22 @@ function ProSens({ f, R }) {
     React.createElement("div", { style: { marginTop: 8 } }, chips.length ? chips.map(([c, t]) => React.createElement("span", { key: t, className: 'chip ' + c }, t)) : React.createElement("span", { style: { fontSize: 11, color: '#8A94A3' } }, "활성 경고 없음")));
 }
 function ProDash({ f, set, live, sheet }) {
+  // 중복 정리(2026-11-20): 사업개요 = 요약 수지표 + 규모 미리보기·민감도 / 사업수지 = KPI 3개만(상세 수지표는 아래 기존 표)
+  if (sheet === 'pf') return React.createElement(ProKpis, { f, R: live });
+  const fl = proFlags(f, live);
   return React.createElement(React.Fragment, null,
-    React.createElement(ProKpis, { f, R: live }),
+    !fl.hasDesign && React.createElement("p", { style: { fontSize: 11, color: '#FDBA74', margin: 0 } }, '⚠ 1차 판단(추정 포함) — 설계 면적 없이 대지·용적률로 추정했습니다. 설계·견적값을 넣을수록 정밀해집니다.'),
     React.createElement(ProTable, { f, set, R: live }),
-    React.createElement("aside", { className: "sj-aside" }, sheet === 'cost' && React.createElement(ProMass, { f, R: live }), React.createElement(ProSens, { f, R: live }))); // 규모 미리보기는 사업개요에만
+    React.createElement("aside", { className: "sj-aside" }, React.createElement(ProMass, { f, R: live }), React.createElement(ProSens, { f, R: live })));
 }
 
 // 사업개요 맨 위: 사업명·저장 + 작은 결과 요약(고정)
 function ProTop({ f, set, setF, live }) {
   const ok = live && !live.empty;
   const it = (l, v, c) => React.createElement("div", { style: { minWidth: 0 } }, React.createElement("div", { style: { fontSize: 10, color: '#8A94A3' } }, l), React.createElement("div", { className: "num", style: { fontSize: 14, fontWeight: 700, color: c || '#E8EAED', whiteSpace: 'nowrap' } }, v));
+  if (f._bar) return React.createElement("div", { className: "pc", style: { order: 0, position: 'sticky', top: 0, zIndex: 6, padding: '8px 12px', display: ok ? 'grid' : 'none', gridTemplateColumns: 'repeat(4,minmax(0,1fr))', gap: 8, backdropFilter: 'blur(6px)', background: 'rgba(19,23,29,.92)' } },
+      ok && it('필요 분양가', `${fmt(live.t10)}만`), ok && it('손익분기', `${fmt(live.be)}만`), ok && it('이익률', `${live.margin.toFixed(1)}%`, live.profit < 0 ? '#F87171' : '#C5F04A'), ok && it('사업이익', sEok1(live.profit), live.profit < 0 ? '#F87171' : '#E8EAED'));
   return React.createElement(React.Fragment, null,
-    React.createElement("div", { className: "pc", style: { order: 0, position: 'sticky', top: 0, zIndex: 6, padding: '8px 12px', display: ok ? 'grid' : 'none', gridTemplateColumns: 'repeat(4,minmax(0,1fr))', gap: 8, backdropFilter: 'blur(6px)', background: 'rgba(19,23,29,.92)' } },
-      ok && it('필요 분양가', `${fmt(live.t10)}만`), ok && it('손익분기', `${fmt(live.be)}만`), ok && it('이익률', `${live.margin.toFixed(1)}%`, live.profit < 0 ? '#F87171' : '#C5F04A'), ok && it('사업이익', sEok1(live.profit), live.profit < 0 ? '#F87171' : '#E8EAED')),
     React.createElement("div", { className: "bg-white rounded-xl border border-slate-200 p-4 space-y-2", style: { order: 1 } },
       React.createElement("label", { className: "block" }, React.createElement("span", { className: "block text-[11px] font-bold text-slate-600 mb-1" }, "사업명"), React.createElement("input", { className: inputCls, value: f.name, onChange: e => set('name')(e.target.value) })),
       React.createElement("div", { className: "grid grid-cols-2 gap-2.5" }, React.createElement(SavedSites, { f, setF, live }))));
@@ -3528,7 +3531,7 @@ function App() {
   }))), /*#__PURE__*/React.createElement("main", {
     className: "max-w-4xl mx-auto px-4 py-4 space-y-3 sj-main",
     style: { paddingBottom: 96 }
-  }, sheet === 'cost' && React.createElement(ProTop, { f, set, setF, live }), (sheet === 'cost' || sheet === 'pf') && live && !live.empty && React.createElement("div", { className: 'space-y-3', style: { order: sheet === 'cost' ? 8 : 0 } }, React.createElement(ProDash, { f, set, live, go, sheet })), sheet === 'cost' && vwOn() && React.createElement("div", { style: { order: 2 } }, React.createElement(LandLookup, { f, setF })), sheet === 'cost' && React.createElement("div", { style: { order: 2 } }, React.createElement(LandSheet, { f, setF })), sheet === 'cost' && React.createElement("div", { className: "bg-white rounded-xl border border-slate-200 p-4 space-y-3", style: { order: 2 } },
+  }, sheet !== 'pf' && React.createElement(ProTop, { f: { ...f, _bar: 1 }, set, setF, live }), sheet === 'cost' && React.createElement(ProTop, { f, set, setF, live }), (sheet === 'cost' || sheet === 'pf') && live && !live.empty && React.createElement("div", { className: 'space-y-3', style: { order: sheet === 'cost' ? 8 : 0 } }, React.createElement(ProDash, { f, set, live, go, sheet })), sheet === 'cost' && vwOn() && React.createElement("div", { style: { order: 2 } }, React.createElement(LandLookup, { f, setF })), sheet === 'cost' && React.createElement("div", { style: { order: 2 } }, React.createElement(LandSheet, { f, setF })), sheet === 'cost' && React.createElement("div", { className: "bg-white rounded-xl border border-slate-200 p-4 space-y-3", style: { order: 2 } },
     React.createElement("div", null,
       React.createElement("h2", { className: "text-sm font-extrabold flex items-center gap-1.5" }, React.createElement(Target, { size: 15, className: "text-emerald-600" }), "토지 기본정보", React.createElement(Tip, { t: "토지비·대지면적·용도지역으로 용적률·연면적을 잡고, 공사비와 2.사업수지가 모두 이 값을 씁니다." }), React.createElement("button", { type: "button", onClick: () => { if (window.confirm('입력한 값을 모두 지우고 처음부터 할까요?')) setF(DEFAULT); }, style: { marginLeft: 'auto', fontSize: 11, fontWeight: 700, padding: '3px 9px', borderRadius: 999, border: '1px solid #CBD5E1', color: '#64748B', background: 'transparent' } }, "새로 입력"))),
     React.createElement("div", { className: "grid grid-cols-2 gap-2.5" }, /*#__PURE__*/React.createElement(Num, {
@@ -3554,7 +3557,7 @@ function App() {
   }, ZONES.map(z => /*#__PURE__*/React.createElement("option", {
     key: z.id,
     value: z.id
-  }, z.n))))), React.createElement(JimokBox, { f }), React.createElement(ScaleWarn, { f })), /*#__PURE__*/React.createElement("div", {
+  }, z.n))))), React.createElement(JimokBox, { f }), React.createElement(ScaleWarn, { f })), sheet === 'cost' && (!live || live.empty || f.landEst) && /*#__PURE__*/React.createElement("div", {
     className: "grid grid-cols-2 gap-2 text-center"
   }, /*#__PURE__*/React.createElement("button", {
     onClick: () => go('cost'),
