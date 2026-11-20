@@ -2741,13 +2741,15 @@ function buildReportHTML(f, R, rt) {
   const mgMk = pg != null && pg > 5 ? model(f, mk.v).margin : null;
   const capMk = mgMk != null ? solveLand(f, mk.v, tm) : null;
   const hiTxt = pg != null && pg > 5 ? ` 다만 입력 분양가(평당 ${fmt(price)}만)가 주변 중앙값(${fmt(mk.v)}만)보다 ${gTxt(price, mk.v)} 높아, 주변 중앙값으로 팔면 이익률은 ${mgMk.toFixed(1)}%입니다.` : '';
-  const v = !hasPrice ? ['기준 분양가 산정', '#3B5BDB', `분양가를 넣지 않아 목표 이익률 ${tm}%를 맞추는 분양가로 계산했습니다.`]
-    : pg != null && pg > 15 ? ['분양가 재검토 필요', mgMk >= 0 ? '#F59F00' : '#E03131', `입력 분양가가 주변 분양가 중앙값보다 ${gTxt(price, mk.v)} 높습니다. 이 가격 기준 이익률 ${mg.toFixed(1)}%는 분양가가 시장에서 받아들여질 때만 성립하며, 주변 중앙값(${fmt(mk.v)}만) 기준 이익률은 ${mgMk.toFixed(1)}%입니다.`]
-    : mg >= tm ? ['검토 진행', pg != null && pg > 5 ? '#F59F00' : '#2F9E44', `입력 분양가로 예상 이익률 ${mg.toFixed(1)}%가 목표(${tm}%) 이상입니다.${hiTxt}`]
-    : mg >= 0 ? ['조건부 검토', '#F59F00', `예상 이익률 ${mg.toFixed(1)}%로 목표(${tm}%)에 ${(tm - mg).toFixed(1)}%p 못 미칩니다.`]
-    : ['재검토 필요', '#E03131', `입력 분양가로는 손실(이익률 ${mg.toFixed(1)}%)이 예상됩니다.`];
-  const cap = t => { const x = solveLand(f, price, t); return x < 0 ? '불가' : `${fmt(x)}억`; };
   const cap15 = solveLand(f, price, tm);
+  const noD0 = !(f.archAboveM2 > 0) && !(f.archBsmtM2 > 0) && !f.gfaManual && !(R.sc && R.sc.whole); // 설계 개요 없으면 '추진' 대신 '조건부 추진'
+  // 판정 4단계(2026-11-20): 추진 / 조건부 추진 / 재검토 / 불가 — 시행사 투자심의 표현
+  const v = !hasPrice ? ['조건부 추진', '#3B5BDB', `분양가 미입력 — 목표 이익률 ${tm}% 기준 필요 분양가 평당 ${fmt(R.t10)}만 확보를 전제로 함`]
+    : pg != null && pg > 15 ? ['재검토', mgMk >= 0 ? '#F59F00' : '#E03131', `입력 분양가가 주변 분양가 중앙값보다 ${gTxt(price, mk.v)} 높음. 이익률 ${mg.toFixed(1)}%는 이 분양가가 시장에서 받아들여질 때만 성립하며, 주변 중앙값(${fmt(mk.v)}만) 기준 이익률은 ${mgMk.toFixed(1)}%임`]
+    : mg >= tm ? [pg != null && pg > 5 || noD0 ? '조건부 추진' : '추진', pg != null && pg > 5 ? '#F59F00' : '#2F9E44', `예상 이익률 ${mg.toFixed(1)}%로 목표(${tm}%) 충족.${hiTxt}`]
+    : mg >= 0 ? [cap15 >= 0 ? '조건부 추진' : '재검토', '#F59F00', `예상 이익률 ${mg.toFixed(1)}%로 목표(${tm}%) 대비 ${(tm - mg).toFixed(1)}%p 부족`]
+    : [cap15 >= 0 ? '재검토' : '불가', '#E03131', `입력 분양가 기준 손실 예상(이익률 ${mg.toFixed(1)}%)${cap15 < 0 ? ' — 토지비 0원이어도 목표 이익률 미달' : ''}`];
+  const cap = t => { const x = solveLand(f, price, t); return x < 0 ? '불가' : `${fmt(x)}억`; };
   let rtHTML = '', rtOp = '';
   if (rt && !rt.error && rt.all && rt.all.n) {
     const use = rt.recent5y && rt.recent5y.n >= 5 ? rt.recent5y : rt.all, lab = rt.type === 'silv' ? '거래' : use === rt.recent5y ? '최근 5년 안 준공' : '전체(기존 건물 포함)';
@@ -2758,7 +2760,7 @@ function buildReportHTML(f, R, rt) {
 <tr><td>${lab} ${rt.basis} 평당</td><td class="r">중앙 ${fmt(use.med)}만 (중간 50%: ${fmt(use.p25)}~${fmt(use.p75)}만)</td></tr>
 ${conv ? `<tr><td>${esc(R.p.priceUnit || '분양면적')} 기준 환산 (전용률 ${Math.round(eff * 100)}%)</td><td class="r"><b>약 ${fmt(conv)}만</b></td></tr><tr><td>필요 분양가와 비교</td><td class="r">${fmt(R.t10)}만 (${g >= 0 ? '+' : ''}${g.toFixed(0)}%)</td></tr>` : ''}
 ${(rt.others || []).map(d => `<tr><td>참고: ${RTMS_N[d.type] || ''}</td><td class="r">${d.all.n}건 · ${d.basis} 평당 중앙 ${fmt(d.all.med)}만</td></tr>`).join('')}</table><div class="bs" style="margin-top:6px">${esc(rt.src)} · 조회 ${esc(rt.at)} · 해제 거래 제외. ${rt.type === 'silv' ? '분양권 전매가는 프리미엄이 붙은 거래라 최초 분양가와 다를 수 있습니다.' : '기존 건물 매매가라 새 분양가는 보통 이보다 높습니다.'} 시세·감정가가 아닌 통계 참고값입니다.</div></div>`;
-    if (conv) rtOp = `<b>[실거래]</b> 주변 ${RTMS_N[rt.type] || ''} ${lab} 중앙값을 ${esc(R.p.priceUnit || '분양면적')} 기준으로 바꾸면 평당 약 ${fmt(conv)}만으로, 필요 분양가는 이보다 ${g >= 0 ? g.toFixed(0) + '% 높습니다' : Math.abs(g).toFixed(0) + '% 낮습니다'}.`;
+    if (conv) rtOp = `- 실거래: 주변 ${RTMS_N[rt.type] || ''} ${lab} 중앙값 ${esc(R.p.priceUnit || '분양면적')} 환산 평당 약 ${fmt(conv)}만, 필요 분양가는 이 대비 ${g >= 0 ? '+' : ''}${g.toFixed(0)}%`;
   } else if (rt && rt.error) rtHTML = `<div class="bs" style="margin:8px 0">주변 실거래를 불러오지 못했습니다(${esc(rt.error)}).</div>`;
   const tag = b => { const m = /^\[(공공|실사업|추정|입력)\]/.exec(b || ''); const c = { 공공: '#2B6CB0', 실사업: '#2F855A', 추정: '#C05621', 입력: '#6B46C1' }; return m ? `<span class="tg" style="color:${c[m[1]]};background:${c[m[1]]}14">${m[1]}</span>` : ''; };
   const S = R.S || 1;
@@ -2807,19 +2809,37 @@ ${cmp ? `<div style="margin-top:8px;font-weight:800;color:${pos2[1]}">${pos2[0]}
 ${pg != null && pg > 5 ? `<div style="margin-top:6px;padding:8px 10px;border-radius:8px;background:${pg > 15 ? '#FFE3E3' : '#FFF3BF'};font-size:12.5px;font-weight:700;color:${pg > 15 ? '#C92A2A' : '#E67700'}">⚠ 입력 분양가가 주변 중앙값보다 ${gTxt(price, mk.v)} 높습니다. 이 가격이 시장에서 받아들여진다는 근거(입지·브랜드·최근 인근 분양 사례)가 없으면 예상 이익률 ${mg.toFixed(1)}%는 과대평가일 수 있습니다.</div>` : ''}
 ${cmp ? ''  : `<div style="margin-top:8px;font-size:12px;color:#C05621">이 자료는 민영아파트 분양가(공급면적 기준)라 ${esc(R.p.name)}에는 직접 비교가 어렵습니다. 참고로만 보세요.</div>`}
 <div class="bs" style="margin-top:6px">주변 분양가는 공공 자료의 통계값이며 이 사업의 적정 가격이나 감정가가 아닙니다. 입지·브랜드·평형·시점에 따라 달라집니다.</div></div>`;
-    if (cmp) mkOp = `<b>[시장성]</b> 필요 분양가 평당 ${fmt(R.t10)}만은 ${esc(mk.n || '')} 주변 분양가 중앙값(${fmt(mk.v)}만)${Math.abs(gap(R.t10, mk.v)) < 1 ? '과 같은 수준입니다' : `보다 ${gTxt(R.t10, mk.v)}입니다`}. ${pos2[0]}.${pg != null && pg > 5 ? ` <b style="color:${pg > 15 ? '#C92A2A' : '#E67700'}">입력 분양가 ${fmt(price)}만도 주변 중앙값보다 ${gTxt(price, mk.v)} 높게 잡혀 있어, 주변 중앙값으로 팔면 이익률은 ${mgMk.toFixed(1)}%입니다.</b>` : ''}`;
+    if (cmp) mkOp = `- 분양가: ${esc(mk.n || '')} 주변 중앙 평당 ${fmt(mk.v)}만 대비 필요 분양가 ${gTxt(R.t10, mk.v)} — ${pos2[0]}${pg != null && pg > 5 ? ` · <b style="color:${pg > 15 ? '#C92A2A' : '#E67700'}">입력 분양가 ${gTxt(price, mk.v)}, 주변 중앙값으로 팔면 이익률 ${mgMk.toFixed(1)}%</b>` : ''}`;
   }
   const N0 = mk || rtHTML.includes('<h2>') ? 3 : 2, N = k => String(N0 + k).padStart(2, '0');
+  // 종합의견(2026-11-20): 결론 → 사업성 → 시장성 → 리스크 → 추진 조건 → 후속 확인, 개조식
+  const fixedRate = R.p.kind === 'lh' || R.p.kind === 'exit';
+  const beRate = (() => { if (fixedRate || model(f, price, { saleRate: 100 }).margin < 0) return null; let lo = 30, hi = 100; if (model(f, price, { saleRate: lo }).margin >= 0) return lo; for (let i = 0; i < 30; i++) { const m = (lo + hi) / 2; if (model(f, price, { saleRate: m }).margin >= 0) hi = m; else lo = m; } return Math.ceil(hi); })();
+  const cM = d => model(f, price, { costMode: 'manual', costManual: R.unit * d });
+  const c5 = cM(1.05).margin;
+  const cMax = (() => { if (cM(0.5).margin < tm) return null; let lo = 0.5, hi = 2; if (cM(hi).margin >= tm) return R.unit * hi; for (let i = 0; i < 30; i++) { const m = (lo + hi) / 2; if (cM(m).margin >= tm) lo = m; else hi = m; } return Math.floor(R.unit * lo / 10) * 10; })();
+  const gC = (R.groups || {})['공사비'] || 0, gF = (R.groups || {})['금융비'] || 0;
+  const landCap = capMk != null ? capMk : cap15, landNote = capMk != null ? '(주변 중앙 분양가 기준)' : '';
+  const noD = !(f.archAboveM2 > 0) && !(f.archBsmtM2 > 0) && !f.gfaManual && !(R.sc && R.sc.whole);
+  const concl = !hasPrice ? `분양가 평당 ${fmt(R.t10)}만 이상 확보 시(토지 ${fmt(f.landEok)}억 기준)` : v[0] === '추진' ? `토지 ${fmt(f.landEok)}억 · 분양가 평당 ${fmt(price)}만 기준 목표 이익률 충족` : v[0] === '불가' ? '토지비를 낮춰도 목표 이익률 미달 — 분양가·상품 구성 재설계 필요' : landCap >= 0 ? `토지 ${fmt(landCap)}억 이하 확보 시${landNote}` : '분양가·상품 구성 재검토 전제';
+  const H = t => `<div style="margin-top:8px"><b>■ ${t}</b></div>`;
   const opinion = [
-    `<b>[사업성]</b> ${v[2]}`,
-    mkOp,
-    rtOp,
-    `<b>[핵심 변수]</b> 분양가가 5% 내려가면 이익률이 ${mg.toFixed(1)}%에서 ${p5.toFixed(1)}%로 바뀝니다.${big ? ` 비용 중 가장 큰 항목은 ${esc(big)}(총매출의 ${(R.groups[big] / S * 100).toFixed(0)}%)입니다.` : ''}`,
-    !hasPrice ? `<b>[권고]</b> 예상 분양가를 넣어 다시 계산하면, 그 분양가에서 목표이익 기준 토지비와 판정이 나옵니다.` : pg != null && pg > 5 ? `<b>[권고]</b> <b style="color:${pg > 15 ? '#C92A2A' : '#E67700'}">${capMk >= 0 ? `주변 중앙값(${fmt(mk.v)}만) 기준으로는 토지를 ${fmt(capMk)}억 이하로 확보해야 목표 이익률 ${tm}%가 나옵니다(입력 토지비 ${fmt(f.landEok)}억${capMk < f.landEok ? `, ${fmt(f.landEok - capMk)}억 초과` : ''}).` : `주변 중앙값(${fmt(mk.v)}만) 기준으로는 토지비가 0원이어도 목표 이익률 ${tm}%가 나오지 않습니다.`}</b>${cap15 >= 0 ? ` 입력 분양가가 실현될 때의 상한은 ${fmt(cap15)}억이니, 매입 협상은 주변 시세 기준으로 보세요.` : ''}` : cap15 >= 0 ? `<b>[권고]</b> 토지를 ${fmt(cap15)}억 이하로 확보할 수 있을 때 목표 이익률 ${tm}%가 나옵니다(입력 토지비 ${fmt(f.landEok)}억).` : `<b>[권고]</b> 토지비가 0원이어도 목표 이익률 ${tm}%가 나오지 않아 분양가·상품 구성을 다시 검토해야 합니다.`,
-    nEst ? `<b>[확인]</b> 추정값 ${nEst}개(${esc(estNames)})가 포함되어 있습니다. 설계 개요와 실제 매입가를 넣어 다시 계산하면 정확해집니다.` : '',
-    farWarn ? `<b style="color:#E67700">[확인] 용적률 ${fmt(R.sc.far)}%는 ${esc(fi.src)} 기준입니다. 시 조례 용적률이 더 낮으면 연면적·세대수가 줄어 수지가 나빠지니 조례와 토지이음을 꼭 확인하세요.</b>` : '',
-    f.saleRate >= 100 ? `<b style="color:#E67700">[확인] 분양률 100%는 낙관적 가정입니다. 분양률 80%에서 이익률은 ${model(f, price, { saleRate: 80 }).margin.toFixed(1)}%입니다(05 참고).</b>` : ''
-  ].filter(Boolean).join('<br>');
+    `<div style="font-size:15px"><b>■ 결론: <span style="color:${v[1]}">${v[0]}</span></b> — ${concl}${noD ? ' <span style="color:#C05621">(설계 개요 없이 추정 — 반영 후 재확인 필요)</span>' : ''}</div>`,
+    H('사업성') + `- 매출 ${eok1(R.S)}, 사업비 ${eok1(costT)}, 사업이익 ${eok1(R.profit)}(이익률 ${mg.toFixed(1)}%)<br>- 손익분기 분양가 평당 ${fmt(R.be)}만${mk ? `(주변 중앙 대비 ${gTxt(R.be, mk.v)})` : ''}, 목표 이익률 ${tm}% 분양가 평당 ${fmt(R.t10)}만`,
+    mkOp || rtOp ? H('시장성') + [mkOp, rtOp].filter(Boolean).join('<br>') : '',
+    H('리스크') + [
+      `- 분양: 분양가 5% 하락 시 이익률 ${p5.toFixed(1)}%${beRate != null ? `, 손익분기 분양률 ${beRate}%` : ''}${f.saleRate >= 100 && !fixedRate ? ` · <b style="color:#E67700">분양률 100%는 낙관적 가정(80% 시 ${model(f, price, { saleRate: 80 }).margin.toFixed(1)}%)</b>` : ''}`,
+      `- 원가: 공사비 ${eok1(gC)}(매출 대비 ${(gC / S * 100).toFixed(0)}%, 평당 ${fmt(R.unit)}만), 공사비 5% 상승 시 이익률 ${c5.toFixed(1)}%`,
+      `- 금융: PF ${eok1(R.pf || 0)}, 금융비 ${eok1(gF)}(매출 대비 ${(gF / S * 100).toFixed(1)}%)`,
+      farWarn ? `- 인허가: <b style="color:#E67700">용적률 ${fmt(R.sc.far)}%는 ${esc(fi.src)} 기준 추정 — 시 조례 확인 필요</b>` : '- 인허가: 지구단위계획·주차·일조 등 개별 규제 미반영',
+      nEst ? `- 추정 항목 ${nEst}개(${esc(estNames)}) 포함 — 설계 개요·실매입가 반영 필요` : ''
+    ].filter(Boolean).join('<br>'),
+    H('추진 조건') + (v[0] === '불가' ? `- 토지비 0원이어도 목표 이익률 미달<br>- 분양가 평당 ${fmt(R.t10)}만 이상(입력 대비 ${gTxt(R.t10, price)}) 근거 확보 또는 상품·규모 재구성 필요` :
+      [`① 토지 ${landCap >= 0 ? fmt(landCap) + '억 이하' + landNote : '— 토지비만으로는 목표 미달'}`,
+       `② 분양가 평당 ${fmt(R.t10)}만 이상`,
+       cMax ? `③ 공사비 평당 ${fmt(cMax)}만 이내` : ''].filter(Boolean).join(' &nbsp;') + `<div class="bs">각 조건은 나머지 입력값을 그대로 둔 기준이며 목표 이익률 ${tm}% 달성선임</div>`),
+    H('후속 확인') + '- 감정평가 · 인근 분양 사례 · 시공사 개략 견적 · 조례·지구단위계획'
+  ].filter(Boolean).join('');
   return `<!DOCTYPE html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>SuziQ 사업성 검토 보고서 - ${esc(f.name || '')}</title>
 <style>@page{size:A4;margin:14mm 12mm}body{font-family:'Pretendard','Noto Sans KR',system-ui,sans-serif;color:#14161A;margin:0;background:#F1F2F4}
 .pg{background:#fff;max-width:760px;margin:16px auto;padding:28px 30px;box-sizing:border-box;break-after:page}.pg:last-of-type{break-after:auto}
