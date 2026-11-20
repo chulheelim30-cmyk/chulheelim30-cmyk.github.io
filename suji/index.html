@@ -2734,6 +2734,7 @@ function buildReportHTML(f, R, rt) {
   // 주변 분양가 비교: 앱에 들어 있는 공공 자료(청약홈 시군구 분양가 중앙값, 없으면 HUG 지역 평균). 아파트·주상복합만 직접 비교
   const mk = (() => { try { return hugOf(f); } catch { return null; } })();
   const cmp = mk && ['apt', 'mixed'].includes(R.p.id);
+  const mkLab = mk && mk.src === 'sgg' ? '주변 중앙' : '지역 평균'; // HUG 지역 평균일 때 '주변 중앙'으로 쓰지 않음
   const gap = (a, b) => ((a / b - 1) * 100);
   const gTxt = (a, b) => { const g = gap(a, b); return Math.abs(g) < 0.5 ? '±0%' : `${g >= 0 ? '+' : ''}${g.toFixed(0)}%`; };
   // 입력 분양가가 주변 중앙값보다 높으면 판정을 보수적으로 낮춤(+5% 초과 주의, +15% 초과 판정 하향)
@@ -2806,7 +2807,7 @@ ${cmp ? `<div style="margin-top:8px;font-weight:800;color:${pos2[1]}">${pos2[0]}
 ${pg != null && pg > 5 ? `<div style="margin-top:6px;padding:8px 10px;border-radius:8px;background:${pg > 15 ? '#FFE3E3' : '#FFF3BF'};font-size:12.5px;font-weight:700;color:${pg > 15 ? '#C92A2A' : '#E67700'}">참고: 입력 분양가는 주변 중앙값 대비 ${gTxt(price, mk.v)}. 주변 중앙값(${fmt(mk.v)}만)으로 팔 경우 이익률 ${mgMk.toFixed(1)}%.</div>` : ''}
 ${cmp ? ''  : `<div style="margin-top:8px;font-size:12px;color:#C05621">이 자료는 민영아파트 분양가(공급면적 기준)라 ${esc(R.p.name)}에는 직접 비교가 어렵습니다. 참고로만 보세요.</div>`}
 <div class="bs" style="margin-top:6px">주변 분양가는 공공 자료의 통계값이며 이 사업의 적정 가격이나 감정가가 아닙니다. 입지·브랜드·평형·시점에 따라 달라집니다.</div></div>`;
-    if (cmp) mkOp = `- 분양가: ${esc(mk.n || '')} 주변 중앙 평당 ${fmt(mk.v)}만 대비 필요 분양가 ${gTxt(R.t10, mk.v)}${pg != null && pg > 5 ? ` · <b style="color:${pg > 15 ? '#C92A2A' : '#E67700'}">입력 분양가 ${gTxt(price, mk.v)}, 주변 중앙값으로 팔면 이익률 ${mgMk.toFixed(1)}%</b>` : ''}`;
+    if (cmp) mkOp = `- 분양가: ${esc(mk.n || '')} ${mkLab} 평당 ${fmt(mk.v)}만 대비 필요 분양가 ${gTxt(R.t10, mk.v)}${pg != null && pg > 5 ? ` · <b style="color:${pg > 15 ? '#C92A2A' : '#E67700'}">입력 분양가 ${gTxt(price, mk.v)}, 주변 중앙값으로 팔면 이익률 ${mgMk.toFixed(1)}%</b>` : ''}`;
   }
   const N0 = mk || rtHTML.includes('<h2>') ? 3 : 2, N = k => String(N0 + k).padStart(2, '0');
   // 종합의견(2026-11-20): 결론 → 사업성 → 시장성 → 리스크 → 추진 조건 → 후속 확인, 개조식
@@ -2823,7 +2824,7 @@ ${cmp ? ''  : `<div style="margin-top:8px;font-size:12px;color:#C05621">이 자�
   const H = t => `<div style="margin-top:8px"><b>■ ${t}</b></div>`;
   const opinion = [
     `<div style="font-size:15px"><b>■ 목표 이익률 ${tm}% 달성 조건</b><br>${concl}<div class="bs">각 조건은 나머지 입력값을 그대로 둔 기준임</div>${noD ? ' <span style="color:#C05621">(설계 개요 없이 추정 — 반영 후 재확인 필요)</span>' : ''}</div>`,
-    H('사업성') + `- 매출 ${eok1(R.S)}, 사업비 ${eok1(costT)}, 사업이익 ${eok1(R.profit)}(이익률 ${mg.toFixed(1)}%)<br>- 손익분기 분양가 평당 ${fmt(R.be)}만${mk ? `(주변 중앙 대비 ${gTxt(R.be, mk.v)})` : ''}, 목표 이익률 ${tm}% 분양가 평당 ${fmt(R.t10)}만`,
+    H('사업성') + `- 매출 ${eok1(R.S)}, 사업비 ${eok1(costT)}, 사업이익 ${eok1(R.profit)}(이익률 ${mg.toFixed(1)}%)<br>- 손익분기 분양가 평당 ${fmt(R.be)}만${mk ? `(${mkLab} 대비 ${gTxt(R.be, mk.v)})` : ''}, 목표 이익률 ${tm}% 분양가 평당 ${fmt(R.t10)}만`,
     mkOp || rtOp ? H('시장성') + [mkOp, rtOp].filter(Boolean).join('<br>') : '',
     H('리스크') + [
       `- 분양: 분양가 5% 하락 시 이익률 ${p5.toFixed(1)}%${beRate != null ? `, 손익분기 분양률 ${beRate}%` : ''}${f.saleRate >= 100 && !fixedRate ? ` · 분양률 100% 가정 · 80% 시 이익률 ${model(f, price, { saleRate: 80 }).margin.toFixed(1)}%` : ''}`,
