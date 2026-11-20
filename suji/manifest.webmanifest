@@ -1,7 +1,7 @@
 {
   "id": "./",
-  "name": "수지들 — 사업수지·공사비 계산",
-  "short_name": "수지들",
+  "name": "SuziQ — 사업수지·공사비 계산",
+  "short_name": "SuziQ",
   "description": "지번만 넣으면 면적·용도지역을 불러와 공사비와 사업수지를 바로 계산하는 시행사용 도구",
   "start_url": "./?src=app",
   "scope": "./",
