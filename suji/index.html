@@ -2747,8 +2747,8 @@ function buildReportHTML(f, R, rt) {
   const v = !hasPrice ? ['조건부 추진', '#3B5BDB', `분양가 미입력 — 목표 이익률 ${tm}% 기준 필요 분양가 평당 ${fmt(R.t10)}만 확보를 전제로 함`]
     : pg != null && pg > 15 ? ['재검토', mgMk >= 0 ? '#F59F00' : '#E03131', `입력 분양가가 주변 분양가 중앙값보다 ${gTxt(price, mk.v)} 높음. 이익률 ${mg.toFixed(1)}%는 이 분양가가 시장에서 받아들여질 때만 성립하며, 주변 중앙값(${fmt(mk.v)}만) 기준 이익률은 ${mgMk.toFixed(1)}%임`]
     : mg >= tm ? [pg != null && pg > 5 || noD0 ? '조건부 추진' : '추진', pg != null && pg > 5 ? '#F59F00' : '#2F9E44', `예상 이익률 ${mg.toFixed(1)}%로 목표(${tm}%) 충족.${hiTxt}`]
-    : mg >= 0 ? [cap15 >= 0 ? '조건부 추진' : '재검토', '#F59F00', `예상 이익률 ${mg.toFixed(1)}%로 목표(${tm}%) 대비 ${(tm - mg).toFixed(1)}%p 부족`]
-    : [cap15 >= 0 ? '재검토' : '불가', '#E03131', `입력 분양가 기준 손실 예상(이익률 ${mg.toFixed(1)}%)${cap15 < 0 ? ' — 토지비 0원이어도 목표 이익률 미달' : ''}`];
+    : mg >= 10 ? [cap15 >= 0 ? '조건부 추진' : '재검토', '#F59F00', `예상 이익률 ${mg.toFixed(1)}%로 목표(${tm}%) 대비 ${(tm - mg).toFixed(1)}%p 부족`]
+    : [cap15 >= 0 ? '재검토' : '불가', '#E03131', mg >= 0 ? `예상 이익률 ${mg.toFixed(1)}%로 최소 기준 10% 미달${cap15 < 0 ? ' — 토지비 0원이어도 목표 이익률 미달' : ''}` : `입력 분양가 기준 손실 예상(이익률 ${mg.toFixed(1)}%)${cap15 < 0 ? ' — 토지비 0원이어도 목표 이익률 미달' : ''}`];
   const cap = t => { const x = solveLand(f, price, t); return x < 0 ? '불가' : `${fmt(x)}억`; };
   let rtHTML = '', rtOp = '';
   if (rt && !rt.error && rt.all && rt.all.n) {
@@ -2821,7 +2821,7 @@ ${cmp ? ''  : `<div style="margin-top:8px;font-size:12px;color:#C05621">이 자�
   const gC = (R.groups || {})['공사비'] || 0, gF = (R.groups || {})['금융비'] || 0;
   const landCap = capMk != null ? capMk : cap15, landNote = capMk != null ? '(주변 중앙 분양가 기준)' : '';
   const noD = !(f.archAboveM2 > 0) && !(f.archBsmtM2 > 0) && !f.gfaManual && !(R.sc && R.sc.whole);
-  const concl = !hasPrice ? `분양가 평당 ${fmt(R.t10)}만 이상 확보 시(토지 ${fmt(f.landEok)}억 기준)` : v[0] === '추진' ? `토지 ${fmt(f.landEok)}억 · 분양가 평당 ${fmt(price)}만 기준 목표 이익률 충족` : v[0] === '불가' ? '토지비를 낮춰도 목표 이익률 미달 — 분양가·상품 구성 재설계 필요' : landCap >= 0 ? `토지 ${fmt(landCap)}억 이하 확보 시${landNote}` : '분양가·상품 구성 재검토 전제';
+  const concl = !hasPrice ? `분양가 평당 ${fmt(R.t10)}만 이상 확보 시(토지 ${fmt(f.landEok)}억 기준)` : v[0] === '추진' ? `토지 ${fmt(f.landEok)}억 · 분양가 평당 ${fmt(price)}만 기준 목표 이익률 충족` : v[0] === '불가' ? '토지비를 낮춰도 목표 이익률 미달 — 분양가·상품 구성 재설계 필요' : landCap >= 0 ? (v[0] === '재검토' ? `현 조건으로는 진행 불가 — 토지 ${fmt(landCap)}억 이하로 재협상 시 재검토${landNote}` : `토지 ${fmt(landCap)}억 이하 확보 시${landNote}`) : '분양가·상품 구성 재검토 전제';
   const H = t => `<div style="margin-top:8px"><b>■ ${t}</b></div>`;
   const opinion = [
     `<div style="font-size:15px"><b>■ 결론: <span style="color:${v[1]}">${v[0]}</span></b> — ${concl}${noD ? ' <span style="color:#C05621">(설계 개요 없이 추정 — 반영 후 재확인 필요)</span>' : ''}</div>`,
