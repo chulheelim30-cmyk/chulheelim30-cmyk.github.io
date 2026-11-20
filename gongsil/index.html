@@ -190,6 +190,11 @@ body.res .wrap{padding-bottom:90px}
 .dio-hint{position:absolute;left:10px;top:12px;font-size:11px;color:#8a7a5c}
 .print-only{display:none}
 @media print{.dio{display:none!important}.print-only{display:block!important}}
+.dio-hud{position:absolute;left:8px;top:8px;background:rgba(19,35,61,.88);color:#fff;border-radius:12px;padding:6px 10px;min-width:118px;transition:background .4s}
+.dio-hud.done{background:rgba(176,141,87,.95)}.dio-hud .hp{font-size:11px;letter-spacing:.5px;opacity:.85}
+.dio-hud .hg{display:flex;align-items:baseline;gap:6px}.dio-hud .hg b{font-family:'Noto Serif KR',serif;font-size:22px;line-height:1.1}.dio-hud .hg span{font-size:13px}
+.dio-hud .hs{font-size:11px;opacity:.9;max-width:170px}
+.dio{background:#f1ede4}
 @media (max-width:380px){.money{grid-template-columns:1fr}.how{font-size:12px}.sc{grid-template-columns:60px 1fr 46px}header h1{font-size:21px!important}}
 @media (min-width:760px){.wrap,header .in{max-width:640px}.dock a{max-width:608px}}
 </style>
@@ -612,7 +617,7 @@ function buildReport(c){const {x,g,tot,wide,gHi,vr,MK,out,NWL}=c,PL=REP.PL;
     ${gaps.length?`<div class="rh">동급 ${pe.lbl} 대비 빈자리 <small>${esc(pe.desc)}</small></div><div class="gchips">${gaps.map(o=>`<span>${esc(o.nm)} ${Math.round(o.p*100)}%</span>`).join("")}</div>`:""}
     <div class="ractions"><button type="button" class="go" id="pdfBtn">PDF로 저장</button><a class="go" href="#reqBox" style="text-align:center;text-decoration:none;background:var(--navy)">정식 진단 신청</a></div>
     <p class="rfoot">공공 데이터(소상공인시장진흥공단 상가정보 2026.9, 한국부동산원 임대동향 2026.3Q, K-apt 2026.11, 국토부 실거래가)와 입력값으로 만든 간이 보고서입니다. 현장 확인 전 추정치가 포함되며, 정식 리포트에서 실측·평면도 기준으로 확정합니다. 공실공은 분석·기획만 하며 임대 알선·계약은 임대인 또는 공인중개사가 진행합니다.</p></div></div>`;
-  try{renderDiorama(out,x,'rPlan2');}catch(e){console.log(e);try{renderIsoAnim(out,x,'rPlan2');}catch(_){renderPlan(out,x,'rPlan2');}}
+  try{renderDiorama(out,x,'rPlan2',{g:gNow,G:PL.final.g,t0:tot,t1:PL.final.t});}catch(e){console.log(e);try{renderIsoAnim(out,x,'rPlan2');}catch(_){renderPlan(out,x,'rPlan2');}}
   $('pdfBtn').onclick=()=>{window.peTrack&&peTrack("pdf");window.print();};
 }
 // 아이소 MD 배치도 (애니메이션: 바닥 → 층별 상승 → 간판 점등)
@@ -677,140 +682,129 @@ function renderIsoAnim(out,x,tid){
 }
 // ── 3D 디오라마 MD 배치도 (Three.js): 파스텔 섬 위에 층이 통통 튀며 쌓이고, 추천 업종 간판·어닝이 붙음 ──
 let DIO=null;
-function renderDiorama(out,x,tid){
+function renderDiorama(out,x,tid,st){st=st||{};
   const box=$(tid);if(DIO){DIO.stop();DIO=null;}
   const T=window.THREE;let ok=!!T;try{if(ok){const c=document.createElement('canvas');ok=!!(c.getContext('webgl')||c.getContext('experimental-webgl'));}}catch(e){ok=false;}
   if(!ok){renderIsoAnim(out,x,tid);return;}
   box.innerHTML=`<div class="dio"><div class="dio-cv"></div>
-    <div class="dio-ui"><button type="button" data-a="re">↺ 다시 짓기</button><button type="button" data-a="night">🌙 밤</button></div>
-    <div class="dio-cam"><button type="button" data-c="all" class="on">전체</button><button type="button" data-c="front">정면</button><button type="button" data-c="f1">1층</button><button type="button" data-c="top">옥상</button></div>
-    ${matchMedia('(pointer:fine)').matches?'<div class="dio-hint">드래그로 돌려 보기</div>':""}</div><div class="print-only" id="${tid}_p"></div>`;
+    <div class="dio-hud"><div class="hp" data-h="ph">현재 건물</div><div class="hg"><b data-h="g">${st.g||""}</b><span data-h="t">${st.t0??""}점</span></div><div class="hs" data-h="sub"></div></div>
+    <div class="dio-ui"><button type="button" data-a="re">↺ 다시 보기</button><button type="button" data-a="night">🌙 야간</button></div>
+    <div class="dio-cam"><button type="button" data-c="all" class="on">전체</button><button type="button" data-c="front">정면</button><button type="button" data-c="f1">1층</button><button type="button" data-c="top">위에서</button></div></div><div class="print-only" id="${tid}_p"></div>`;
   renderIsoAnim(out,x,tid+"_p");
-  const cv=box.querySelector('.dio-cv'),Wd=Math.max(280,cv.clientWidth||box.clientWidth||340),Hd=Math.round(Math.min(440,Wd*1.02));
-  const scene=new T.Scene(),bg=new T.Color(0xfbf3e0);scene.background=bg;scene.fog=new T.FogExp2(0xfbf3e0,0.012);
-  const cam=new T.PerspectiveCamera(38,Wd/Hd,0.1,200);
+  const H=k=>box.querySelector(`[data-h="${k}"]`);
+  const cv=box.querySelector('.dio-cv'),Wd=Math.max(280,cv.clientWidth||box.clientWidth||340),Hd=Math.round(Math.min(460,Wd*1.08));
+  const BG=0xf1ede4,scene=new T.Scene();scene.background=new T.Color(BG);
+  const cam=new T.PerspectiveCamera(34,Wd/Hd,0.1,200);
   const rd=new T.WebGLRenderer({antialias:true,preserveDrawingBuffer:true});rd.setSize(Wd,Hd);rd.setPixelRatio(Math.min(devicePixelRatio,2));
-  rd.shadowMap.enabled=true;rd.shadowMap.type=T.PCFSoftShadowMap;rd.toneMapping=T.ACESFilmicToneMapping;rd.toneMappingExposure=.95;rd.outputEncoding=T.sRGBEncoding;cv.appendChild(rd.domElement);
-  const amb=new T.HemisphereLight(0xfffbeb,0xf3d9a4,.75);scene.add(amb);
-  const sun=new T.DirectionalLight(0xfff7ed,1.0);sun.position.set(18,30,20);sun.castShadow=true;sun.shadow.mapSize.set(1024,1024);
-  Object.assign(sun.shadow.camera,{left:-18,right:18,top:18,bottom:-18,near:4,far:80});sun.shadow.bias=-0.0006;scene.add(sun);
-  const rim=new T.DirectionalLight(0xfbcfe8,.3);rim.position.set(-16,12,-14);scene.add(rim);
-  const M=(h,r=.72)=>new T.MeshStandardMaterial({color:h,roughness:r,metalness:.03});
-  const mix=(hex,k)=>{const c=new T.Color(hex);c.lerp(new T.Color(0xffffff),k);return c;};
-  const edges=(m,o=.14,c=0x57534e)=>{m.add(new T.LineSegments(new T.EdgesGeometry(m.geometry,28),new T.LineBasicMaterial({color:c,transparent:true,opacity:o})));return m;};
+  rd.shadowMap.enabled=true;rd.shadowMap.type=T.PCFSoftShadowMap;rd.toneMapping=T.ACESFilmicToneMapping;rd.toneMappingExposure=1;rd.outputEncoding=T.sRGBEncoding;cv.appendChild(rd.domElement);
+  const amb=new T.HemisphereLight(0xffffff,0xd9d2c3,.8);scene.add(amb);
+  const sun=new T.DirectionalLight(0xffffff,.95);sun.position.set(-10,26,20);sun.castShadow=true;sun.shadow.mapSize.set(1024,1024);
+  Object.assign(sun.shadow.camera,{left:-16,right:16,top:16,bottom:-16,near:4,far:70});sun.shadow.bias=-0.0006;sun.shadow.radius=4;scene.add(sun);
+  const M=(h,r=.8)=>new T.MeshStandardMaterial({color:h,roughness:r,metalness:.02});
+  const edges=(m,o=.18,c=0x13233D)=>{m.add(new T.LineSegments(new T.EdgesGeometry(m.geometry,25),new T.LineBasicMaterial({color:c,transparent:true,opacity:o})));return m;};
   const bx=(w,h,d,mat,px=0,py=0,pz=0)=>{const m=new T.Mesh(new T.BoxGeometry(w,h,d),mat);m.position.set(px,py,pz);m.castShadow=m.receiveShadow=true;return m;};
-  const glows=[],signs=[],lamps=[];
-  const txt=(t,col,w,h,no)=>{const c=document.createElement('canvas');c.width=512;c.height=Math.round(512*h/w);const g=c.getContext('2d');
-    g.fillStyle=col;g.fillRect(0,0,c.width,c.height);let fs=Math.min(c.height*.62,c.width/Math.max(2,t.length)*1.05);
-    g.font=`700 ${fs}px "Noto Sans KR",sans-serif`;g.fillStyle="#fff";g.textAlign="center";g.textBaseline="middle";
-    const ox=no?c.height*.45:0;g.fillText(t,c.width/2+ox,c.height/2+2);
-    if(no){g.fillStyle="#13233D";g.beginPath();g.arc(c.height*.55,c.height/2,c.height*.36,0,7);g.fill();g.fillStyle="#fff";g.font=`700 ${c.height*.42}px sans-serif`;g.fillText(no,c.height*.55,c.height/2+2);}
+  const lit=[],signs=[];
+  const txt=(t,col,w,h,no,fg)=>{const c=document.createElement('canvas');c.width=512;c.height=Math.max(64,Math.round(512*h/w));const g=c.getContext('2d');
+    g.fillStyle=col;g.fillRect(0,0,c.width,c.height);const ox=no?c.height*.5:0,fs=Math.min(c.height*.6,(c.width-ox*1.6)/Math.max(2,t.length)*1.05);
+    g.font=`700 ${fs}px "Noto Sans KR",sans-serif`;g.fillStyle=fg||"#fff";g.textAlign="center";g.textBaseline="middle";g.fillText(t,c.width/2+ox*.6,c.height/2+2);
+    if(no){g.fillStyle="#fff";g.beginPath();g.arc(c.height*.55,c.height/2,c.height*.34,0,7);g.fill();g.fillStyle=col;g.font=`800 ${c.height*.42}px sans-serif`;g.fillText(no,c.height*.55,c.height/2+2);}
     const tx=new T.CanvasTexture(c);tx.anisotropy=4;tx.encoding=T.sRGBEncoding;const mt=new T.MeshBasicMaterial({map:tx,toneMapped:false});signs.push(mt);return mt;};
-  const parts=[];const reg=(o,s0,s1,type="drop",dh=4.5)=>{parts.push({o,s0,s1,type,dh,p:o.position.clone(),sc:o.scale.clone()});};
+  // 애니메이션 등록: grow(바닥에서 솟음) · pop · hide(사라짐) · fade
+  const parts=[];const reg=(o,s0,s1,type)=>{parts.push({o,s0,s1,type,sc:o.scale.clone(),p:o.position.clone()});};
   const root=new T.Group();scene.add(root);
-  // 섬·광장·도로
-  const isl=new T.Group();root.add(isl);
-  const soil=new T.Mesh(new T.CylinderGeometry(13,10.5,2,40),M(0xe0a35b,.9));soil.position.y=-1.15;isl.add(soil);
-  const soil2=new T.Mesh(new T.CylinderGeometry(10.4,7,1.2,40),M(0xc2833f,.95));soil2.position.y=-2.7;isl.add(soil2);
-  const grass=new T.Mesh(new T.CylinderGeometry(13.3,13.1,.42,40),M(0xa7e3b4,.8));grass.receiveShadow=true;isl.add(grass);reg(isl,0,.07,"pop");
-  const plaza=new T.Group();root.add(plaza);
-  plaza.add(edges(bx(13.4,.14,11.6,M(0xfdf6dc,.85),0,.24,.4),.08));
-  const road=bx(15.5,.12,2.6,M(0x6b7280,.9),0,.26,7.4);road.receiveShadow=true;plaza.add(road);
-  for(let i=-6;i<=6;i+=2.2)plaza.add(bx(1.2,.13,.16,M(0xfffbeb,.6),i,.33,7.4));
-  reg(plaza,.03,.1,"pop");
-  // 나무·가로등
-  [[-9,3.2,0x86d39a],[-8,-5,0x6fcf97],[8.8,-4,0xa7e3b4],[9.2,2.6,0xfde68a],[-2.4,-8.6,0x86d39a]].forEach((t,i)=>{const g=new T.Group();
-    g.add(bx(.3,1.4,.3,M(0x9a5b2a,.85),0,.7,0));const c1=new T.Mesh(new T.SphereGeometry(.95,16,16),M(t[2],.75));c1.position.y=1.85;c1.castShadow=true;g.add(c1);
-    const c2=new T.Mesh(new T.SphereGeometry(.62,16,16),M(t[2],.75));c2.position.set(.45,2.25,.25);g.add(c2);g.position.set(t[0],.2,t[1]);root.add(g);reg(g,.05+i*.012,.13+i*.012,"pop");});
-  {const g=new T.Group();g.add(bx(.14,3.4,.14,M(0x475569,.5),0,1.9,0));const bm=new T.MeshStandardMaterial({color:0xfef9c3,emissive:0xfde047,emissiveIntensity:.3});
-    const gl=new T.Mesh(new T.SphereGeometry(.32,16,16),bm);gl.position.y=3.75;g.add(gl);const pl=new T.PointLight(0xffedd5,0,14);pl.position.y=3.7;g.add(pl);lamps.push({pl,bm});
-    g.position.set(6.4,.3,5.4);root.add(g);reg(g,.1,.17,"pop");}
+  // 모형 받침(네이비) + 대지 + 보도·도로
+  const W=9.4,D=7.6,H1=2.9,HU=2.5,HT=2.3,PW=W+7,PD=D+11;
+  const base=new T.Group();root.add(base);
+  base.add(bx(PW+.6,.7,PD+.6,M(0x13233D,.6),0,-.35,1.2));
+  base.add(bx(PW+.64,.06,PD+.64,M(0xB08D57,.4),0,0,1.2));
+  base.add(bx(PW,.12,PD,M(0xe9e4d8,.95),0,.06,1.2));
+  base.add(bx(PW,.14,2.4,M(0x5b616c,.9),0,.08,D/2+5.2));
+  for(let k=-PW/2+1;k<PW/2-1;k+=2.2)base.add(bx(1.1,.15,.14,M(0xf5f1e8,.6),k,.09,D/2+5.2));
+  base.add(bx(PW,.16,2.2,M(0xd8d1c2,.9),0,.1,D/2+2.9));
+  reg(base,0,.08,"fade");
+  // 모형 나무(무채색)·사람 스케일
+  [[-W/2-2.2,D/2+2.9],[W/2+2.2,D/2+2.9],[-W/2-2.4,-1],[W/2+2.4,-2.6]].forEach(([a,b],i)=>{const g=new T.Group();g.add(bx(.1,1.2,.1,M(0xb9b2a4),0,.7,0));
+    const c=new T.Mesh(new T.IcosahedronGeometry(.85,1),M(0xf7f5f0,.9));c.position.y=1.75;c.castShadow=true;g.add(c);g.position.set(a,.12,b);root.add(g);reg(g,.06+i*.01,.12+i*.01,"pop");});
+  [[-1.2,D/2+2.6,0x13233D],[-.6,D/2+3.2,0xB08D57],[2.6,D/2+2.8,0x5b6b82]].forEach(([a,b,c],i)=>{const g=new T.Group();g.add(bx(.22,.7,.16,M(c,.7),0,.47,0));
+    const hd=new T.Mesh(new T.SphereGeometry(.13,12,12),M(c,.7));hd.position.y=.95;g.add(hd);g.position.set(a,.12,b);root.add(g);reg(g,.88+i*.02,.93+i*.02,"pop");});
   // 건물
-  const W=9.4,D=7.6,H1=2.9,HU=2.5,HT=2.3;
-  const items=out.map((o,i)=>({...o,no:i+1,ar:o.r.area||40}));
+  const items=out.map((o,i)=>({...o,no:i+1,ar:o.r.area||40})),N=items.length;
   const ff=items.filter(o=>o.r.pos==="front"),fi=items.filter(o=>o.r.pos==="inner"),up=items.filter(o=>o.r.pos==="upper");
   const nUp=up.length?Math.min(2,Math.ceil(up.length/3)):0,tower={officetel:3,jisan:3,mixed:2,small:1,retail:0}[x.type]??1;
-  const nFl=1+nUp+tower,slot=.8/(nFl+1);let y=.7;
+  const nFl=1+nUp+tower,G0=.1,G1=.42,sl=(G1-G0)/nFl;let y=.12,fk=0;
   const bld=new T.Group();root.add(bld);
-  const fnd=edges(bx(W+.8,.45,D+.8,M(0xf5dfa0,.8),0,.48,0));bld.add(fnd);reg(fnd,.08,.16,"drop",3.5);
-  const glass=new T.MeshPhysicalMaterial({color:0x9ec9e8,roughness:.08,metalness:.1,transparent:true,opacity:.38});
-  const glowMat=()=>{const m=new T.MeshStandardMaterial({color:0xcfdde6,emissive:0xff9f2e,emissiveIntensity:0,roughness:.6});m.toneMapped=false;glows.push(m);return m;};
+  const WALL=0xf7f4ee,glassDay=0x9fb6c9;
+  const glass=new T.MeshPhysicalMaterial({color:0xaec4d6,roughness:.06,metalness:.15,transparent:true,opacity:.42});
+  const dark=new T.MeshStandardMaterial({color:0x2b3442,roughness:.5});
+  const litMat=()=>{const m=new T.MeshStandardMaterial({color:0xf3e3c2,emissive:0xffb347,emissiveIntensity:.18,roughness:.6});m.toneMapped=false;lit.push(m);return m;};
   const short=n=>{n=n.replace(/\s*\(.*?\)/g,"");return n.length>8?n.split(/[·\s]/)[0].slice(0,8):n;};
-  // 가게 한 칸 (정면: dir='z', 옆면: dir='x')
-  const shop=(g,o,cx,w,h,dir,isUp)=>{const ct=CAT[o?o.pick?o.pick.cat:"none":"none"],col=o?ct[1]:"#b8b2a4",u=new T.Group();
-    const face=bx(w-.06,h-.1,.12,M(mix(col,.78),.75),0,h/2,0);u.add(face);
-    if(isUp){const wn=bx(w*.7,h*.45,.16,glowMat(),0,h*.42,.03);u.add(wn);u.add(bx(w*.66,h*.41,.2,glass,0,h*.42,.04));}
-    else{u.add(bx(w*.86,h*.58,.16,glowMat(),0,h*.36,.03));u.add(bx(w*.82,h*.54,.2,glass,0,h*.36,.04));
-      const aw=new T.Group();const n=Math.max(3,Math.round(w/.55)),sw=(w-.1)/n;
-      for(let i=0;i<n;i++){const st=bx(sw,.12,.95,M(i%2?0xfffbeb:mix(col,.15),.6),-(w-.1)/2+sw/2+i*sw,0,0);st.rotation.x=.3;aw.add(st);}
-      aw.position.set(0,h*.74,.5);u.add(aw);}
-    if(o){const sg=bx(w*.92,.5,.14,txt(short(o.pick?o.pick.n:"전환 검토"),col,w*.92,.5,o.no),0,h-.32,.12);u.add(sg);}
-    else{u.add(bx(w*.8,.36,.12,M(0xd6cfbf,.7),0,h-.3,.1));}
+  const F1=.52,F2=.92,fillAt=k=>F1+(F2-F1-.06)*(N>1?k/(N-1):0);
+  // 한 칸: o=추천 호실(처음엔 공실 → 순서대로 입점), null=기존 영업 칸
+  const unit=(g,o,cx,w,h,dir,isUp)=>{const u=new T.Group();
+    u.add(bx(w-.06,h-.1,.1,M(WALL,.85),0,h/2,0));
+    const gh=isUp?h*.46:h*.6,gy=isUp?h*.44:h*.37;
+    if(!o){u.add(bx(w*.84,gh,.12,litMat(),0,gy,.03));u.add(bx(w*.8,gh*.94,.16,glass,0,gy,.04));u.add(bx(w*.8,.34,.1,M(0xcfc8b8,.8),0,h-.3,.08));}
+    else{const ct=CAT[o.pick?o.pick.cat:"none"],col=ct[1];
+      const em=new T.Group();em.add(bx(w*.84,gh,.12,dark,0,gy,.03));em.add(bx(w*.8,gh*.94,.16,glass,0,gy,.04));
+      em.add(bx(Math.min(1.5,w*.6),.42,.1,txt("공실","#9B2C2C",Math.min(1.5,w*.6),.42),0,gy,.13));u.add(em);reg(em,0,fillAt(o.no-1),"hide");
+      const fu=new T.Group();fu.add(bx(w*.84,gh,.12,litMat(),0,gy,.03));fu.add(bx(w*.8,gh*.94,.16,glass,0,gy,.04));
+      fu.add(bx(w*.94,.52,.14,txt(short(o.pick?o.pick.n:"전환 검토"),col,w*.94,.52,o.no),0,h-.32,.12));
+      if(!isUp){const aw=bx(w*.9,.08,.9,M(col,.55),0,h*.73,.5);aw.rotation.x=.22;fu.add(aw);}
+      u.add(fu);reg(fu,fillAt(o.no-1),fillAt(o.no-1)+.06,"pop");}
     if(dir==="z")u.position.set(cx,0,D/2+.02);else{u.rotation.y=Math.PI/2;u.position.set(W/2+.02,0,cx);}
     g.add(u);};
   const layout=(arr,len,minW)=>{const tot=arr.reduce((a,o)=>a+o.ar,0),use=arr.length?Math.min(len,Math.max(len*.5,len*tot/(arr.length>2?tot:Math.max(tot,90)))):0;
     let p=-len/2,res=[];arr.forEach(o=>{const w=Math.max(minW,use*o.ar/tot);res.push([o,p+w/2,w]);p+=w;});
     for(;p<len/2-.6;){const w=Math.min(2.4,len/2-p);res.push([null,p+w/2,w]);p+=w;}return res;};
-  const floorBody=(h,col)=>{const g=new T.Group();g.add(edges(bx(W,h,D,M(col,.75),0,h/2,0),.12));g.add(bx(W+.3,.2,D+.3,M(0xfffbeb,.7),0,.05,0));return g;};
-  // 1층
-  {const g=floorBody(H1,0xfffbeb);g.position.y=y;bld.add(g);
-    layout(ff,W,1.6).forEach(([o,c,w])=>shop(g,o,c,w,H1,"z",false));
-    layout(fi,D,1.5).forEach(([o,c,w])=>shop(g,o,c,w,H1,"x",false));
-    reg(g,slot,slot*2,"drop",5);y+=H1;}
-  // 2층 이상 상가
-  for(let k=0;k<nUp;k++){const g=floorBody(HU,0xffedd5);g.position.y=y;bld.add(g);const a=up.slice(k*3,k*3+3);
-    layout(a,W,2).forEach(([o,c,w])=>shop(g,o,c,w,HU,"z",true));
-    [-1.9,1.9].forEach(z=>{const w=new T.Group();w.add(bx(1.6,1.1,.14,glowMat(),0,HU*.48,0));w.add(bx(1.5,1,.18,glass,0,HU*.48,.01));w.rotation.y=Math.PI/2;w.position.set(W/2+.02,0,z);g.add(w);});
-    reg(g,slot*(2+k),slot*(3+k),"drop",5);y+=HU;}
-  // 위층(주거·업무)
-  const tc=[0xd1fae5,0xfef3c7,0xe0e7ff,0xfce7f3];
-  for(let k=0;k<tower;k++){const g=floorBody(HT,tc[k%4]);g.position.y=y;bld.add(g);
-    [-3,0,3].forEach(px=>{const w=new T.Group();w.add(bx(1.7,1.15,.14,M(0xfffbeb,.7),0,HT*.5,0));w.add(bx(1.45,.92,.16,glowMat(),0,HT*.5,.02));w.add(bx(1.4,.88,.2,glass,0,HT*.5,.03));w.position.set(px,0,D/2+.02);g.add(w);});
-    [-1.9,1.9].forEach(z=>{const w=new T.Group();w.add(bx(1.45,.92,.16,glowMat(),0,HT*.5,0));w.add(bx(1.4,.88,.2,glass,0,HT*.5,.01));w.rotation.y=Math.PI/2;w.position.set(W/2+.02,0,z);g.add(w);});
-    reg(g,slot*(2+nUp+k),slot*(3+nUp+k),"drop",5);y+=HT;}
-  // 옥상: 지붕·물탱크·화분·건물명 간판
-  const roof=new T.Group();roof.position.y=y;bld.add(roof);
-  roof.add(edges(bx(W+.4,.3,D+.4,M(0xfb9fa8,.65),0,.15,0),.14));
-  const tank=new T.Mesh(new T.CylinderGeometry(.55,.55,1.1,16),M(0x7cc6ee,.6));tank.position.set(-2.8,.9,-1.8);tank.castShadow=true;roof.add(tank);
-  [[2.6,-1.6],[3.4,1.2]].forEach(([a,b])=>{const pot=new T.Mesh(new T.CylinderGeometry(.35,.26,.4,12),M(0xfb7185,.6));pot.position.set(a,.5,b);roof.add(pot);const bu=new T.Mesh(new T.SphereGeometry(.45,12,12),M(0x6fcf97,.75));bu.position.set(a,.92,b);roof.add(bu);});
-  reg(roof,.82,.9,"drop",3);
-  const crown=new T.Group();crown.position.set(0,y+1.25,D/2-1.2);bld.add(crown);
-  crown.add(bx(5.4,.9,.22,txt((x.name||"").slice(0,12),"#13233D",5.4,.9),0,0,0));
-  [-2,0,2].forEach((bx_,i)=>{const b=new T.Mesh(new T.SphereGeometry(i===1?.22:.15,12,12),M(i===1?0xfb7185:0x7cc6ee,.6));b.position.set(bx_,.62,0);crown.add(b);});
-  reg(crown,.9,1,"pop");
+  const floor=(h)=>{const g=new T.Group();g.add(edges(bx(W,h,D,M(WALL,.85),0,h/2,0)));g.add(bx(W+.24,.16,D+.24,M(0xe4ded2,.8),0,h,0));g.position.y=y;bld.add(g);
+    reg(g,G0+sl*fk,G0+sl*(fk+1)+.04,"grow");fk++;return g;};
+  {const g=floor(H1);layout(ff,W,1.6).forEach(([o,c,w])=>unit(g,o,c,w,H1,"z",false));layout(fi,D,1.5).forEach(([o,c,w])=>unit(g,o,c,w,H1,"x",false));y+=H1;}
+  for(let k=0;k<nUp;k++){const g=floor(HU);layout(up.slice(k*3,k*3+3),W,2).forEach(([o,c,w])=>unit(g,o,c,w,HU,"z",true));
+    [-1.9,1.9].forEach(z=>{const w=new T.Group();w.add(bx(1.6,1.1,.12,litMat(),0,HU*.48,0));w.add(bx(1.5,1,.16,glass,0,HU*.48,.01));w.rotation.y=Math.PI/2;w.position.set(W/2+.02,0,z);g.add(w);});y+=HU;}
+  for(let k=0;k<tower;k++){const g=floor(HT);
+    for(let px=-3.6;px<=3.6;px+=1.8){g.add(bx(1.3,1.25,.1,glass,px,HT*.5,D/2+.04));}
+    [-2.4,-.8,.8,2.4].forEach(z=>g.add(bx(.1,1.25,1.2,glass,W/2+.04,HT*.5,z)));y+=HT;}
+  {const r=new T.Group();r.position.y=y;bld.add(r);r.add(edges(bx(W+.3,.22,D+.3,M(0xe4ded2,.8),0,.11,0)));r.add(edges(bx(2.6,1,2,M(WALL,.85),-2.6,.72,-1.6)));reg(r,G1-.02,G1+.05,"grow");}
+  const crown=new T.Group();crown.position.set(0,y+.95,D/2-.6);bld.add(crown);
+  crown.add(bx(Math.min(6.4,1.2+(x.name||"").length*.42),.72,.16,txt((x.name||"").slice(0,14),"#13233D",Math.min(6.4,1.2+(x.name||"").length*.42),.72),0,0,0));reg(crown,.93,1,"pop");
   // 카메라
-  const midY=Math.max(3.5,y*.5);
-  const dd=.92+y*.022;const CAMS={all:[[20*dd,9+y*.55,23*dd],[0,midY,0]],front:[[0,5+y*.35,27*dd],[0,midY,0]],f1:[[9.5,3.6,12.5],[.5,1.8,2]],top:[[10,y+12,12],[0,y,0]]};
+  const midY=Math.max(3,y*.48),dd=1.02+y*.024;
+  const CAMS={all:[[18*dd,7+y*.5,24*dd],[-.6,midY+1.2,1]],front:[[0,4+y*.3,27*dd],[0,midY+1,1]],f1:[[8.5,3.4,12.5],[.8,1.6,2.5]],top:[[9,y+16,14],[0,y*.4,1]]};
   cam.position.set(...CAMS.all[0]);let ctl=null;
-  if(T.OrbitControls&&matchMedia('(pointer:fine)').matches){ctl=new T.OrbitControls(cam,rd.domElement);ctl.target.set(...CAMS.all[1]);ctl.enableDamping=true;ctl.maxPolarAngle=Math.PI/2-.05;ctl.minDistance=10;ctl.maxDistance=50;ctl.enableZoom=false;}
-  let look=new T.Vector3(...CAMS.all[1]),tPos=null,tLook=null;
-  if(ctl)ctl.addEventListener('start',()=>{tPos=tLook=null;});
-  // 애니메이션
-  const bounce=t=>{const n=7.5625,d=2.75;if(t<1/d)return n*t*t;if(t<2/d)return n*(t-=1.5/d)*t+.75;if(t<2.5/d)return n*(t-=2.25/d)*t+.9375;return n*(t-=2.625/d)*t+.984375;};
-  const pop=t=>t<=0?0:t>=1?1:Math.pow(2,-9*t)*Math.sin((t*10-.75)*2*Math.PI/3.2)+1;
-  const apply=pr=>parts.forEach(q=>{if(pr<=q.s0){q.o.visible=false;return;}q.o.visible=true;const t=Math.min(1,(pr-q.s0)/(q.s1-q.s0));
-    if(q.type==="drop"){const b=bounce(t);q.o.position.set(q.p.x,q.p.y+(1-b)*q.dh,q.p.z);const s=t<.3?.8+.2*t/.3:1;q.o.scale.set(q.sc.x*s,q.sc.y*s,q.sc.z*s);}
-    else{const s=Math.max(.01,pop(t));q.o.scale.set(q.sc.x*s,q.sc.y*s,q.sc.z*s);}});
+  if(T.OrbitControls&&matchMedia('(pointer:fine)').matches){ctl=new T.OrbitControls(cam,rd.domElement);ctl.target.set(...CAMS.all[1]);ctl.enableDamping=true;ctl.maxPolarAngle=Math.PI/2-.05;ctl.enableZoom=false;}
+  let look=new T.Vector3(...CAMS.all[1]),tPos=null,tLook=null;if(ctl)ctl.addEventListener('start',()=>{tPos=tLook=null;});
+  // 진행
+  const eo=t=>1-Math.pow(1-t,3),bk=t=>{const c=1.7;return 1+(c+1)*Math.pow(t-1,3)+c*Math.pow(t-1,2);};
+  const apply=pr=>parts.forEach(q=>{const t=Math.max(0,Math.min(1,(pr-q.s0)/(q.s1-q.s0)));
+    if(q.type==="hide"){q.o.visible=pr<q.s1;return;}
+    if(pr<=q.s0){q.o.visible=false;return;}q.o.visible=true;
+    if(q.type==="grow"){const e=Math.max(.001,eo(t));q.o.scale.set(q.sc.x,q.sc.y*e,q.sc.z);}
+    else if(q.type==="fade"){const e=eo(t);q.o.position.y=q.p.y-(1-e)*1.2;}
+    else{const s=Math.max(.01,bk(t));q.o.scale.set(q.sc.x*s,q.sc.y*s,q.sc.z*s);}});
+  const vac=x.vac??N,t0=st.t0??0,t1=st.t1??t0;let hudK="";
+  const hud=pr=>{let ph,g,t,sub;
+    if(pr<G1+.02){ph="① 현재 건물";g=st.g;t=t0;sub="";}
+    else if(pr<F1){ph="② 공실 진단";g=st.g;t=t0;sub=`공실 ${vac}실 · 빈 칸은 불이 꺼져 있습니다`;}
+    else if(pr<F2){const k=Math.min(N,items.filter(o=>pr>=fillAt(o.no-1)).length),f=(pr-F1)/(F2-F1);ph="③ 공실공 MD 적용";t=Math.round(t0+(t1-t0)*f);g=t>t0?grade(t):st.g;sub=`${k}/${N} 호실 입점 제안`;}
+    else{ph="④ 기획 후";g=st.G||st.g;t=t1;sub=`공실 ${Math.max(0,vac-N)}실 · ${N}개 호실 MD 확정`;}
+    const key=ph+g+t+sub;if(key===hudK)return;hudK=key;H("ph").textContent=ph;H("g").textContent=g||"";H("t").textContent=t+"점";H("sub").textContent=sub;
+    box.querySelector('.dio-hud').classList.toggle('done',pr>=F2);};
   const reduce=matchMedia('(prefers-reduced-motion:reduce)').matches;
-  let pr=reduce?1:0,run=false,raf=0,last=0,el=0,night=false,started=false;const DUR=7;
-  apply(pr);
+  let pr=reduce?1:0,run=false,raf=0,last=0,el=0,night=false,started=false,cur="all";const DUR=9;
+  apply(pr);hud(pr);
   const loop=now=>{raf=requestAnimationFrame(loop);const dt=Math.min(.1,(now-(last||now))/1000);last=now;el+=dt;
-    if(started&&pr<1){pr=Math.min(1,pr+dt/DUR);apply(pr);}
-    root.position.y=Math.sin(el*1.3)*.07;
-    if(!ctl&&!tPos){const a=Math.sin(el*.25)*.18;const b=CAMS.all[0];if(cur==="all"){cam.position.set(b[0]*Math.cos(a)-b[2]*Math.sin(a),b[1],b[0]*Math.sin(a)+b[2]*Math.cos(a));}}
-    if(tPos){cam.position.lerp(tPos,.08);look.lerp(tLook,.08);if(cam.position.distanceTo(tPos)<.05){tPos=null;}}
+    if(started&&pr<1){pr=Math.min(1,pr+dt/DUR);apply(pr);hud(pr);}
+    if(!ctl&&!tPos&&cur==="all"){const a=Math.sin(el*.22)*.16,b=CAMS.all[0];cam.position.set(b[0]*Math.cos(a)-b[2]*Math.sin(a),b[1],b[0]*Math.sin(a)+b[2]*Math.cos(a));}
+    if(tPos){cam.position.lerp(tPos,.08);look.lerp(tLook,.08);if(cam.position.distanceTo(tPos)<.05)tPos=null;}
     if(ctl){if(tLook)ctl.target.copy(look);ctl.update();}else cam.lookAt(look);
     rd.render(scene,cam);};
-  let cur="all";
   const start=()=>{if(!run){run=true;last=0;raf=requestAnimationFrame(loop);}};const stop=()=>{run=false;cancelAnimationFrame(raf);};
   const ob=new IntersectionObserver(es=>{if(es[0].isIntersecting){started=true;start();}else stop();},{threshold:.25});ob.observe(box);
-  box.querySelector('[data-a="re"]').onclick=()=>{pr=0;apply(0);started=true;start();};
-  box.querySelector('[data-a="night"]').onclick=e=>{night=!night;e.target.textContent=night?"☀️ 낮":"🌙 밤";
-    const c=night?0x1e1b4b:0xfbf3e0;scene.background=new T.Color(c);scene.fog.color=new T.Color(c);
-    amb.color.setHex(night?0x818cf8:0xfffbeb);amb.groundColor.setHex(night?0x312e81:0xf3d9a4);amb.intensity=night?.45:.9;sun.intensity=night?.4:1;sun.color.setHex(night?0xc7d2fe:0xfff7ed);
-    glows.forEach(m=>{m.emissiveIntensity=night?.85:0;m.color.setHex(night?0xffc46b:0xcfdde6);});glass.opacity=night?.15:.38;lamps.forEach(l=>{l.pl.intensity=night?1.8:0;l.bm.emissiveIntensity=night?1.6:.3;});};
-  box.querySelectorAll('.dio-cam button').forEach(b=>b.onclick=()=>{cur=b.dataset.c;box.querySelectorAll('.dio-cam button').forEach(z=>z.classList.toggle('on',z===b));
-    tPos=new T.Vector3(...CAMS[cur][0]);tLook=new T.Vector3(...CAMS[cur][1]);});
+  box.querySelector('[data-a="re"]').onclick=()=>{pr=0;apply(0);hud(0);started=true;start();};
+  box.querySelector('[data-a="night"]').onclick=e=>{night=!night;e.target.textContent=night?"☀️ 주간":"🌙 야간";
+    scene.background=new T.Color(night?0x0f1a2c:BG);amb.color.setHex(night?0x6b7da6:0xffffff);amb.groundColor.setHex(night?0x1a2438:0xd9d2c3);amb.intensity=night?.5:.8;sun.intensity=night?.25:.95;
+    lit.forEach(m=>{m.emissiveIntensity=night?.95:.18;});glass.opacity=night?.18:.42;};
+  box.querySelectorAll('.dio-cam button').forEach(b=>b.onclick=()=>{cur=b.dataset.c;box.querySelectorAll('.dio-cam button').forEach(z=>z.classList.toggle('on',z===b));tPos=new T.Vector3(...CAMS[cur][0]);tLook=new T.Vector3(...CAMS[cur][1]);});
   DIO={stop:()=>{stop();ob.disconnect();rd.dispose();}};
 }
 function renderLegend(out){const items=out.map((o,i)=>({...o,no:i+1}));
