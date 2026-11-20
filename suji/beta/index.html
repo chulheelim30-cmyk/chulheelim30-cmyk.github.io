@@ -3126,45 +3126,53 @@ function ProTable({ f, set, R }) {
       React.createElement("tr", { className: "pro" + (R.profit < 0 ? " neg" : "") }, React.createElement("td", null, "사업이익"), React.createElement("td", { className: "r num" }, sEok1(R.profit)), React.createElement("td", { className: "r num", style: { whiteSpace: 'nowrap' } }, `${R.margin.toFixed(1)}%`))))),
     React.createElement("p", { style: { fontSize: 10.5, color: '#8A94A3', marginTop: 6 } }, "도넛 = 총사업비 대비 비중 · 항목별 상세와 산출 근거는 2.사업수지 시트에 있습니다."));
 }
-// 규모 미리보기: 대표 1개동 평면이 한 층씩 쌓임(SVG 아이소)
-function proMassSvg(W, D, floors, bf, retF, u, k, done) {
-  const C = Math.cos(Math.PI / 6), S = Math.sin(Math.PI / 6), fh = Math.min(3.0, (W + D) * 0.9 / Math.max(1, floors));
-  const sc = Math.min(330 / ((W + D) * C * 1.5), 260 / ((W + D) * S * 1.5 + floors * fh + bf * fh));
-  const ox = 220 - (W - D) * C * sc / 2, oy = 300 - bf * fh * sc - (W + D) * S * sc;
+// 규모 미리보기(시안 스타일): 라임 대지판 + 앰버 포디움 + 블루그레이 유리 트윈타워, 층이 차례로 올라감. 형태는 연출, 층수·지하·상가 층은 입력값
+function proMassSvg(floors, bf, retF, twin, k, done, unitLabel) {
+  const C = Math.cos(Math.PI / 6), S = Math.sin(Math.PI / 6);
+  const podF = Math.max(1, Math.min(3, retF || 1)), towF = Math.max(1, floors - podF), PH = 2.6;
+  const PW = 20, PD = 16, fh = Math.min(1.5, (44 - podF * PH) / (towF + 1));
+  const sc = 5.4, ox = 205, oy = 262;
   const P = (x, y, z) => [ox + (x - y) * C * sc, oy + (x + y) * S * sc - z * sc];
   const pt = a => a.map(p => p[0].toFixed(1) + ',' + p[1].toFixed(1)).join(' ');
   const poly = (a, fill, ex = '') => `<polygon points="${pt(a)}" fill="${fill}" ${ex}/>`;
-  const rnd = a => { const x = Math.sin(a * 127.1 + 311.7) * 43758.5453; return x - Math.floor(x); };
-  let o = `<defs><radialGradient id="pg" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="rgba(197,240,74,.22)"/><stop offset="1" stop-color="rgba(197,240,74,0)"/></radialGradient></defs>`;
-  // 대지 그리드 + 접지 글로우
-  const g0 = -0.35, g1 = 1.35;
-  const gc = P(W / 2, D / 2, 0); o += `<ellipse cx="${gc[0].toFixed(0)}" cy="${gc[1].toFixed(0)}" rx="${((W + D) * C * sc * .9).toFixed(0)}" ry="${((W + D) * S * sc * .9).toFixed(0)}" fill="url(#pg)"/>`;
-  o += poly([P(W * g0, D * g0, 0), P(W * g1, D * g0, 0), P(W * g1, D * g1, 0), P(W * g0, D * g1, 0)], 'rgba(19,23,29,.6)', 'stroke="#2B3442"');
-  for (let i = 1; i < 8; i++) { const t = g0 + (g1 - g0) * i / 8; const a = P(W * t, D * g0, 0), b = P(W * t, D * g1, 0), c = P(W * g0, D * t, 0), d = P(W * g1, D * t, 0); o += `<line x1="${a[0]}" y1="${a[1]}" x2="${b[0]}" y2="${b[1]}" stroke="#1E2530"/><line x1="${c[0]}" y1="${c[1]}" x2="${d[0]}" y2="${d[1]}" stroke="#1E2530"/>`; }
-  const face = (a, b, z, h, cols, lit, base, warm, fid) => { const q = (t, zz) => P(a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, zz); let r = poly([q(0, z), q(1, z), q(1, z + h), q(0, z + h)], base);
-    for (let c = 0; c < cols; c++) { const t0 = c / cols + .015, t1 = (c + 1) / cols - .015, on = rnd(fid * 31 + c * 7) < lit; r += poly([q(t0, z + h * .2), q(t1, z + h * .2), q(t1, z + h * .9), q(t0, z + h * .9)], on ? (warm ? 'rgba(253,186,116,.9)' : 'rgba(255,214,140,.75)') : 'rgba(147,197,253,.12)'); }
-    return r; };
-  // 지하: 반투명 와이어프레임
-  for (let b = bf; b >= 1; b--) { const z = -b * fh; o += poly([P(0, D, z), P(W, D, z), P(W, D, z + fh * .9), P(0, D, z + fh * .9)], 'rgba(147,197,253,.04)', 'stroke="rgba(147,197,253,.35)" stroke-dasharray="3 3"') + poly([P(W, D, z), P(W, 0, z), P(W, 0, z + fh * .9), P(W, D, z + fh * .9)], 'rgba(147,197,253,.03)', 'stroke="rgba(147,197,253,.35)" stroke-dasharray="3 3"'); }
-  const lift = done ? 0 : fh * 2;
-  for (let fI = 0; fI < k; fI++) {
-    const ret = fI < retF, last = fI === k - 1, z = fI * fh + (last ? lift : 0), h = fh * .88;
-    const cl = Math.max(2, Math.round(W / 3.2)), cr = Math.max(2, Math.round(D / 3.2));
-    o += face([0, D], [W, D], z, h, cl, ret ? .9 : .3, ret ? '#3A2A1C' : '#1B2633', ret, fI);
-    o += face([W, D], [W, 0], z, h, cr, ret ? .9 : .3, ret ? '#4A3422' : '#26364A', ret, fI + 500);
-    const top = [P(0, 0, z + h), P(W, 0, z + h), P(W, D, z + h), P(0, D, z + h)];
-    if (!last) { o += poly(top, '#2B3A4C'); continue; }
-    o += poly(top, '#263040', 'stroke="#C5F04A" stroke-width="1.6"');
-    // 평면: 세대 구획 + 어두운 코어 샤프트
-    const cw = W * .14, cx = (W - cw) / 2; const n = Math.max(1, u);
-    for (let i = 1; i < n; i++) { const xx = i * W / n; const a = P(xx, 0, z + h), b = P(xx, D, z + h); o += `<line x1="${a[0]}" y1="${a[1]}" x2="${b[0]}" y2="${b[1]}" stroke="#3E4C60" stroke-width="1"/>`; }
-    o += poly([P(cx, D * .3, z + h), P(cx + cw, D * .3, z + h), P(cx + cw, D * .7, z + h), P(cx, D * .7, z + h)], '#0B0E13', 'stroke="#3E4C60"');
-    if (!done) [[0, 0], [W, 0], [W, D], [0, D]].forEach(([x, y]) => { const a = P(x, y, fI * fh), b = P(x, y, z); o += `<line x1="${a[0]}" y1="${a[1]}" x2="${b[0]}" y2="${b[1]}" stroke="#C5F04A" stroke-dasharray="3 3" opacity=".7"/>`; });
+  const ln = (a, b, c, w = 1, ex = '') => `<line x1="${a[0].toFixed(1)}" y1="${a[1].toFixed(1)}" x2="${b[0].toFixed(1)}" y2="${b[1].toFixed(1)}" stroke="${c}" stroke-width="${w}" ${ex}/>`;
+  const x0 = -PW / 2, y0 = -PD / 2;
+  const box = (x, y, w, d, z, h, top, l, r, ex = '') => poly([P(x, y + d, z), P(x + w, y + d, z), P(x + w, y + d, z + h), P(x, y + d, z + h)], l) + poly([P(x + w, y + d, z), P(x + w, y, z), P(x + w, y, z + h), P(x + w, y + d, z + h)], r) + poly([P(x, y, z + h), P(x + w, y, z + h), P(x + w, y + d, z + h), P(x, y + d, z + h)], top, ex);
+  let o = `<defs><radialGradient id="gw" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="rgba(197,240,74,.45)"/><stop offset="1" stop-color="rgba(197,240,74,0)"/></radialGradient>
+   <linearGradient id="am" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#F2A55E"/><stop offset="1" stop-color="#B8662C"/></linearGradient>
+   <linearGradient id="tl" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5E7C9E"/><stop offset="1" stop-color="#3A5069"/></linearGradient>
+   <linearGradient id="tr" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#86A3C2"/><stop offset="1" stop-color="#55708F"/></linearGradient></defs>`;
+  // 은은한 바닥 그리드 + 라임 글로우 + 라임 대지판
+  for (let i = 0; i <= 8; i++) { const t = -18 + i * 4.5; o += ln(P(t, -18, 0), P(t, 18, 0), '#1A212B') + ln(P(-18, t, 0), P(18, t, 0), '#1A212B'); }
+  const g = P(0, 0, 0); o += `<ellipse cx="${g[0]}" cy="${g[1]}" rx="${21 * C * sc * 1.25}" ry="${21 * S * sc * 1.25}" fill="url(#gw)"/>`;
+  o += box(x0 - 3, y0 - 3, PW + 6, PD + 6, -0.7, 0.7, 'rgba(197,240,74,.9)', '#8DB32C', '#A9D03A', 'stroke="#E2FF8A" stroke-width="1"');
+  for (let b = 1; b <= bf; b++) { const z = -0.7 - b * 1.2; o += poly([P(x0, y0 + PD, z), P(x0 + PW, y0 + PD, z), P(x0 + PW, y0, z)], 'none', 'stroke="rgba(147,197,253,.3)" stroke-dasharray="3 3"'); }
+  // 앰버 포디움(상가)
+  const podK = Math.min(k, podF), towK = Math.max(0, k - podF);
+  if (podK > 0) {
+    const ph = podK * PH; o += box(x0, y0, PW, PD, 0, ph, '#2B2F36', 'url(#am)', 'url(#am)');
+    for (let f = 0; f < podK; f++) { const z = f * PH; for (let c = 0; c < 10; c++) { const a = x0 + PW * c / 10 + .25, b = x0 + PW * (c + 1) / 10 - .25; o += poly([P(a, y0 + PD, z + .4), P(b, y0 + PD, z + .4), P(b, y0 + PD, z + PH * .85), P(a, y0 + PD, z + PH * .85)], 'rgba(255,236,200,.75)'); }
+      for (let c = 0; c < 8; c++) { const a = y0 + PD * c / 8 + .25, b = y0 + PD * (c + 1) / 8 - .25; o += poly([P(x0 + PW, a, z + .4), P(x0 + PW, b, z + .4), P(x0 + PW, b, z + PH * .85), P(x0 + PW, a, z + PH * .85)], 'rgba(255,236,200,.6)'); } }
+    o += ln(P(x0, y0 + PD, ph), P(x0 + PW, y0 + PD, ph), '#FFD2A0', 1.2) + ln(P(x0 + PW, y0 + PD, ph), P(x0 + PW, y0, ph), '#FFD2A0', 1.2);
   }
-  // 치수선 HUD
-  if (k > 0) { const b = P(W, 0, 0), t = P(W, 0, (k - 1) * fh + fh + lift), x = Math.max(b[0], t[0]) + 18;
-    o += `<line x1="${x}" y1="${b[1]}" x2="${x}" y2="${t[1]}" stroke="#C5F04A" stroke-width="1"/><line x1="${x - 4}" y1="${b[1]}" x2="${x + 4}" y2="${b[1]}" stroke="#C5F04A"/><line x1="${x - 4}" y1="${t[1]}" x2="${x + 4}" y2="${t[1]}" stroke="#C5F04A"/>`;
-    o += `<rect x="${x + 6}" y="${t[1] - 11}" rx="5" width="42" height="20" fill="#C5F04A"/><text x="${x + 27}" y="${t[1] + 3}" font-size="11.5" text-anchor="middle" font-weight="800" fill="#0E1116" font-family="Space Grotesk,Noto Sans KR">${k}F</text>`; }
+  const pz = podF * PH;
+  // 유리 타워: 블루그레이 면 + 층선·멀리온 격자
+  const tower = (x, y, w, d, nF, kF) => { const h = kF * fh; if (h <= 0) return '';
+    let r = box(x, y, w, d, pz, h, '#9FB6CF', 'url(#tl)', 'url(#tr)', 'stroke="#C5F04A" stroke-width="1.2"');
+    for (let f = 1; f < kF; f++) { const z = pz + f * fh; r += ln(P(x, y + d, z), P(x + w, y + d, z), 'rgba(205,222,240,.38)', .7) + ln(P(x + w, y + d, z), P(x + w, y, z), 'rgba(225,236,248,.42)', .7); }
+    const cl = Math.round(w * .9), cr = Math.round(d * .9);
+    for (let c = 1; c < cl; c++) { const xx = x + w * c / cl; r += ln(P(xx, y + d, pz), P(xx, y + d, pz + h), 'rgba(20,30,42,.45)', .8); }
+    for (let c = 1; c < cr; c++) { const yy = y + d * c / cr; r += ln(P(x + w, yy, pz), P(x + w, yy, pz + h), 'rgba(20,30,42,.4)', .8); }
+    return r; };
+  const T = twin ? [[x0 + 2, y0 + 1.5, 8.5, 9, 1], [x0 + 10.5, y0 + 5, 8, 9, .82]] : [[x0 + 4, y0 + 3, 12, 10, 1]];
+  let topA = null;
+  T.forEach(([x, y, w, d, hr], idx) => { const nF = Math.max(1, Math.round(towF * hr)), kF = Math.min(nF, towK); o += tower(x, y, w, d, nF, kF);
+    if (idx === 0 && kF > 0) topA = [x, y, w, d, pz + kF * fh]; });
+  // 지붕 라벨(세대 크기) + 층수 태그
+  if (topA) { const [x, y, w, d, z] = topA, c = P(x + w / 2, y + d / 2, z);
+    if (done && unitLabel) o += `<rect x="${c[0] - 15}" y="${c[1] - 10}" rx="4" width="30" height="18" fill="#C5F04A"/><text x="${c[0]}" y="${c[1] + 3.5}" font-size="11" text-anchor="middle" font-weight="800" fill="#0E1116" font-family="Space Grotesk,Noto Sans KR">${unitLabel}</text>`;
+    const tF = Math.min(towF, towK) + podF, a = P(x + w, y, z), tx = a[0] + 30, ty = a[1] + 4;
+    o += ln(a, [tx, ty], '#C5F04A', 1) + `<rect x="${tx}" y="${ty - 10}" rx="4" width="40" height="19" fill="#C5F04A"/><text x="${tx + 20}" y="${ty + 3.5}" font-size="11" text-anchor="middle" font-weight="800" fill="#0E1116" font-family="Space Grotesk,Noto Sans KR">${tF}F</text>`; }
   return o;
 }
 function ProMass({ f, R }) {
@@ -3176,11 +3184,12 @@ function ProMass({ f, R }) {
   const retF = sc.retailPy > 0 ? Math.max(1, Math.round(sc.retailPy / fpd / dong)) : 0;
   const m = Math.sqrt(fpd * 3.3058), ar = isRes ? 2.4 : 1.2, W = m * Math.sqrt(ar), D = m / Math.sqrt(ar);
   const [k, setK] = useState(0), [run, setRun] = useState(0);
-  useEffect(() => { setK(0); let i = 0; const t = setInterval(() => { i++; setK(i); if (i >= floors) clearInterval(t); }, Math.max(28, 2600 / floors)); return () => clearInterval(t); }, [floors, W, D, run]);
-  const svg = useMemo(() => proMassSvg(W, D, floors, Math.min(bf, 6), retF, isRes ? u : 1, Math.min(k, floors), k >= floors), [W, D, floors, bf, retF, k]);
+  useEffect(() => { setK(0); const tot = floors; let i = 0; const t = setInterval(() => { i++; setK(i); if (i >= tot) clearInterval(t); }, Math.max(28, 2800 / tot)); return () => clearInterval(t); }, [floors, retF, run]);
+  const total = floors;
+  const svg = useMemo(() => proMassSvg(floors, Math.min(bf, 6), retF, isRes && floors >= 12, Math.min(k, total), k >= total, isRes ? String(f.size || 84) : ''), [floors, bf, retF, dong, k, f.size]);
   return React.createElement("div", { className: "pc" },
     React.createElement("div", { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' } }, React.createElement("h3", null, "건물 규모 미리보기"), React.createElement(Bdg, { t: floorsIn ? '입력' : '추정' })),
-    React.createElement("div", { style: { borderRadius: 12, marginTop: 8, background: 'radial-gradient(120% 90% at 50% 30%,#18202B 0%,#0E1116 75%)' } }, React.createElement("svg", { viewBox: "0 0 440 330", style: { width: '100%', display: 'block' }, dangerouslySetInnerHTML: { __html: svg } })),
+    React.createElement("div", { style: { borderRadius: 12, marginTop: 8, background: 'radial-gradient(120% 90% at 50% 30%,#18202B 0%,#0E1116 75%)' } }, React.createElement("svg", { viewBox: "0 0 440 340", style: { width: '100%', display: 'block' }, dangerouslySetInnerHTML: { __html: svg } })),
     React.createElement("div", { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginTop: 8 } },
       React.createElement("span", { style: { fontSize: 11, color: '#8A94A3', lineHeight: 1.5 } }, `${floorsIn ? '' : '추정 '}지상 ${floors}층 · 지하 ${bf}층 · 대표 1개동${dong > 1 ? `(약 ${dong}개동)` : ''} · 바닥 약 ${fmt(fpd)}평`),
       React.createElement("button", { type: "button", className: "pill", onClick: () => setRun(r => r + 1) }, "다시 쌓기")),
