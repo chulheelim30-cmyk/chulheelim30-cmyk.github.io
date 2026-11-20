@@ -3186,14 +3186,11 @@ function ProMass({ f, R }) {
   const tag = (x, y, w, h, t) => React.createElement(React.Fragment, null, React.createElement("rect", { x, y, width: w, height: h, rx: 5, fill: "#C5F04A" }), React.createElement("text", { x: x + w / 2, y: y + h / 2 + 5, fontSize: 14, fontWeight: 800, textAnchor: "middle", fill: "#0E1116", fontFamily: "Space Grotesk,Noto Sans KR" }, t));
   const top = isRes ? String(f.size || 84) : (R.p.name || '').slice(0, 3);
   return React.createElement("div", { className: "pc" },
-    React.createElement("style", null, "@keyframes proDrop{from{transform:translateY(-16%);opacity:0}60%{opacity:1}to{transform:none;opacity:1}}@keyframes proFade{from{opacity:0}to{opacity:1}}"),
+    React.createElement("style", null, "@keyframes proRise{from{clip-path:inset(100% 0 0 0)}to{clip-path:inset(0 0 0 0)}}@keyframes proFade{from{opacity:0}to{opacity:1}}"),
     React.createElement("div", { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' } }, React.createElement("h3", null, "건물 규모 미리보기"), React.createElement(Bdg, { t: floorsIn ? '입력' : '추정' })),
     React.createElement("div", { key: run, style: { position: 'relative', marginTop: 8, borderRadius: 12, overflow: 'hidden', background: '#161E26' } },
-      // 한 층씩 쌓이는 연출: 같은 그림을 가로 띠 18개로 잘라 아래 띠부터 위에서 떨어져 내려앉게 함
-      React.createElement("img", { src: PRO_BLD_IMG, alt: "", style: { width: '100%', display: 'block', visibility: 'hidden' } }),
-      Array.from({ length: 18 }, (_, i) => { const h = 100 / 18, bot = i * h, top = 100 - (i + 1) * h;
-        return React.createElement("img", { key: i, src: PRO_BLD_IMG, alt: i ? '' : '건물 규모 미리보기', style: { position: 'absolute', inset: 0, width: '100%', clipPath: `inset(${Math.max(0, top - .3)}% 0 ${bot}% 0)`, animation: `proDrop .42s ${(i * .13).toFixed(2)}s cubic-bezier(.34,1.45,.64,1) both` } }); }),
-      React.createElement("svg", { viewBox: "0 0 305 310", style: { position: 'absolute', inset: 0, width: '100%', height: '100%', animation: 'proFade .15s 1.85s both' } },
+      React.createElement("img", { src: PRO_BLD_IMG, alt: "건물 규모 미리보기", style: { width: '100%', display: 'block', animation: 'proRise 2.4s cubic-bezier(.3,.8,.3,1) both' } }),
+      React.createElement("svg", { viewBox: "0 0 305 310", style: { position: 'absolute', inset: 0, width: '100%', height: '100%', animation: 'proFade .4s 2.2s both' } },
         tag(129, 28, 46, 32, top), tag(202, 38, 54, 32, `${floors}F`))),
     React.createElement("div", { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginTop: 8 } },
       React.createElement("span", { style: { fontSize: 11, color: '#8A94A3', lineHeight: 1.5 } }, `${floorsIn ? '' : '추정 '}지상 ${floors}층${bf ? ` · 지하 ${bf}층` : ''} · ${R.p.name} · 이미지는 예시(형태는 실제 설계와 무관)`),
