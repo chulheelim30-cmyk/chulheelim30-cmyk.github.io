@@ -170,6 +170,16 @@ body.res .wrap{padding-bottom:90px}
 @media print{@page{size:A4;margin:12mm}body{background:#fff;font-size:12px}header,.prog,#f,.dock,footer,.wrap>.card:not(#result .card),.sample,.ractions,#detBtn,#reqBox,#copyBtn,#againBtn,#copied,.isohint,#iso3Btn{display:none!important}
  .wrap{max-width:none;padding:0}#result{display:block!important}#rDetail{display:block!important;break-before:page}.card,.rep{box-shadow:none;break-inside:avoid}.rcover{-webkit-print-color-adjust:exact;print-color-adjust:exact}
  .rep,.card{border-color:#ddd}#rPlan2 svg,#rIso svg{max-width:130mm;margin:0 auto}.rh{break-after:avoid}.rstep,.mdt tr{break-inside:avoid}*{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
+.iz{position:relative;background:linear-gradient(180deg,#f7f4ee 0%,#efe9dc 100%);border-radius:14px;padding:6px 4px 2px;overflow:hidden}
+.iz-re{position:absolute;right:8px;top:8px;border:0;background:rgba(19,35,61,.08);color:var(--navy);border-radius:999px;padding:5px 10px;font:inherit;font-size:12px;cursor:pointer}
+.iz .iz-base,.iz .iz-fl,.iz .iz-sign{opacity:0}
+.iz.play .iz-base{animation:izf .5s ease forwards}
+.iz.play .iz-fl{transform:translateY(60px);animation:izr .7s cubic-bezier(.2,.9,.25,1) forwards;animation-delay:calc(.35s + var(--i)*.32s)}
+.iz.play .iz-sign{animation:izf .35s ease forwards;animation-delay:calc(.75s + var(--d)*.32s)}
+@keyframes izr{from{opacity:0;transform:translateY(60px)}60%{opacity:1}to{opacity:1;transform:translateY(0)}}
+@keyframes izf{from{opacity:0}to{opacity:1}}
+@media (prefers-reduced-motion:reduce){.iz .iz-base,.iz .iz-fl,.iz .iz-sign{opacity:1!important;animation:none!important;transform:none!important}}
+@media print{.iz .iz-base,.iz .iz-fl,.iz .iz-sign{opacity:1!important;animation:none!important;transform:none!important}.iz-re{display:none}}
 @media (max-width:380px){.money{grid-template-columns:1fr}.how{font-size:12px}.sc{grid-template-columns:60px 1fr 46px}header h1{font-size:21px!important}}
 @media (min-width:760px){.wrap,header .in{max-width:640px}.dock a{max-width:608px}}
 </style>
@@ -592,8 +602,68 @@ function buildReport(c){const {x,g,tot,wide,gHi,vr,MK,out,NWL}=c,PL=REP.PL;
     ${gaps.length?`<div class="rh">동급 ${pe.lbl} 대비 빈자리 <small>${esc(pe.desc)}</small></div><div class="gchips">${gaps.map(o=>`<span>${esc(o.nm)} ${Math.round(o.p*100)}%</span>`).join("")}</div>`:""}
     <div class="ractions"><button type="button" class="go" id="pdfBtn">PDF로 저장</button><a class="go" href="#reqBox" style="text-align:center;text-decoration:none;background:var(--navy)">정식 진단 신청</a></div>
     <p class="rfoot">공공 데이터(소상공인시장진흥공단 상가정보 2026.9, 한국부동산원 임대동향 2026.3Q, K-apt 2026.11, 국토부 실거래가)와 입력값으로 만든 간이 보고서입니다. 현장 확인 전 추정치가 포함되며, 정식 리포트에서 실측·평면도 기준으로 확정합니다. 공실공은 분석·기획만 하며 임대 알선·계약은 임대인 또는 공인중개사가 진행합니다.</p></div></div>`;
-  renderPlan(out,x,'rPlan2');
+  try{renderIsoAnim(out,x,'rPlan2');}catch(e){console.log(e);renderPlan(out,x,'rPlan2');}
   $('pdfBtn').onclick=()=>{window.peTrack&&peTrack("pdf");window.print();};
+}
+// 아이소 MD 배치도 (애니메이션: 바닥 → 층별 상승 → 간판 점등)
+function renderIsoAnim(out,x,tid){
+  const C=0.866,S=0.5,L=220,D=96,H1=52,HU=42,HT=22;
+  const items=out.map((o,i)=>({...o,no:i+1,ar:o.r.area||40}));
+  const ff=items.filter(o=>o.r.pos==="front"),fi=items.filter(o=>o.r.pos==="inner"),up=items.filter(o=>o.r.pos==="upper");
+  const tower={officetel:4,jisan:4,mixed:3,small:1,retail:1}[x.type]??2,towerNm={officetel:"주거",jisan:"업무",mixed:"주거",small:"업무",retail:"상가"}[x.type]||"";
+  const nUp=up.length?Math.min(2,Math.ceil(up.length/3)):0,TOP=H1+nUp*HU+tower*HT;
+  const X0=40,Y0=48+TOP+D*S; // 앞-왼쪽-바닥 모서리
+  const P=(x,y,z)=>[X0+x*C+y*C,Y0+x*S-y*S-z];const pt=a=>a.map(q=>q.map(v=>v.toFixed(1)).join(",")).join(" ");
+  const esc=t=>String(t).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+  const short=n=>{n=n.replace(/\s*\(.*?\)/g,"");return n.length>7?n.split(/[·\s]/)[0].slice(0,7):n;};
+  const sh=(c,k)=>{const n=parseInt(c.slice(1),16),r=n>>16,g=n>>8&255,b=n&255,f=v=>Math.round(Math.max(0,Math.min(255,v*k)));return `rgb(${f(r)},${f(g)},${f(b)})`;};
+  let g="",fl=0;
+  // 바닥·도로
+  g+=`<g class="iz-base"><polygon points="${pt([P(-14,-40,0),P(L+14,-40,0),P(L+14,D+12,0),P(-14,D+12,0)])}" fill="#E9E3D6"/>
+     <polygon points="${pt([P(-14,-40,0),P(L+14,-40,0),P(L+14,-14,0),P(-14,-14,0)])}" fill="#5d6470"/>
+     <polyline points="${pt([P(-6,-27,0),P(L+6,-27,0)])}" stroke="#F6F3EC" stroke-width="1.6" stroke-dasharray="9 7" fill="none"/></g>`;
+  // 면(앞/옆) 그리기 도우미
+  const front=(a,b,z0,z1,fill,st)=>`<polygon points="${pt([P(a,0,z0),P(b,0,z0),P(b,0,z1),P(a,0,z1)])}" fill="${fill}" stroke="${st||"#fff"}" stroke-width=".8"/>`;
+  const side=(a,b,z0,z1,fill,st)=>`<polygon points="${pt([P(L,a,z0),P(L,b,z0),P(L,b,z1),P(L,a,z1)])}" fill="${fill}" stroke="${st||"#fff"}" stroke-width=".8"/>`;
+  const fx=(a,z)=>{const [ox,oy]=P(a,0,z);return `matrix(${C},${S},0,1,${ox.toFixed(1)},${oy.toFixed(1)})`;};
+  const sx=(a,z)=>{const [ox,oy]=P(L,a,z);return `matrix(${C},${-S},0,1,${ox.toFixed(1)},${oy.toFixed(1)})`;};
+  const shop=(o,w,h,tr,tag)=>{const ct=CAT[o.pick?o.pick.cat:"none"],col=ct[1],nm=o.pick?short(o.pick.n):"전환 검토";
+    return `<g transform="${tr}"><rect x="2" y="${-h+16}" width="${w-4}" height="${h-18}" fill="#cfe0ea" opacity=".85"/>
+      <line x1="${w/2}" y1="${-h+18}" x2="${w/2}" y2="0" stroke="#fff" stroke-width=".8"/>
+      <g class="iz-sign" style="--d:${tag}"><rect x="1" y="${-h+2}" width="${w-2}" height="14" rx="2" fill="${col}"/>
+      <text x="${w/2}" y="${-h+12.5}" font-size="${w<44?8:9.5}" font-weight="700" fill="#fff" text-anchor="middle">${esc(nm)}</text>
+      <circle cx="7" cy="${-h+24}" r="6" fill="#13233D"/><text x="7" y="${-h+27}" font-size="7.5" font-weight="700" fill="#fff" text-anchor="middle">${o.no}</text></g></g>`;};
+  // 한 층: 앞면 칸 + 옆면 칸
+  const floor=(z0,h,fr,sd,base,lbl)=>{let q=`<g class="iz-fl" style="--i:${fl++}">`;
+    q+=side(0,D,z0,z0+h,sh(base,.86))+front(0,L,z0,z0+h,base);
+    q+=`<polyline points="${pt([P(0,0,z0+h),P(L,0,z0+h),P(L,D,z0+h)])}" stroke="#13233D" stroke-opacity=".35" stroke-width="2" fill="none"/>`;
+    const tf=fr.reduce((a,o)=>a+o.ar,0),tot=Math.max(tf,fr.length?0:1);let u=0;
+    const wF=fr.length?Math.min(L,L*Math.max(.55,Math.min(1,tf/120))):0;
+    fr.forEach(o=>{const w=Math.max(34,wF*o.ar/tf);q+=front(u,u+w,z0,z0+h,"#fff","#ddd")+shop(o,w,h,fx(u,z0),fl);u+=w;});
+    if(u<L-4){for(let k=u;k<L-4;k+=46){const w=Math.min(46,L-k);q+=`<g transform="${fx(k,z0)}"><rect x="3" y="${-h+16}" width="${w-6}" height="${h-18}" fill="#dfe6ea" opacity=".7"/><rect x="2" y="${-h+3}" width="${w-4}" height="11" rx="2" fill="#c9c2b3"/></g>`;}}
+    const ts=sd.reduce((a,o)=>a+o.ar,0);let v=0;
+    sd.forEach(o=>{const w=Math.max(30,D*Math.min(1,ts/90)*o.ar/ts);q+=side(v,v+w,z0,z0+h,"#fff","#ddd")+shop(o,w,h,sx(v,z0),fl);v+=w;});
+    if(lbl)q+=`<text x="${P(0,0,z0)[0]-5}" y="${P(0,0,z0+h/2)[1]+4}" font-size="10" fill="#6b7280" text-anchor="end">${lbl}</text>`;
+    return q+"</g>";};
+  g+=floor(0,H1,ff,fi,"#efe9dc","1층");
+  for(let k=0;k<nUp;k++)g+=floor(H1+k*HU,HU,up.slice(k*3,k*3+3),[],"#ebe5d8",(k+2)+"층");
+  // 위층 (주거·업무) 유리 매스
+  const zt=H1+nUp*HU;let tw=`<g class="iz-fl" style="--i:${fl++}">`;
+  for(let k=0;k<tower;k++){const z=zt+k*HT;tw+=side(0,D,z,z+HT,"#9fb3c8")+front(0,L,z,z+HT,"#b9cadb");
+    for(let w=8;w<L-6;w+=18)tw+=`<polygon points="${pt([P(w,0,z+6),P(w+11,0,z+6),P(w+11,0,z+HT-5),P(w,0,z+HT-5)])}" fill="#e8f0f7" opacity=".85"/>`;
+    for(let w=8;w<D-6;w+=18)tw+=`<polygon points="${pt([P(L,w,z+6),P(L,w+11,z+6),P(L,w+11,z+HT-5),P(L,w,z+HT-5)])}" fill="#dbe5ef" opacity=".8"/>`;}
+  const zz=zt+tower*HT;tw+=`<polygon points="${pt([P(0,0,zz),P(L,0,zz),P(L,D,zz),P(0,D,zz)])}" fill="#d7e1ea" stroke="#fff"/>`;
+  tw+=`<text x="${P(0,0,zt+tower*HT/2)[0]-5}" y="${P(0,0,zt+tower*HT/2)[1]+4}" font-size="10" fill="#6b7280" text-anchor="end">${towerNm}</text></g>`;g+=tw;
+  const [nx,ny]=P(L/2,D/2,zz);
+  g+=`<g class="iz-sign" style="--d:${fl}"><rect x="${nx-70}" y="${ny-34}" width="140" height="22" rx="11" fill="#13233D"/><text x="${nx}" y="${ny-19}" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">${esc((x.name||"").slice(0,14))}</text></g>`;
+  const [rx,ry]=P(L/2,-27,0);
+  g+=`<text class="iz-base" x="${rx-40}" y="${ry+34}" font-size="10.5" font-weight="700" fill="#B08D57" text-anchor="middle">▲ 도로·역 방향</text>`;
+  const Wd=Math.ceil(X0+L*C+D*C+16),Hd=Math.ceil(Y0+L*S+46);
+  const el=$(tid);el.innerHTML=`<div class="iz"><svg viewBox="0 0 ${Wd} ${Hd}" width="100%" role="img" aria-label="MD 배치도 아이소 뷰">${g}</svg>
+    <button type="button" class="iz-re" aria-label="다시 보기">↻ 다시 보기</button></div>`;
+  const go=()=>{const z=el.querySelector('.iz');z.classList.remove('play');void z.offsetWidth;z.classList.add('play');};
+  el.querySelector('.iz-re').onclick=go;
+  if('IntersectionObserver' in window){const ob=new IntersectionObserver(es=>{if(es[0].isIntersecting){go();ob.disconnect();}},{threshold:.35});ob.observe(el);}else go();
 }
 function renderLegend(out){const items=out.map((o,i)=>({...o,no:i+1}));
   $('rLegend').innerHTML=items.map(o=>{const ct=CAT[o.pick?o.pick.cat:"none"];return `<div class="lg"><div class="no" style="background:${ct[1]}">${o.no}</div><div><b>${o.pick?o.pick.n:"비F&B·분할 검토"}</b>${o.pick&&o.pick.nw?' <span class="tag new">새 포맷</span>':''} <span style="color:var(--muted);font-size:12px">${POSNM[o.r.pos]}${o.r.area!==null?" · "+o.r.area+"㎡":""} · ${ct[0]}</span>${o.pick?`<div class="tm">${o.pick.tm.map(t=>"<span>"+t+"</span>").join("")}</div>${o.pick.img?`<img src="${o.pick.img}" alt="${o.pick.n} 예시" loading="lazy">`:""}`:""}</div></div>`;}).join("");
