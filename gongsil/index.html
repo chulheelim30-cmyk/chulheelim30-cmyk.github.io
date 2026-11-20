@@ -790,7 +790,7 @@ function renderDiorama(out,x,tid,st){st=st||{};
     const key=ph+g+t+sub;if(key===hudK)return;hudK=key;H("ph").textContent=ph;H("g").textContent=g||"";H("t").textContent=t+"점";H("sub").textContent=sub;
     box.querySelector('.dio-hud').classList.toggle('done',pr>=F2);};
   const reduce=matchMedia('(prefers-reduced-motion:reduce)').matches;
-  let pr=reduce?1:0,run=false,raf=0,last=0,el=0,night=false,started=false,cur="all";const DUR=9;
+  let pr=reduce?1:0,run=false,raf=0,last=0,el=0,night=false,started=false,cur="all";const DUR=4.8;
   apply(pr);hud(pr);
   const loop=now=>{raf=requestAnimationFrame(loop);const dt=Math.min(.1,(now-(last||now))/1000);last=now;el+=dt;
     if(started&&pr<1){pr=Math.min(1,pr+dt/DUR);apply(pr);hud(pr);}
