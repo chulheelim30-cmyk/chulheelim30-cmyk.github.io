@@ -50,6 +50,8 @@ html body .st input{width:120px;text-align:right;padding:6px 8px;border-radius:8
 .chip.d{color:var(--red);border-color:rgba(248,113,113,.5);background:rgba(248,113,113,.08)}
 .pill{white-space:nowrap;background:var(--lime);color:#0E1116;border:0;border-radius:999px;padding:6px 14px;font-weight:800;font-size:12px;cursor:pointer}
 .sj-aside{display:flex;flex-direction:column;gap:12px}
+html body .sj-main{display:flex;flex-direction:column;gap:12px}
+html body .sj-main>*{order:6;margin-top:0!important}
 @media (max-width:640px){.kpis{grid-template-columns:1fr 1fr;gap:8px}.kpis .pc{padding:11px}.kpis .hl{grid-column:span 2}.kpi .v{font-size:17px}.kpi .s{font-size:10.5px}.st td{padding:8px 6px;font-size:12.5px}html body .st input{width:96px}}
 @media (min-width:1100px){
  .sj-nav{top:0!important;bottom:0!important;right:auto!important;width:76px;border-top:0!important;border-right:1px solid var(--bd)!important;padding-top:72px}
@@ -3224,6 +3226,17 @@ function ProDash({ f, set, live, sheet }) {
     React.createElement("aside", { className: "sj-aside" }, sheet === 'cost' && React.createElement(ProMass, { f, R: live }), React.createElement(ProSens, { f, R: live }))); // 규모 미리보기는 사업개요에만
 }
 
+// 사업개요 맨 위: 사업명·저장 + 작은 결과 요약(고정)
+function ProTop({ f, set, setF, live }) {
+  const ok = live && !live.empty;
+  const it = (l, v, c) => React.createElement("div", { style: { minWidth: 0 } }, React.createElement("div", { style: { fontSize: 10, color: '#8A94A3' } }, l), React.createElement("div", { className: "num", style: { fontSize: 14, fontWeight: 700, color: c || '#E8EAED', whiteSpace: 'nowrap' } }, v));
+  return React.createElement(React.Fragment, null,
+    React.createElement("div", { className: "pc", style: { order: 0, position: 'sticky', top: 0, zIndex: 6, padding: '8px 12px', display: ok ? 'grid' : 'none', gridTemplateColumns: 'repeat(4,minmax(0,1fr))', gap: 8, backdropFilter: 'blur(6px)', background: 'rgba(19,23,29,.92)' } },
+      ok && it('필요 분양가', `${fmt(live.t10)}만`), ok && it('손익분기', `${fmt(live.be)}만`), ok && it('이익률', `${live.margin.toFixed(1)}%`, live.profit < 0 ? '#F87171' : '#C5F04A'), ok && it('사업이익', sEok1(live.profit), live.profit < 0 ? '#F87171' : '#E8EAED')),
+    React.createElement("div", { className: "bg-white rounded-xl border border-slate-200 p-4 space-y-2", style: { order: 1 } },
+      React.createElement("label", { className: "block" }, React.createElement("span", { className: "block text-[11px] font-bold text-slate-600 mb-1" }, "사업명"), React.createElement("input", { className: inputCls, value: f.name, onChange: e => set('name')(e.target.value) })),
+      React.createElement("div", { className: "grid grid-cols-2 gap-2.5" }, React.createElement(SavedSites, { f, setF, live }))));
+}
 // 내 사업지 저장·불러오기 (2026-11-19): 이 브라우저에만 저장(서버로 보내지 않음), 최대 50개
 const SITES_KEY = 'suji_sites_v1';
 function SavedSites({ f, setF, live }) {
@@ -3515,7 +3528,7 @@ function App() {
   }))), /*#__PURE__*/React.createElement("main", {
     className: "max-w-4xl mx-auto px-4 py-4 space-y-3 sj-main",
     style: { paddingBottom: 96 }
-  }, (sheet === 'cost' || sheet === 'pf') && live && !live.empty && React.createElement(ProDash, { f, set, live, go, sheet }), sheet === 'cost' && vwOn() && React.createElement(LandLookup, { f, setF }), sheet === 'cost' && React.createElement(LandSheet, { f, setF }), sheet === 'cost' && React.createElement("div", { className: "bg-white rounded-xl border border-slate-200 p-4 space-y-3" },
+  }, sheet === 'cost' && React.createElement(ProTop, { f, set, setF, live }), (sheet === 'cost' || sheet === 'pf') && live && !live.empty && React.createElement("div", { className: 'space-y-3', style: { order: sheet === 'cost' ? 8 : 0 } }, React.createElement(ProDash, { f, set, live, go, sheet })), sheet === 'cost' && vwOn() && React.createElement("div", { style: { order: 2 } }, React.createElement(LandLookup, { f, setF })), sheet === 'cost' && React.createElement("div", { style: { order: 2 } }, React.createElement(LandSheet, { f, setF })), sheet === 'cost' && React.createElement("div", { className: "bg-white rounded-xl border border-slate-200 p-4 space-y-3", style: { order: 2 } },
     React.createElement("div", null,
       React.createElement("h2", { className: "text-sm font-extrabold flex items-center gap-1.5" }, React.createElement(Target, { size: 15, className: "text-emerald-600" }), "토지 기본정보", React.createElement(Tip, { t: "토지비·대지면적·용도지역으로 용적률·연면적을 잡고, 공사비와 2.사업수지가 모두 이 값을 씁니다." }), React.createElement("button", { type: "button", onClick: () => { if (window.confirm('입력한 값을 모두 지우고 처음부터 할까요?')) setF(DEFAULT); }, style: { marginLeft: 'auto', fontSize: 11, fontWeight: 700, padding: '3px 9px', borderRadius: 999, border: '1px solid #CBD5E1', color: '#64748B', background: 'transparent' } }, "새로 입력"))),
     React.createElement("div", { className: "grid grid-cols-2 gap-2.5" }, /*#__PURE__*/React.createElement(Num, {
@@ -3575,7 +3588,8 @@ function App() {
     className: "text-[10px] text-slate-500"
   }, R ? R.priced ? '이익률' : '손익분기 분양가' : '손익분기 분양가'), /*#__PURE__*/React.createElement("p", {
     className: `text-sm font-extrabold tabular-nums ${R && R.priced ? R.margin >= 0 ? 'text-emerald-700' : 'text-red-600' : 'text-slate-300'}`
-  }, R && !R.empty ? R.priced ? `${R.margin.toFixed(1)}%` : R.capped ? '토지비 단위(억) 확인' : `${fmt(R.be)}만/평` : '—'))), sheet === 'cost' && React.createElement(QuickCompare, { f, setProduct }), sheet === 'cost' && React.createElement(MaxLand, { f, set, jiga: f.jigaEok || 0, go }), sheet === 'cost' && /*#__PURE__*/React.createElement("section", {
+  }, R && !R.empty ? R.priced ? `${R.margin.toFixed(1)}%` : R.capped ? '토지비 단위(억) 확인' : `${fmt(R.be)}만/평` : '—'))), sheet === 'cost' && React.createElement("div", { style: { order: 3 } }, React.createElement(QuickCompare, { f, setProduct })), sheet === 'cost' && React.createElement("div", { style: { order: 5 } }, React.createElement(MaxLand, { f, set, jiga: f.jigaEok || 0, go })), sheet === 'cost' && /*#__PURE__*/React.createElement("section", {
+    style: { order: 4 },
     className: "space-y-3"
   }, /*#__PURE__*/React.createElement("div", {
     className: "bg-white rounded-xl border border-slate-200 p-4 space-y-3"
@@ -3586,14 +3600,6 @@ function App() {
   }, "만원/평 · VAT 별도", React.createElement(Tip, { t: "도급순위(1~5군) × 상품별 평단가(만원/3.3㎡, VAT 별도)입니다. 여기서 고른 값이 2.사업수지에 그대로 들어갑니다." }))), /*#__PURE__*/React.createElement("div", {
     className: "grid grid-cols-2 gap-2.5"
   }, /*#__PURE__*/React.createElement("label", {
-    className: "block col-span-2"
-  }, /*#__PURE__*/React.createElement("span", {
-    className: "block text-[11px] font-bold text-slate-600 mb-1"
-  }, "\uC0AC\uC5C5\uBA85"), /*#__PURE__*/React.createElement("input", {
-    className: inputCls,
-    value: f.name,
-    onChange: e => set('name')(e.target.value)
-  })), React.createElement(SavedSites, { f, setF, live }), /*#__PURE__*/React.createElement("label", {
     className: "block"
   }, /*#__PURE__*/React.createElement("span", {
     className: "block text-[11px] font-bold text-slate-600 mb-1"
