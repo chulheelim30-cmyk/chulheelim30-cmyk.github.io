@@ -10,7 +10,7 @@ E('className: "max-w-4xl mx-auto px-4 py-4 space-y-3",\n    style: { paddingBott
 js=open('_suji_src/pro_dash.js').read()
 E('// 내 사업지 저장·불러오기', js+'\n// 내 사업지 저장·불러오기')
 # 베타 표시
-E('"SuziQ"))), usage.owner','"SuziQ", React.createElement("span", { style: { marginLeft: 6, fontSize: 10, fontWeight: 800, color: "#0E1116", background: "#C5F04A", borderRadius: 5, padding: "1px 5px", verticalAlign: 3 } }, "BETA")))), usage.owner')
+E('"SuziQ"))), usage.owner','"Suzi", React.createElement("span", { style: { color: "#C5F04A" } }, "Q"), React.createElement("span", { style: { marginLeft: 6, fontSize: 10, fontWeight: 800, color: "#0E1116", background: "#C5F04A", borderRadius: 5, padding: "1px 5px", verticalAlign: 3 } }, "BETA")))), usage.owner')
 open(p,'w').write(s)
 print('ok')
 s=open(p).read()
