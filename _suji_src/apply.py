@@ -62,3 +62,39 @@ assert s.count(o3)==1
 s=s.replace(o3,'React.createElement(ScaleWarn, { f })), sheet === \'cost\' && (!live || live.empty || f.landEst) && /*#__PURE__*/React.createElement("div", {\n    className: "grid grid-cols-2 gap-2 text-center"')
 open(p,'w').write(s)
 print('reordered')
+# ── v3 단계형 사업개요(2026-11-21): 토지 → 상품 → 분양가 → 결과. 기존 섹션에 data-st 표시 후 CSS로 단계별 노출, 계산 엔진 그대로 ──
+s=open(p).read()
+def R(o,n,c=1):
+  global s; assert s.count(o)==c,(o[:70],s.count(o)); s=s.replace(o,n)
+R("  const [sheet, setSheet] = useState('cost');","  const [sheet, setSheet] = useState('cost');\n  const [stp, setStp0] = useState(1);\n  const setStp = n => { setStp0(n); window.scrollTo({ top: 0 }); };")
+R("    if (pay || showMatrix || sheet !== 'cost') {","    if (sheet === 'cost' && stp > 1 && !pay && !showMatrix) { setStp(stp - 1); return true; }\n    if (pay || showMatrix || sheet !== 'cost') {")
+R('className: "max-w-4xl mx-auto px-4 py-4 space-y-3 sj-main",\n    style: { paddingBottom: 96 }\n  }, ','className: "max-w-4xl mx-auto px-4 py-4 space-y-3 sj-main",\n    \'data-step\': sheet === \'cost\' ? String(stp) : undefined,\n    style: { paddingBottom: 96 }\n  }, sheet === \'cost\' && React.createElement(ProSteps, { stp, setStp, go, top: 1 }), sheet === \'cost\' && React.createElement(ProSteps, { stp, setStp, go }), ')
+R('className: "bg-white rounded-xl border border-slate-200 p-4 space-y-2", style: { order: 1 } }','className: "bg-white rounded-xl border border-slate-200 p-4 space-y-2", \'data-st\': \'1\', style: { order: 1 } }')
+R('{ style: { order: 2 } }',"{ 'data-st': '1', style: { order: 2 } }",2)
+R('{ style: { order: 3 } }',"{ 'data-st': '2', style: { order: 3 } }")
+R('{ style: { order: 5 } }',"{ 'data-st': '3', style: { order: 5 } }")
+R('className: "bg-white rounded-xl border border-slate-200 p-4 space-y-3", style: { order: 2 } }','className: "bg-white rounded-xl border border-slate-200 p-4 space-y-3", \'data-st\': \'1\', style: { order: 2 } }')
+R("sheet === 'cost' && /*#__PURE__*/React.createElement(\"section\", {\n    style: { order: 4 },","sheet === 'cost' && /*#__PURE__*/React.createElement(\"section\", {\n    'data-st': '2',\n    style: { order: 4 },")
+R("React.createElement(\"div\", { className: 'space-y-3', style: { order: sheet === 'cost' ? 8 : 0 } }","React.createElement(\"div\", { className: 'space-y-3', 'data-st': '4', style: { order: sheet === 'cost' ? 8 : 0 } }")
+R('&& /*#__PURE__*/React.createElement("div", {\n    className: "grid grid-cols-2 gap-2 text-center"','&& /*#__PURE__*/React.createElement("div", {\n    \'data-st\': \'4\',\n    className: "grid grid-cols-2 gap-2 text-center"')
+R("// 내 사업지 저장·불러오기", r'''// 단계형 사업개요: 위 진행바·제목 / 아래 이전·다음
+function ProSteps({ stp, setStp, go, top }) {
+  const L = ['토지', '상품', '분양가', '결과'];
+  const H = [['어떤 땅인가요?', '지번을 넣으면 면적·용도지역을 공공자료에서 불러와요. 직접 넣어도 돼요.'], ['무엇을 지을까요?', '상품과 평형, 공사비 기준을 골라요.'], ['얼마에 팔 수 있을까요?', '모르면 비워두세요. 목표 이익률에 필요한 분양가를 계산해 드려요.'], ['1차 수지 결과', '위 단계를 누르면 언제든 돌아가 고칠 수 있어요.']];
+  if (top) return React.createElement("div", { className: 'sj-steps', style: { order: -1 } },
+    React.createElement("div", { style: { display: 'flex', gap: 6 } }, L.map((l, i) => React.createElement("button", { key: l, type: 'button', onClick: () => setStp(i + 1), 'aria-current': stp === i + 1 ? 'step' : undefined, className: 'sj-seg' + (i < stp ? ' on' : '') + (stp === i + 1 ? ' cur' : '') }, React.createElement("span", { className: 'bar' }), React.createElement("span", null, (i + 1) + ' ' + l)))),
+    React.createElement("h1", { className: 'sj-sh' }, H[stp - 1][0]), React.createElement("p", { className: 'sj-ss' }, H[stp - 1][1]));
+  return React.createElement("div", { className: 'sticky bottom-3 z-10 sj-stepnav', style: { order: 99 } },
+    stp > 1 && React.createElement("button", { type: 'button', className: 'sj-prev', onClick: () => setStp(stp - 1) }, '이전'),
+    stp < 4 ? React.createElement("button", { type: 'button', className: 'sj-next', onClick: () => setStp(stp + 1) }, '다음 · ' + L[stp] + ' →') : React.createElement("button", { type: 'button', className: 'sj-next', onClick: () => go('pf') }, '사업수지표 전체 보기 →'));
+}
+// 내 사업지 저장·불러오기''')
+open(p,'w').write(s)
+print('steps')
+
+# ── 에메랄드 강조색(2026-11-21, C안): 라임 → 에메랄드, 배경 초록빛 다크. 보고서 팔레트(#D4FF24 등)는 그대로 ──
+s=open(p).read()
+for o,n in [('#C5F04A','#10B981'),('#D4F76B','#34D399'),('197,240,74','16,185,129'),('content="#0E1116"','content="#09130F"'),("  acc: '#D4FF24'","  acc: '#10B981'")]:
+  assert o in s,o; s=s.replace(o,n)
+open(p,'w').write(s)
+print('emerald')

@@ -52,11 +52,11 @@ html body .sj-main>*{order:6;margin-top:0!important}
 </style>
 
 <style id="theme-v2">/* v2 UI 개편 (2026-11-21): 랜딩과 같은 톤 — 넓은 여백·둥근 카드·유리 내비·차분한 라벨 */
-:root{--cv:#0A0B0D;--sf:#121418;--in:#0D0F12;--hv:#191C21;--bd:rgba(242,241,236,.08);--tx:#F2F1EC;--mut:#9BA1AB;--lime:#C5F04A}
+:root{--cv:#09130F;--sf:#0F1E19;--in:#08110E;--hv:#142621;--bd:rgba(150,210,185,.12);--tx:#EEF5F2;--mut:#98B0A7;--lime:#10B981}
 html,body,html body .min-h-screen{background:var(--cv)!important;color:var(--tx)}
 body{font-family:'Noto Sans KR',system-ui,sans-serif;-webkit-font-smoothing:antialiased;letter-spacing:-.005em}
 /* 헤더 */
-html body .sj-head{background:rgba(10,11,13,.86)!important;border-bottom:1px solid var(--bd);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px)}
+html body .sj-head{background:rgba(9,19,15,.86)!important;border-bottom:1px solid var(--bd);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px)}
 /* 카드 */
 html body .sj-shell .bg-white.rounded-xl,html body .sj-shell section.bg-white,html body .pc{border-radius:18px!important;border-color:var(--bd)!important;background-color:var(--sf)!important}
 html body .sj-shell .bg-white.rounded-xl.p-4,html body .sj-shell section.p-4{padding:20px!important}
@@ -77,9 +77,9 @@ html body .sj-shell button:active{transform:scale(.985)}
 html body .sj-shell button:focus-visible,html body .sj-shell a:focus-visible{outline:2px solid var(--lime);outline-offset:2px}
 html body .sj-main .sticky.bottom-3 button{border-radius:16px!important;min-height:56px;font-size:16px;box-shadow:0 12px 40px rgba(0,0,0,.55)}
 /* 상단 요약 바 */
-html body .sj-main .pc[style*="sticky"]{border-radius:16px!important;background:rgba(18,20,24,.88)!important;backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px)}
+html body .sj-main .pc[style*="sticky"]{border-radius:16px!important;background:rgba(15,30,25,.9)!important;backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px)}
 /* 아래 내비(모바일): 떠 있는 유리 바 */
-html body .sj-nav{left:12px!important;right:12px!important;bottom:calc(10px + env(safe-area-inset-bottom))!important;padding-bottom:0!important;border-radius:22px;border:1px solid rgba(242,241,236,.1)!important;background:rgba(18,20,24,.84)!important;backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);box-shadow:0 18px 50px rgba(0,0,0,.55);overflow:hidden}
+html body .sj-nav{left:12px!important;right:12px!important;bottom:calc(10px + env(safe-area-inset-bottom))!important;padding-bottom:0!important;border-radius:22px;border:1px solid rgba(242,241,236,.1)!important;background:rgba(15,30,25,.86)!important;backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);box-shadow:0 18px 50px rgba(0,0,0,.55);overflow:hidden}
 html body .sj-nav button{border-top:0!important;min-height:60px!important;position:relative;color:#8A909A}
 html body .sj-nav button.sel-tab{color:var(--lime)!important}
 html body .sj-nav button.sel-tab::before{content:"";position:absolute;inset:7px 6px;border-radius:14px;background:rgba(197,240,74,.1);z-index:-1}
@@ -98,4 +98,22 @@ html body .sj-main>*{animation:sjIn .35s cubic-bezier(.2,.8,.2,1) both}
  html body .sj-main .sticky.bottom-3{bottom:16px!important}
  html body .sj-main:not(:has(.sj-aside)){padding-right:24px!important;max-width:1000px!important;margin-left:max(100px,calc(50vw - 450px))!important}
 }
+</style>
+
+<style id="theme-steps">/* v3 단계형 사업개요 */
+html body .sj-main[data-step="1"]>[data-st]:not([data-st="1"]),html body .sj-main[data-step="2"]>[data-st]:not([data-st="2"]),html body .sj-main[data-step="3"]>[data-st]:not([data-st="3"]),html body .sj-main[data-step="4"]>[data-st]:not([data-st="4"]){display:none!important}
+html body .sj-main[data-step="1"]>.pc[style*="sticky"],html body .sj-main[data-step="4"]>.pc[style*="sticky"]{display:none!important}
+html body .sj-main[data-step]:not([data-step="4"])>details{display:none!important}
+html body .sj-main[data-step]>details{order:98!important}
+.sj-steps{display:flex;flex-direction:column;gap:4px;padding:2px 2px 6px}
+html body .sj-shell .sj-seg{flex:1;min-width:0;display:flex;flex-direction:column;align-items:stretch;gap:7px;background:none;border:0;padding:6px 0;min-height:44px;color:var(--mut);font-size:12px;font-family:inherit;text-align:left;cursor:pointer}
+.sj-seg .bar{display:block;height:4px;border-radius:4px;background:rgba(150,210,185,.18)}
+.sj-seg.on .bar{background:var(--lime)}
+html body .sj-shell .sj-seg.cur{color:var(--tx);font-weight:700}
+.sj-sh{margin:14px 0 0;font-size:26px;line-height:1.3;font-weight:700;letter-spacing:-.03em;color:var(--tx)}
+.sj-ss{margin:4px 0 0;font-size:14px;line-height:1.6;color:var(--mut)}
+.sj-stepnav{display:flex;gap:10px;padding-top:4px}
+html body .sj-shell .sj-prev{flex:1;min-height:56px;border-radius:16px;border:1px solid rgba(150,210,185,.22);background:rgba(15,30,25,.92);color:var(--tx);font-size:15px;font-weight:500;font-family:inherit;backdrop-filter:blur(12px)}
+html body .sj-shell .sj-next{flex:2.4;min-height:56px;border-radius:16px;border:0;background:var(--lime);color:#04130E;font-size:16px;font-weight:700;font-family:inherit;box-shadow:0 12px 40px rgba(0,0,0,.5)}
+@media (min-width:1100px){.sj-sh{font-size:30px}}
 </style>
