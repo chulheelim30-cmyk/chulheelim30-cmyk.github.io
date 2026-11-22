@@ -3364,7 +3364,22 @@ function ProTop({ f, set, setF, live }) {
   return React.createElement(React.Fragment, null,
     React.createElement("div", { className: "bg-white rounded-xl border border-slate-200 p-4 space-y-2", 'data-st': '1', style: { order: 1 } },
       React.createElement("label", { className: "block" }, React.createElement("span", { className: "block text-[11px] font-bold text-slate-600 mb-1" }, "사업명"), React.createElement("input", { className: inputCls, value: f.name, placeholder: '예: OO역 오피스텔 신축사업', onChange: e => set('name')(e.target.value) })),
-      React.createElement("div", { className: "grid grid-cols-2 gap-2.5" }, React.createElement(SavedSites, { f, setF, live }))));
+      React.createElement("div", { className: "grid grid-cols-2 gap-2.5" }, React.createElement(SavedSites, { f, setF, live }))),
+    React.createElement(ProPick, { f, setF }));
+}
+// 상품 빠른 선택 카드(2026-11-22): 3D 미니어처 이미지(vidIQ 생성, Supabase 공개 버킷 suziq-assets/cards). 나머지 상품은 아래 상품 목록에서
+const PICK_IMG = 'https://guwnuaeainixryxdxids.supabase.co/storage/v1/object/public/suziq-assets/cards/';
+const PICKS = [['apt', '아파트'], ['officetel', '오피스텔'], ['retail', '상가'], ['logistics', '물류센터']];
+function ProPick({ f, setF }) {
+  const pick = id => setF(o => { const np = PRODUCTS.find(q => q.id === id), op = PRODUCTS.find(q => q.id === o.product) || {}; return { ...o, product: id, size: np.size, effPct: 0, saleRate: ['lh', 'rent', 'exit'].includes(np.kind) ? 100 : ['lh', 'rent', 'exit'].includes(op.kind) ? 90 : o.saleRate }; });
+  return React.createElement("div", { className: "pc", 'data-st': '2', style: { order: 1, padding: 10 } },
+    React.createElement("div", { style: { fontSize: 11, fontWeight: 700, color: '#8A94A3', margin: '0 2px 8px' } }, "상품 고르기"),
+    React.createElement("div", { style: { display: 'grid', gridTemplateColumns: 'repeat(4,minmax(0,1fr))', gap: 8 } }, PICKS.map(([id, n]) => {
+      const on = f.product === id;
+      return React.createElement("button", { key: id, type: 'button', onClick: () => pick(id), "aria-pressed": on, style: { padding: 0, borderRadius: 12, overflow: 'hidden', background: '#0B0E13', border: on ? '2px solid #10B981' : '1px solid #232A35', boxShadow: on ? '0 0 0 3px rgba(16,185,129,.15)' : 'none', cursor: 'pointer', textAlign: 'center' } },
+        React.createElement("img", { src: PICK_IMG + id + '.jpg', alt: n, loading: 'lazy', style: { display: 'block', width: '100%', aspectRatio: '1/1', objectFit: 'cover', opacity: on ? 1 : .78 } }),
+        React.createElement("div", { style: { fontSize: 12, fontWeight: 700, padding: '6px 0', color: on ? '#10B981' : '#D6DBE3' } }, n));
+    })));
 }
 // 단계형 사업개요: 위 진행바·제목 / 아래 이전·다음
 function ProSteps({ stp, setStp, go, top }) {
