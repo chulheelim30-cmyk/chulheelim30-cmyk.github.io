@@ -17,7 +17,7 @@ s=open(p).read()
 def R(o,n):
   global s; assert o in s,o; s=s.replace(o,n)
 R("register('sw.js', { updateViaCache: 'none' })","register('../sw.js', { updateViaCache: 'none', scope: '../' })")
-R('href="manifest.webmanifest?v=1"','href="../manifest.webmanifest?v=1"'); R('href="apple-touch-icon.png?v=1"','href="../apple-touch-icon.png?v=1"')
+R('href="manifest.webmanifest?v=2"','href="../manifest.webmanifest?v=2"'); R('href="apple-touch-icon.png?v=2"','href="../apple-touch-icon.png?v=2"')
 open(p,'w').write(s)
 # ── 사업개요 화면 순서(2026-11-20): 사업명·저장 → 토지 → 상품 → 공사비 조건 → 분양가·목표이익률 → 결과, 맨 위에 작은 결과 요약 고정 ──
 s=open(p).read()
