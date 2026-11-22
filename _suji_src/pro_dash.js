@@ -21,7 +21,7 @@ function ProKpis({ f, R }) {
     React.createElement("div", { className: "kpis" },
       card('필요 분양가', costTag, `평당 ${fmt(R.t10)}만원`, `목표 이익률 ${R.tm}% 기준`),
       card('손익분기 분양가', costTag, `평당 ${fmt(R.be)}만원`, '이익 0원 기준'),
-      card('목표이익 기준 토지비', landTag, cap >= 0 ? `${fmt(cap)}억원` : '산출 불가', `목표 이익률 ${R.tm}% 역산 · 감정가 아님`, true)),
+      card('목표이익 기준 토지비', landTag, cap >= 0 ? `${fmt(cap)}억원` : '0원이어도 미달', `목표 이익률 ${R.tm}% 역산값`, true)),
     React.createElement("p", { style: { fontSize: 11, color: '#8A94A3', marginTop: 6 } },
       fl.hasDesign ? '설계 면적 입력 기준 계산입니다.' : '⚠ 1차 판단(추정 포함) — 설계 면적 없이 대지·용적률로 추정했습니다. 설계·견적값을 넣을수록 정밀해집니다.'));
 }
