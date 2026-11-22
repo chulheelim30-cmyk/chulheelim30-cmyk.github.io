@@ -2798,7 +2798,9 @@ ${mgMk != null ? `<tr><td>주변 중앙값(${fmt(mk.v)}만)으로 팔 때 이익
 ${cmp ? `<div style="margin-top:8px;font-weight:800;color:${pos2[1]}">${pos2[0]}</div>` : ''}
 ${pg != null && pg > 5 ? `<div style="margin-top:6px;padding:8px 10px;border-radius:8px;background:${pg > 15 ? '#FFE3E3' : '#FFF3BF'};font-size:12.5px;font-weight:700;color:${pg > 15 ? '#C92A2A' : '#E67700'}">참고: 입력 분양가는 주변 중앙값 대비 ${gTxt(price, mk.v)}. 주변 중앙값(${fmt(mk.v)}만)으로 팔 경우 이익률 ${mgMk.toFixed(1)}%.</div>` : ''}
 ${cmp ? ''  : `<div style="margin-top:8px;font-size:12px;color:#C05621">이 자료는 민영아파트 분양가(공급면적 기준)라 ${esc(R.p.name)}에는 직접 비교가 어렵습니다. 참고로만 보세요.</div>`}
-<div class="bs" style="margin-top:6px">주변 분양가는 공공 자료의 통계값이며 이 사업지의 가격을 뜻하지 않습니다. 입지·브랜드·평형·시점에 따라 달라집니다.</div></div>`;
+<div class="bs" style="margin-top:6px">주변 분양가는 공공 자료의 통계값이며 이 사업지의 가격을 뜻하지 않습니다. 입지·브랜드·평형·시점에 따라 달라집니다.</div></div>${(() => { const mx = mixOf(f); if (!mx || !R.p.res) return ''; const avg = sizeAvg(f, R.p), raw = (f.mix || []).filter(([z, r]) => z >= 10 && r > 0);
+  const rows = mx.map(([z, r], i) => { const py = z * R.sc.unitPy / avg, pr = (raw[i] && raw[i][2]) || price, need = price > 0 ? pr * R.t10 / price : R.t10; return `<tr><td>${z}㎡</td><td class="r">${fmt(Math.round(R.units * r))}</td><td class="r">${py.toFixed(1)}평</td><td class="r">${fmt(Math.round(pr))}만</td><td class="r">${(py * pr / 1e4).toFixed(2)}억</td><td class="r">${fmt(Math.round(need))}만</td></tr>`; }).join('');
+  return `<h2 style="font-size:14px;margin-top:12px">타입별 구성</h2><table><tr><th style="text-align:left">타입(전용)</th><th class="r">세대</th><th class="r">공급(호당)</th><th class="r">평당 분양가</th><th class="r">세대당 분양가</th><th class="r">필요 평당가(${tm}%)</th></tr>${rows}</table><div class="bs" style="margin-top:4px">${mixPrice(f) ? '타입별 평당가를 면적 가중 평균해 매출에 반영' : '모든 타입에 같은 평당 분양가 적용'} · 필요 평당가는 타입별 가격 비율을 유지한 값 · 공급면적은 전용률 동일 가정</div>`; })()}`;
     if (cmp) mkOp = `- 분양가: ${esc(mk.n || '')} ${mkLab} 평당 ${fmt(mk.v)}만 대비 필요 분양가 ${gTxt(R.t10, mk.v)}${pg != null && pg > 5 ? ` · <b style="color:${pg > 15 ? '#C92A2A' : '#E67700'}">입력 분양가 ${gTxt(price, mk.v)}, 주변 중앙값으로 팔면 이익률 ${mgMk.toFixed(1)}%</b>` : ''}`;
   }
   const N0 = mk || rtHTML.includes('<h2>') ? 3 : 2, N = k => String(N0 + k).padStart(2, '0');
@@ -2996,6 +2998,7 @@ function MaxLand({ f, set, jiga, go }) {
             className: "tabular-nums", style: inp
           }),
           React.createElement("span", { style: { fontSize: 14, color: '#9AA3AF' } }, "만원"))),
+      mixPrice(f) > 0 && React.createElement("p", { style: { fontSize: 11, color: '#34D399', fontWeight: 700, margin: '4px 0' } }, `타입별 평당가 평균 ${fmt(mixPrice(f))}만 적용 중 (${mixTxt(f)}) — 사업수지 탭에서 수정`),
       React.createElement("div", { style: { display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' } },
         React.createElement("span", { style: { fontSize: 12, fontWeight: 700, color: '#B0B7C1', marginRight: 2 } }, "목표 이익률"),
         [5, 8, 10, 12, 15].map(v => React.createElement("button", {
@@ -3033,6 +3036,7 @@ function PriceExtras({ f, set, live }) {
   const [uDraft, setUDraft] = useState(null);
   const inp = { width: '100%', height: 40, borderRadius: 8, border: '1px solid #2E3541', background: '#0E1116', color: '#E8EAED', padding: '0 10px', fontSize: 15, textAlign: 'right' };
   return React.createElement("div", { className: "space-y-2" },
+    mixPrice(f) > 0 && React.createElement("p", { style: { ...note, color: '#34D399', fontWeight: 700 } }, `타입별 평당가 평균 ${fmt(mixPrice(f))}만 적용 중 — 바꾸려면 사업수지 탭의 타입별 평당가를 고치세요(${mixTxt(f)})`),
     p.kind !== 'coop' && !live.sc.whole && React.createElement("div", { style: box },
       React.createElement("span", { style: { display: 'block', fontSize: 12, fontWeight: 700, color: '#B0B7C1', marginBottom: 4 } }, "또는 ", p.res ? '세대' : '호실', "당 금액으로 입력 (", p.sizeLabel || '전용', " ", f.size, "㎡ = ", p.priceUnit, " ", unitPy.toFixed(1), "평)"),
       React.createElement("div", { style: { display: 'flex', alignItems: 'center', gap: 8 } },
@@ -3060,12 +3064,14 @@ function PriceExtras({ f, set, live }) {
 // 세대 타입 혼합(2026-11-22): x.mix=[[전용㎡, 세대 비율%],...] 2개 이상일 때만 적용, 세대수 가중 평균
 function mixOf(x) { const m = (x.mix || []).filter(([a, r]) => a >= 10 && r > 0); if (m.length < 2) return null; const t = m.reduce((a, [, r]) => a + r, 0); return m.map(([a, r]) => [a, r / t]); }
 function sizeAvg(x, p) { const m = mixOf(x); return m ? m.reduce((a, [z, r]) => a + z * r, 0) : (x.size || p.size); }
+// 타입별 분양가(평당, 공급면적): 면적 가중 평균 = Σ(세대비율×전용×가격)/Σ(세대비율×전용) — 전용률 동일 가정
+function mixPrice(x) { const m = (x.mix || []).filter(([a, r]) => a >= 10 && r > 0); if (m.length < 2 || !m.every(q => q[2] > 0)) return 0; const w = m.reduce((t, [a, r]) => t + a * r, 0); return Math.round(m.reduce((t, [a, r, pr]) => t + a * r * pr, 0) / w); }
 function mixTxt(x, units) { const m = mixOf(x); return m ? m.map(([a, r]) => `${a}㎡ ${Math.round(r * 100)}%${units ? `(${Math.round(units * r)})` : ''}`).join(' · ') : ''; }
 function MixInput({ f, set, live }) {
   const on = Array.isArray(f.mix);
   const m = on ? f.mix : [];
-  const put = nm => { set('mix')(nm); const top = nm.filter(([a, r]) => a >= 10 && r > 0).sort((a, b) => b[1] - a[1])[0]; if (top) set('size')(top[0]); };
-  const eq = arr => arr.map(([a], i) => [a, Math.floor(100 / arr.length) + (i < 100 % arr.length ? 1 : 0)]);
+  const put = nm => { set('mix')(nm); const mp = mixPrice({ mix: nm }); if (mp > 0) set('price')(mp); const top = nm.filter(([a, r]) => a >= 10 && r > 0).sort((a, b) => b[1] - a[1])[0]; if (top) set('size')(top[0]); };
+  const eq = arr => arr.map(([a, , pr], i) => [a, Math.floor(100 / arr.length) + (i < 100 % arr.length ? 1 : 0), pr || 0]);
   const toggle = z => { const has = m.some(([a]) => a === z); put(eq(has ? m.filter(([a]) => a !== z) : [...m, [z, 0]].sort((a, b) => a[0] - b[0]))); };
   const sum = m.reduce((a, [, r]) => a + (+r || 0), 0), mx = mixOf(f);
   const inp = { className: "text-sm text-right rounded-lg outline-none", style: { width: 64, padding: '5px 6px', border: '1px solid #2E3541', background: '#12161C', color: '#E8EAED' } };
@@ -3075,12 +3081,13 @@ function MixInput({ f, set, live }) {
     on && React.createElement("div", { style: { marginTop: 8, display: 'grid', gap: 6 } },
       React.createElement("div", { style: { display: 'flex', flexWrap: 'wrap', gap: 4 } }, live.p.sizes.map(z => btn(`${z}㎡`, () => toggle(z), m.some(([a]) => a === z)))),
       m.map(([a, r], i) => React.createElement("div", { key: i, style: { display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: '#B0B7C1' } },
-        React.createElement("input", { ...inp, type: "number", inputMode: "decimal", value: a || '', onChange: e => put(m.map((q, j) => j === i ? [parseFloat(e.target.value) || 0, q[1]] : q)) }), "㎡",
-        React.createElement("input", { ...inp, type: "number", inputMode: "numeric", value: r === 0 ? '' : r, onChange: e => put(m.map((q, j) => j === i ? [q[0], parseFloat(e.target.value) || 0] : q)) }), "%",
-        mx && React.createElement("span", null, `약 ${Math.round(live.sc.units * (r / (sum || 1)))}세대`),
+        React.createElement("input", { ...inp, type: "number", inputMode: "decimal", value: a || '', onChange: e => put(m.map((q, j) => j === i ? [parseFloat(e.target.value) || 0, q[1], q[2] || 0] : q)) }), "㎡",
+        React.createElement("input", { ...inp, type: "number", inputMode: "numeric", value: r === 0 ? '' : r, onChange: e => put(m.map((q, j) => j === i ? [q[0], parseFloat(e.target.value) || 0, q[2] || 0] : q)) }), "%",
+        React.createElement("input", { ...inp, style: { ...inp.style, width: 76 }, type: "number", inputMode: "numeric", placeholder: "평당가", value: m[i][2] || '', onChange: e => put(m.map((q, j) => j === i ? [q[0], q[1], parseFloat(e.target.value) || 0] : q)) }), "만",
+        mx && React.createElement("span", null, `${Math.round(live.sc.units * (r / (sum || 1)))}세대`),
         btn('삭제', () => put(m.filter((_, j) => j !== i)), false))),
       btn('+ 타입 직접 추가', () => put([...m, [0, 0]]), false),
-      React.createElement("p", { style: { fontSize: 11, color: sum === 100 || !mx ? '#9AA3AF' : '#FCD34D' } }, !mx ? '타입을 2개 이상 고르면 적용돼요.' : `세대 비율 합계 ${sum}%${sum === 100 ? '' : ' — 100%가 아니면 비율대로 나눠 계산'} · 평균 전용 ${sizeAvg(f, live.p).toFixed(1)}㎡`)));
+      React.createElement("p", { style: { fontSize: 11, color: sum === 100 || !mx ? '#9AA3AF' : '#FCD34D' } }, !mx ? '타입을 2개 이상 고르면 적용돼요.' : `세대 비율 합계 ${sum}%${sum === 100 ? '' : ' — 100%가 아니면 비율대로 나눠 계산'} · 평균 전용 ${sizeAvg(f, live.p).toFixed(1)}㎡ · ${mixPrice(f) ? `타입별 평당가 면적 가중 평균 ${fmt(mixPrice(f))}만 → 분양가에 반영` : '평당가를 모든 타입에 넣으면 평균이 분양가에 들어가요(비우면 공통 분양가)'}`)));
 }
 function SizeInput({ f, set, live }) {
   const [draft, setDraft] = useState(null);
@@ -3142,6 +3149,7 @@ function SavedSites({ f, setF, live }) {
 }
 function App() {
   const [f, setF] = useState(loadForm);
+  useEffect(() => { const mp = mixPrice(f); if (mp > 0 && f.price !== mp) setF(o => ({ ...o, price: mixPrice(o) || o.price })); }, [f.mix, f.price]); // 타입별 평당가를 다 넣으면 분양가 = 면적 가중 평균(고정)
   useEffect(() => { const t = setTimeout(() => { try { localStorage.setItem(FORM_KEY, JSON.stringify(f)); } catch {} }, 300); return () => clearTimeout(t); }, [f]);
   const [sheet, setSheet] = useState('cost');
   const [result0, setResult] = useState(null);
@@ -3879,7 +3887,7 @@ function App() {
   })), /*#__PURE__*/React.createElement("div", {
     className: "grid grid-cols-2 gap-2.5"
   }, /*#__PURE__*/React.createElement(Num, {
-    label: `${live.kd.price} (VAT 별도, ${live.p.priceUnit})`,
+    label: `${live.kd.price} (VAT 별도, ${live.p.priceUnit})${mixPrice(f) ? ' · 타입별 평균' : ''}`,
     unit: "\uB9CC/\uD3C9",
     value: f.price,
     step: 50,
