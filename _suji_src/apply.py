@@ -59,7 +59,7 @@ function ProTop({ f, set, setF, live }) {
 const PICK_IMG = 'https://guwnuaeainixryxdxids.supabase.co/storage/v1/object/public/suziq-assets/cards/';
 const PICKS = [['apt', '아파트'], ['officetel', '오피스텔'], ['retail', '상가'], ['logistics', '물류센터']];
 function ProPick({ f, setF }) {
-  const pick = id => setF(o => { const np = PRODUCTS.find(q => q.id === id), op = PRODUCTS.find(q => q.id === o.product) || {}; return { ...o, product: id, size: np.size, effPct: 0, saleRate: ['lh', 'rent', 'exit'].includes(np.kind) ? 100 : ['lh', 'rent', 'exit'].includes(op.kind) ? 90 : o.saleRate }; });
+  const pick = id => setF(o => { const np = PRODUCTS.find(q => q.id === id), op = PRODUCTS.find(q => q.id === o.product) || {}; return { ...o, product: id, size: np.size, mix: null, effPct: 0, saleRate: ['lh', 'rent', 'exit'].includes(np.kind) ? 100 : ['lh', 'rent', 'exit'].includes(op.kind) ? 90 : o.saleRate }; });
   return React.createElement("div", { className: "pc", 'data-st': '2', style: { order: 1, padding: 10 } },
     React.createElement("div", { style: { fontSize: 11, fontWeight: 700, color: '#8A94A3', margin: '0 2px 8px' } }, "상품 고르기"),
     React.createElement("div", { style: { display: 'grid', gridTemplateColumns: 'repeat(4,minmax(0,1fr))', gap: 8 } }, PICKS.map(([id, n]) => {

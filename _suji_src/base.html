@@ -1283,7 +1283,7 @@ function scale(x) {
   const whole = p.area === 'gfa';
   const base = whole ? gfa : p.res ? above * SUPPLY_RES : gfa * 0.97; // 통매각: 연면적 / 아파트류: 공급면적 / 그 외: 계약면적
   const eff = x.effPct > 0 ? x.effPct / 100 : p.effRatio; // 전용률: 입력값 우선(2026-11-19)
-  const unitPy = (x.size || p.size) / 3.3058 / eff;
+  const unitPy = sizeAvg(x, p) / 3.3058 / eff; // 여러 타입이면 세대수 가중 평균 전용
   let mainPy = base * (1 - p.retailShare),
     retailPy = base * p.retailShare;
   const SM = !whole && x.archSaleM2 > 0 ? x.archSaleM2 / 3.3058 : 0, RM = !whole && p.id !== 'retail' && x.archRetailM2 > 0 ? x.archRetailM2 / 3.3058 : 0;
@@ -1473,11 +1473,11 @@ function model(f, price, o = {}) {
   // 하수도 원인자부담금(2026-11-21) [공공] 하수도법 제61조 + 시군 조례: 1일 오수발생량(㎥) × 시군 공고 단위단가. 오수발생량은 기후에너지환경부 고시
   // 「건축물의 용도별 오수발생량」: 아파트 200L/인·일, N=2.7+(R-2)×0.5(R=거실 수, 1거실 2인) / 오피스텔 10L/㎡ / 상가·업무 15L/㎡. 1일 10㎥ 미만이면 부과 안 함
   {
-    const ex = x.size || p.size, R = ex <= 40 ? 1 : ex <= 60 ? 2 : ex <= 85 ? 3 : 4, N = R === 1 ? 2 : 2.7 + (R - 2) * 0.5;
+    const nOf = ex => { const R = ex <= 40 ? 1 : ex <= 60 ? 2 : ex <= 85 ? 3 : 4; return R === 1 ? 2 : 2.7 + (R - 2) * 0.5; }, mxS = mixOf(x), N = mxS ? mxS.reduce((a, [z, r]) => a + nOf(z) * r, 0) : nOf(x.size || p.size);
     const m2 = py => py * 3.3058, resPart = p.res && !['officetel'].includes(p.id);
     const q = (resPart ? units * N * 0.2 : m2(sc.mainPy) * (p.id === 'officetel' ? 10 : 15) / 1000) + m2(sc.retailPy || 0) * 15 / 1000;
     const sg = (x.sgg || '').split('|'), SW = SEWER_UNIT[sg.slice(0, 2).join('|')] || SEWER_UNIT[sg[0] + '|*'], sw = SW ? SW[0] : SEWER_DEF[x.region] || SEWER_DEF.local;
-    if (q >= 10) add('제세·부담금', '하수도 원인자부담금', q * sw / 1e8, `${SW ? '[공공]' : '[추정]'} 오수 ${fmt(Math.round(q))}㎥/일(${resPart ? `${fmt(units)}세대 × ${N}인 × 200L` : '용도별 L/㎡'}, 환경부 고시) × ${fmt(sw)}원/㎥${SW ? ` (${SW[1]})` : ` — 시군 공고 단가 미수록, ${x.region === 'local' ? '지방' : '수도권'} 보수 기준값`}`);
+    if (q >= 10) add('제세·부담금', '하수도 원인자부담금', q * sw / 1e8, `${SW ? '[공공]' : '[추정]'} 오수 ${fmt(Math.round(q))}㎥/일(${resPart ? `${fmt(units)}세대 × ${+N.toFixed(2)}인 × 200L` : '용도별 L/㎡'}, 환경부 고시) × ${fmt(sw)}원/㎥${SW ? ` (${SW[1]})` : ` — 시군 공고 단가 미수록, ${x.region === 'local' ? '지방' : '수도권'} 보수 기준값`}`);
   }
   if (x.taxPct > 3.7) add('제세·부담금', '국민주택채권·상수도 원인자부담금 등', B * (x.taxPct - 3.7) / 100, `[추정] 직접공사비 × ${(x.taxPct - 3.7).toFixed(2)}% — 보존등기 국민주택채권 할인 매도 손실·상수도 원인자부담금(시군 조례) 등`);
   // 토지 보유세(2026-11-21) [공공] 재산세(지방세법 제111조 세율·제112조 도시지역분 0.14%·지방교육세 20%, 공정시장가액비율 70%) + 종부세(종합부동산세법 제14조)
@@ -2694,6 +2694,7 @@ function qcForm(f, id) {
     ...Object.fromEntries(ARCH_KEYS.map(k => [k, 0])), // 건축개요는 고른 상품의 설계라 다른 상품 비교에는 쓰지 않음
     product: id,
     size: np.size,
+    mix: null,
     price: 0,
     finEok: 0,
     salesPct: 0,
@@ -2841,7 +2842,7 @@ table{width:100%;border-collapse:collapse;font-size:12.5px}td,th{padding:6px 4px
 <div class="bar"><button onclick="print()">PDF로 저장 · 인쇄</button></div>
 <section class="pg"><div class="hd"><b>SuziQ 사업성 검토 보고서 <span class="fv">SuziQ 무료판</span></b><span>${today} · 1/4</span></div>
 <div class="sub">대상</div><h1>${esc(f.name || '이름 없는 사업')}</h1>
-<div class="sub">${esc(R.p.name)} · ${esc(zoneOf(f).n)} · 대지 ${fmt(f.sitePy)}평 · 용적률 ${fmt(R.sc.far)}% · 연면적 ${fmt(R.sc.gfa)}평 · ${R.p.res ? '세대' : '호'} ${fmt(R.units)}</div>
+<div class="sub">${esc(R.p.name)} · ${esc(zoneOf(f).n)} · 대지 ${fmt(f.sitePy)}평 · 용적률 ${fmt(R.sc.far)}% · 연면적 ${fmt(R.sc.gfa)}평 · ${R.p.res ? '세대' : '호'} ${fmt(R.units)}${mixOf(f) ? ` (${mixTxt(f, R.units)})` : ''}</div>
 <div class="vd"><span class="dot" style="background:${v[1]}"></span><div><div class="sub">핵심 결과</div><div style="font-size:20px;font-weight:800">${v[0]}</div><div style="font-size:12.5px">${v[2]}</div></div></div>${estBanner}
 <h2><span>01</span>핵심 숫자</h2><div class="kp">
 <div class="k h"><div class="l">필요 분양가 (이익률 ${tm}%)</div><div class="v">평당 ${fmt(R.t10)}만</div><div class="s">${esc(pu)} 기준</div></div>
@@ -3056,6 +3057,31 @@ function PriceExtras({ f, set, live }) {
       React.createElement("p", { style: note }, "재개발·역세권 사업처럼 일반 요율에 없는 큰 비용은 여기 넣으세요. 사업추진비에 한 줄로 들어갑니다.")));
 }
 
+// 세대 타입 혼합(2026-11-22): x.mix=[[전용㎡, 세대 비율%],...] 2개 이상일 때만 적용, 세대수 가중 평균
+function mixOf(x) { const m = (x.mix || []).filter(([a, r]) => a >= 10 && r > 0); if (m.length < 2) return null; const t = m.reduce((a, [, r]) => a + r, 0); return m.map(([a, r]) => [a, r / t]); }
+function sizeAvg(x, p) { const m = mixOf(x); return m ? m.reduce((a, [z, r]) => a + z * r, 0) : (x.size || p.size); }
+function mixTxt(x, units) { const m = mixOf(x); return m ? m.map(([a, r]) => `${a}㎡ ${Math.round(r * 100)}%${units ? `(${Math.round(units * r)})` : ''}`).join(' · ') : ''; }
+function MixInput({ f, set, live }) {
+  const on = Array.isArray(f.mix);
+  const m = on ? f.mix : [];
+  const put = nm => { set('mix')(nm); const top = nm.filter(([a, r]) => a >= 10 && r > 0).sort((a, b) => b[1] - a[1])[0]; if (top) set('size')(top[0]); };
+  const eq = arr => arr.map(([a], i) => [a, Math.floor(100 / arr.length) + (i < 100 % arr.length ? 1 : 0)]);
+  const toggle = z => { const has = m.some(([a]) => a === z); put(eq(has ? m.filter(([a]) => a !== z) : [...m, [z, 0]].sort((a, b) => a[0] - b[0]))); };
+  const sum = m.reduce((a, [, r]) => a + (+r || 0), 0), mx = mixOf(f);
+  const inp = { className: "text-sm text-right rounded-lg outline-none", style: { width: 64, padding: '5px 6px', border: '1px solid #2E3541', background: '#12161C', color: '#E8EAED' } };
+  const btn = (t, fn, sel) => React.createElement("button", { type: "button", onClick: e => { e.preventDefault(); fn(); }, className: `px-2 py-1 rounded-md text-[11px] font-bold border ${sel ? 'sel bg-slate-900 text-white border-slate-900' : 'bg-white border-slate-300 text-slate-600'}` }, t);
+  return React.createElement("div", { style: { marginTop: 8 } },
+    btn(on ? '여러 타입 끄기' : '+ 여러 타입 섞기', () => on ? (set('mix')(null)) : put(eq([[f.size || live.p.size, 0]])), on),
+    on && React.createElement("div", { style: { marginTop: 8, display: 'grid', gap: 6 } },
+      React.createElement("div", { style: { display: 'flex', flexWrap: 'wrap', gap: 4 } }, live.p.sizes.map(z => btn(`${z}㎡`, () => toggle(z), m.some(([a]) => a === z)))),
+      m.map(([a, r], i) => React.createElement("div", { key: i, style: { display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: '#B0B7C1' } },
+        React.createElement("input", { ...inp, type: "number", inputMode: "decimal", value: a || '', onChange: e => put(m.map((q, j) => j === i ? [parseFloat(e.target.value) || 0, q[1]] : q)) }), "㎡",
+        React.createElement("input", { ...inp, type: "number", inputMode: "numeric", value: r === 0 ? '' : r, onChange: e => put(m.map((q, j) => j === i ? [q[0], parseFloat(e.target.value) || 0] : q)) }), "%",
+        mx && React.createElement("span", null, `약 ${Math.round(live.sc.units * (r / (sum || 1)))}세대`),
+        btn('삭제', () => put(m.filter((_, j) => j !== i)), false))),
+      btn('+ 타입 직접 추가', () => put([...m, [0, 0]]), false),
+      React.createElement("p", { style: { fontSize: 11, color: sum === 100 || !mx ? '#9AA3AF' : '#FCD34D' } }, !mx ? '타입을 2개 이상 고르면 적용돼요.' : `세대 비율 합계 ${sum}%${sum === 100 ? '' : ' — 100%가 아니면 비율대로 나눠 계산'} · 평균 전용 ${sizeAvg(f, live.p).toFixed(1)}㎡`)));
+}
 function SizeInput({ f, set, live }) {
   const [draft, setDraft] = useState(null);
   const custom = !live.p.sizes.includes(f.size);
@@ -3136,6 +3162,7 @@ function App() {
       ...o,
       product: id,
       size: np.size,
+      mix: null,
       effPct: 0,
       saleRate: ['lh', 'rent', 'exit'].includes(np.kind) ? 100 : ['lh', 'rent', 'exit'].includes(PRODUCTS.find(q => q.id === o.product).kind) ? 90 : o.saleRate
     };
@@ -3721,14 +3748,15 @@ function App() {
   }, /*#__PURE__*/React.createElement("span", {
     className: "block text-[11px] font-bold text-slate-600 mb-1"
   }, "\uD3C9\uD615 (", live.p.sizeLabel, "\uBA74\uC801)"), /*#__PURE__*/React.createElement("div", {
-    className: "grid grid-cols-4 gap-1"
+    className: "grid grid-cols-4 gap-1",
+    style: Array.isArray(f.mix) ? { display: 'none' } : undefined
   }, React.createElement(SizeInput, { f, set, live }), live.p.sizes.map(s => /*#__PURE__*/React.createElement("button", {
     key: s,
     onClick: () => set('size')(s),
     className: `py-2 rounded-md text-xs font-bold border ${f.size === s ? 'sel bg-slate-900 text-white border-slate-900' : 'bg-white border-slate-300 text-slate-600'}`
   }, s, "\u33A1", /*#__PURE__*/React.createElement("span", {
     className: "block text-[10px] font-normal opacity-70"
-  }, (s / 3.3058).toFixed(1), "\uD3C9")))))), /*#__PURE__*/React.createElement("div", {
+  }, (s / 3.3058).toFixed(1), "\uD3C9")))), live.p.res && !live.sc.whole && React.createElement(MixInput, { f, set, live }))), /*#__PURE__*/React.createElement("div", {
     className: "rounded-lg border border-slate-200 p-3 space-y-2"
   }, /*#__PURE__*/React.createElement("label", {
     className: "flex items-center justify-between text-xs font-bold"
@@ -3822,7 +3850,7 @@ function App() {
     className: "flex justify-between text-sm"
   }, /*#__PURE__*/React.createElement("span", {
     className: "font-bold"
-  }, live.p.res ? '세대수' : '호실 수', " (\uD638\uB2F9 ", live.sc.unitPy.toFixed(1), "\uD3C9)"), /*#__PURE__*/React.createElement("b", {
+  }, live.p.res ? '세대수' : '호실 수', mixOf(f) ? " (평균 \uD638\uB2F9 " : " (\uD638\uB2F9 ", live.sc.unitPy.toFixed(1), "\uD3C9)"), /*#__PURE__*/React.createElement("b", {
     className: "text-emerald-700"
   }, "\uC57D ", fmt(live.sc.units), live.p.res ? '세대' : '호')), live.sc.farCapped && /*#__PURE__*/React.createElement("p", {
     className: "text-[11px] text-amber-800"
@@ -4074,7 +4102,7 @@ function App() {
     className: "text-sm font-extrabold"
   }, R.kd.range), /*#__PURE__*/React.createElement("p", {
     className: "text-[11px] text-slate-400"
-  }, R.p.name, " ", result.size, "\u33A1 \xB7 \uC57D ", fmt(R.units), R.p.res ? '세대' : '호', R.p.kind === 'lh' ? ' · LH 전량 매입' : R.p.kind === 'exit' ? ' · 준공 후 통매각' : ` · ${R.p.kind === 'coop' ? '일반분양률' : '분양률'} ${result.saleRate}%`)), (() => {
+  }, R.p.name, " ", mixOf(result) ? mixTxt(result) : result.size + "\u33A1", " \xB7 \uC57D ", fmt(R.units), R.p.res ? '세대' : '호', R.p.kind === 'lh' ? ' · LH 전량 매입' : R.p.kind === 'exit' ? ' · 준공 후 통매각' : ` · ${R.p.kind === 'coop' ? '일반분양률' : '분양률'} ${result.saleRate}%`)), (() => {
     const row = (k, v1, v2, unit, strong) => /*#__PURE__*/React.createElement("div", {
       className: `flex justify-between items-baseline py-1.5 border-t border-white/10 ${strong ? '' : 'text-slate-300'}`
     }, /*#__PURE__*/React.createElement("span", {
