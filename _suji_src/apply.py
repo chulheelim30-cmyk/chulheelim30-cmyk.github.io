@@ -107,7 +107,7 @@ function ProSteps({ stp, setStp, go, top }) {
 open(p,'w').write(s)
 print('steps')
 
-# ── 에메랄드 강조색(2026-11-21, C안): 라임 → 에메랄드, 배경 초록빛 다크. 보고서 팔레트(#D4FF24 등)는 그대로 ──
+# ── 에메랄드 강조색(2026-11-21, C안): 라임 → 에메랄드, 배경 초록빛 다크. 보고서도 에메랄드(2026-11-22) ──
 s=open(p).read()
 for o,n in [('#C5F04A','#10B981'),('#D4F76B','#34D399'),('197,240,74','16,185,129'),('content="#0E1116"','content="#09130F"'),("  acc: '#D4FF24'","  acc: '#10B981'")]:
   assert o in s,o; s=s.replace(o,n)
