@@ -1,0 +1,12 @@
+{
+  "appId": "com.pungnyeon.suziq",
+  "appName": "SuziQ",
+  "webDir": "www",
+  "server": {
+    "url": "https://chulheelim30-cmyk.github.io/suji/",
+    "allowNavigation": ["chulheelim30-cmyk.github.io", "*.supabase.co", "apis.vworld.kr", "cdn.jsdelivr.net", "fonts.googleapis.com", "fonts.gstatic.com"],
+    "errorPath": "index.html"
+  },
+  "android": { "backgroundColor": "#09130F", "allowMixedContent": false },
+  "plugins": { "SplashScreen": { "launchShowDuration": 800, "backgroundColor": "#09130F", "showSpinner": false } }
+}

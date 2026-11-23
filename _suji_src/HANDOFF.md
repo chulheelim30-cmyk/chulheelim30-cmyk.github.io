@@ -59,6 +59,8 @@
 
 - 2026-11-23 전국 토지 시세: 표 `suji_land_price`(공개 읽기) ← 함수 `suji_refresh_land_price()`가 매주 월 04:41 KST(cron `suji-land-price-weekly`) `pub_land_trade` 최근 12개월로 재계산(100건 미만이면 유지). 앱은 시작 시 받아 `LAND_PRICE`에 없는 키만 채움. 전남광주는 '전남광주|'와 옛 '광주|'·'전남|' 키 둘 다
 
+- 2026-11-23 플레이스토어 준비: `_suji_app/`(Capacitor 8, 패키지 com.pungnyeon.suziq, SDK 36, 원격 URL 방식) — 빌드 안내 `_suji_app/README.md`, 등록 자료 `_suji_app/store/`. 회원 탈퇴 함수 `suji-account-delete`(소스 supabase/), 계정 삭제 안내 `suji/account-delete.html`, 개인정보처리방침 개정안 `suji/privacy-20261201.html`(12/1 시행 예정 — 그날 privacy.html로 교체하고 SJ_LOGIN_ON=true). 앱에서 소셜 로그인은 시스템 브라우저 + login-callback 딥링크
+
 ## 7. 디자인
 - 앱: 다크 건축 핀테크(배경 #0B0E13, 라임 #C5F04A), 데스크톱 좌측 내비+우측 패널
 - 2026-11-21 v2 UI 개편: `pro.css` 끝의 `theme-v2` 블록(랜딩 톤 — 배경 #0A0B0D, 둥근 18px 카드, 유리 떠있는 내비, 라벨 12px, 탭 전환 페이드, 데스크톱 패널 없을 때 가운데 정렬), 헤더 워드마크 Suzi+라임 Q(`apply.py`). 계산 로직 변경 없음

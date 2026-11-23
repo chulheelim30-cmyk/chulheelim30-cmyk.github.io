@@ -210,7 +210,7 @@ html body .bg-amber-100{background-color:rgba(250,204,21,.16)}
 html body .bg-orange-200{background-color:rgba(251,146,60,.30)}
 html body .bg-red-500{background-color:#B42318;color:#FFFFFF}
 html body .bg-emerald-50\/60{background-color:rgba(16,185,129,.06)}
-html body .hover\:bg-emerald-700:hover{background-color:#B5E03A}
+html body .hover\:bg-emerald-700:hover{background-color:#059669}
 html body .text-amber-600{color:#FDBA74}
 html body .text-blue-600{color:#93C5FD}
 html body .text-orange-900{color:#FED7AA}
@@ -2281,12 +2281,32 @@ const SjAuth = ({ owner }) => {
     }).catch(e => setMsg(e.message));
     return () => sub && sub.unsubscribe();
   }, [show]);
-  if (!show) return null;
   const back = location.origin + location.pathname;
+  // 안드로이드 앱(Capacitor)에서는 구글이 앱 내부 화면 로그인을 막으므로 시스템 브라우저로 열고 com.pungnyeon.suziq://login-callback 으로 돌아온다
+  const cap = window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform() ? window.Capacitor.Plugins : null;
+  useEffect(() => {
+    if (!show || !cap || !cap.App) return;
+    let h;
+    Promise.resolve(cap.App.addListener('appUrlOpen', async ev => {
+      const u = String(ev && ev.url || '');
+      if (!/login-callback/.test(u)) return;
+      const code = (u.match(/[?&]code=([^&#]+)/) || [])[1];
+      try { const sb = await sjSb(); if (code) await sb.auth.exchangeCodeForSession(decodeURIComponent(code)); } catch (e) { setMsg('로그인을 마치지 못했어요. 다시 시도해 주세요.'); }
+      try { cap.Browser && cap.Browser.close(); } catch (e) {}
+      setBusy(false);
+    })).then(x => { h = x; });
+    return () => { h && h.remove && h.remove(); };
+  }, [show]);
   const oauth = async provider => {
     setMsg(''); setBusy(true);
     try {
       const sb = await sjSb();
+      if (cap && cap.Browser) {
+        const { data, error } = await sb.auth.signInWithOAuth({ provider, options: { redirectTo: 'com.pungnyeon.suziq://login-callback', skipBrowserRedirect: true } });
+        if (error) throw error;
+        await cap.Browser.open({ url: data.url });
+        return;
+      }
       const { error } = await sb.auth.signInWithOAuth({ provider, options: { redirectTo: back } });
       if (error) throw error;
     } catch (e) { setMsg(/not enabled|Unsupported provider/i.test(String(e.message)) ? '이 로그인은 준비 중이에요.' : String(e.message || e)); setBusy(false); }
@@ -2312,6 +2332,25 @@ const SjAuth = ({ owner }) => {
     setBusy(false);
   };
   const logout = async () => { const sb = await sjSb(); await sb.auth.signOut(); setOpen(false); };
+  // 회원 탈퇴: 서버 함수가 본인 계정과 연결 자료를 즉시 삭제(되돌릴 수 없음)
+  const withdraw = async () => {
+    if (!window.confirm('탈퇴하면 계정과 이용 기록(무료 체험·구독 정보)이 바로 삭제되고 되돌릴 수 없어요. 탈퇴할까요?')) return;
+    setBusy(true); setMsg('');
+    try {
+      const sb = await sjSb();
+      const { data } = await sb.auth.getSession();
+      const tk = data.session && data.session.access_token;
+      if (!tk) throw new Error('다시 로그인한 뒤 시도해 주세요.');
+      const r = await fetch(SJ_SB_URL + '/functions/v1/suji-account-delete', { method: 'POST', headers: { Authorization: 'Bearer ' + tk, apikey: SJ_SB_KEY } });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok || !j.ok) throw new Error(j.error || '탈퇴하지 못했어요. 잠시 후 다시 시도해 주세요.');
+      await sb.auth.signOut();
+      setOpen(false); window.alert('탈퇴가 완료됐어요. 그동안 이용해 주셔서 감사합니다.');
+    } catch (e) { setMsg(String(e.message || e)); }
+    setBusy(false);
+  };
+  useEffect(() => { if (show && /[?&]delete=1/.test(location.search)) setOpen(true); }, [show]);
+  if (!show) return null; // 훅은 모두 위에서 호출(React 규칙)
   const daysLeft = prof ? Math.ceil((new Date(prof.trial_until) - Date.now()) / 864e5) : null;
   const isPro = prof && prof.plan === 'pro' && (!prof.pro_until || new Date(prof.pro_until) > new Date());
   const chip = user ? (isPro ? '프로' : daysLeft > 0 ? `무료 체험 D-${daysLeft}` : '무료') : '로그인';
@@ -2326,7 +2365,8 @@ const SjAuth = ({ owner }) => {
         user ? React.createElement(React.Fragment, null,
           React.createElement("p", { style: { fontSize: 14, color: '#98B0A7', margin: 0 } }, user.email || '소셜 로그인'),
           React.createElement("p", { style: { fontSize: 15, margin: '4px 0 8px' } }, isPro ? '프로 이용 중' : daysLeft > 0 ? `가입일부터 14일 무료 체험 · ${daysLeft}일 남음` : '무료 체험이 끝났어요'),
-          btn('transparent', '#EEF5F2', '로그아웃', logout, { border: '1px solid rgba(150,210,185,.22)' }))
+          btn('transparent', '#EEF5F2', '로그아웃', logout, { border: '1px solid rgba(150,210,185,.22)' }),
+          React.createElement("button", { type: "button", onClick: withdraw, disabled: busy, style: { marginTop: 4, minHeight: 44, border: 0, background: 'transparent', color: '#98B0A7', fontSize: 13, textDecoration: 'underline', cursor: 'pointer', fontFamily: 'inherit' } }, '회원 탈퇴'))
         : React.createElement(React.Fragment, null,
           React.createElement("p", { style: { fontSize: 13, color: '#98B0A7', margin: '0 0 6px' } }, '가입하면 14일 동안 모든 기능을 무료로 써요.'),
           btn('#FEE500', '#191600', '카카오로 시작하기', () => oauth('kakao')),
@@ -2335,7 +2375,7 @@ const SjAuth = ({ owner }) => {
           React.createElement("label", { style: { fontSize: 12, color: '#98B0A7' } }, '이메일', React.createElement("input", { type: "email", value: email, onChange: e => setEmail(e.target.value), placeholder: "name@company.com", autoComplete: "email", style: { display: 'block', width: '100%', marginTop: 4, minHeight: 46, borderRadius: 12, border: '1px solid rgba(150,210,185,.22)', background: '#08110E', color: '#EEF5F2', padding: '0 12px', fontSize: 15, boxSizing: 'border-box' } })),
           sent && React.createElement("label", { style: { fontSize: 12, color: '#98B0A7' } }, '인증번호', React.createElement("input", { inputMode: "numeric", value: code, onChange: e => setCode(e.target.value.replace(/\D/g, '').slice(0, 8)), placeholder: "6자리", autoComplete: "one-time-code", style: { display: 'block', width: '100%', marginTop: 4, minHeight: 46, borderRadius: 12, border: '1px solid rgba(150,210,185,.22)', background: '#08110E', color: '#EEF5F2', padding: '0 12px', fontSize: 18, letterSpacing: 4, boxSizing: 'border-box' } })),
           sent ? btn('#10B981', '#04130E', '인증하고 시작하기', verify) : btn('#10B981', '#04130E', '인증번호 받기', sendCode),
-          React.createElement("p", { style: { fontSize: 11, color: '#98B0A7', margin: '4px 0 0', lineHeight: 1.6 } }, '시작하면 ', React.createElement("a", { href: "terms.html", target: "_blank" }, '이용약관'), '과 ', React.createElement("a", { href: "privacy.html", target: "_blank" }, '개인정보처리방침'), '에 동의하는 것으로 봅니다.')),
+          React.createElement("p", { style: { fontSize: 11, color: '#98B0A7', margin: '4px 0 0', lineHeight: 1.6 } }, '만 14세 이상만 가입할 수 있어요. 시작하면 ', React.createElement("a", { href: "terms.html", target: "_blank" }, '이용약관'), '과 ', React.createElement("a", { href: "privacy.html", target: "_blank" }, '개인정보처리방침'), '에 동의하는 것으로 봅니다.')),
         msg && React.createElement("p", { role: "status", style: { fontSize: 13, color: '#6EE7B7', margin: 0 } }, msg))), document.body));
 };
 const ArchBox = ({ f, setF }) => {
@@ -3503,7 +3543,7 @@ function proMassSvg(floors, bf, retF, twin, k, done, unitLabel) {
   // 은은한 바닥 그리드 + 라임 글로우 + 라임 대지판
   for (let i = 0; i <= 8; i++) { const t = -18 + i * 4.5; o += ln(P(t, -18, 0), P(t, 18, 0), '#1A212B') + ln(P(-18, t, 0), P(18, t, 0), '#1A212B'); }
   const g = P(0, 0, 0); o += `<ellipse cx="${g[0]}" cy="${g[1]}" rx="${21 * C * sc * 1.25}" ry="${21 * S * sc * 1.25}" fill="url(#gw)"/>`;
-  o += box(x0 - 3, y0 - 3, PW + 6, PD + 6, -0.7, 0.7, 'rgba(16,185,129,.9)', '#8DB32C', '#A9D03A', 'stroke="#E2FF8A" stroke-width="1"');
+  o += box(x0 - 3, y0 - 3, PW + 6, PD + 6, -0.7, 0.7, 'rgba(16,185,129,.9)', '#047857', '#10B981', 'stroke="#6EE7B7" stroke-width="1"');
   for (let b = 1; b <= bf; b++) { const z = -0.7 - b * 1.2; o += poly([P(x0, y0 + PD, z), P(x0 + PW, y0 + PD, z), P(x0 + PW, y0, z)], 'none', 'stroke="rgba(147,197,253,.3)" stroke-dasharray="3 3"'); }
   // 앰버 포디움(상가)
   const podK = Math.min(k, podF), towK = Math.max(0, k - podF);
