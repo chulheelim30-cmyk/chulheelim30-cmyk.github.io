@@ -1,6 +1,7 @@
 # chulheelim30-cmyk.github.io
 
 - `aigyeot/` — 아이곁: 반려동물 생활 기록 웹앱 (기본=건강한 아이 일상, 치료 기록은 같은 화면 '치료 기록' 줄) (https://chulheelim30-cmyk.github.io/aigyeot/)
+- `play/` — 풍년 게임 10종 지인 테스트용 공개 페이지 (https://chulheelim30-cmyk.github.io/play/). 원본은 프로젝트 games/<id>/<id>.html, 다른 게임 링크만 ../<id>/ 로 바꿔 복사.
   - 저장소: Supabase 프로젝트 pbmocpzclvndlevuvfto의 `aigyeot_*` 테이블, RPC `ag_*` (자세한 내용은 ttokttok 저장소 CLAUDE.md '별개 앱: 아이곁')
   - 톡톡(ttokttok) 앱 주소 범위(/ttokttok/) 밖에 두려고 이 저장소로 옮김(11/12). 톡톡이 설치된 휴대폰에서 링크가 톡톡 앱으로 열리던 문제 때문.
 
