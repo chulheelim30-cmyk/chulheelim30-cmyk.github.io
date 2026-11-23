@@ -113,3 +113,11 @@ for o,n in [('#C5F04A','#10B981'),('#D4F76B','#34D399'),('197,240,74','16,185,12
   assert o in s,o; s=s.replace(o,n)
 open(p,'w').write(s)
 print('emerald')
+
+# ── 로그인 버튼(2026-11-23, SJ_LOGIN_ON=false면 관리자·?login=1만): 헤더 오른쪽 ──
+s=open(p).read()
+o='"BETA")))), '
+assert s.count(o)==1, s.count(o)
+s=s.replace(o, o+'React.createElement(SjAuth, { owner: usage.owner }), ')
+open(p,'w').write(s)
+print('auth')

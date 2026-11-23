@@ -55,6 +55,8 @@
 
 - 2026-11-23 건축개요 사진·PDF 읽기: `ArchBox`의 "사진·PDF로 읽기" → `archFileText`(PDF 글자층 우선, 스캔본은 pdf.js로 그림 변환 후 Tesseract; 사진은 Tesseract) → `archOcrFix`(㎡ 보정) → 기존 `archParse`. 파일은 기기 안에서만 처리(서버 전송 없음). pdf.js 3.11.174 CDN
 
+- 2026-11-23 로그인(미공개): `SjAuth`(헤더) — 카카오·구글·이메일 인증번호, supabase-js 2.49.4 CDN(PKCE). 표 `suji_profiles`(가입 시 트리거로 생성, trial_until = 가입+14일, plan/pro_until은 서버만 변경, 본인 읽기만). `SJ_LOGIN_ON=false` → 관리자·`?login=1`에서만 보임. 공개 전: 대시보드 제공자 키·리다이렉트 URL·메일 템플릿({{ .Token }})·SMTP, 개인정보처리방침 개정
+
 ## 7. 디자인
 - 앱: 다크 건축 핀테크(배경 #0B0E13, 라임 #C5F04A), 데스크톱 좌측 내비+우측 패널
 - 2026-11-21 v2 UI 개편: `pro.css` 끝의 `theme-v2` 블록(랜딩 톤 — 배경 #0A0B0D, 둥근 18px 카드, 유리 떠있는 내비, 라벨 12px, 탭 전환 페이드, 데스크톱 패널 없을 때 가운데 정렬), 헤더 워드마크 Suzi+라임 Q(`apply.py`). 계산 로직 변경 없음
