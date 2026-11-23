@@ -2150,6 +2150,7 @@ const ArchBox = ({ f, setF }) => {
         React.createElement("button", { type: "button", onClick: read, disabled: !txt.trim(), style: { fontSize: 11, fontWeight: 700, padding: '4px 10px', borderRadius: 6, background: txt.trim() ? '#2563EB' : '#2E3541', color: '#fff' } }, "숫자 읽기"),
         has && React.createElement("button", { type: "button", onClick: () => { setF(o => ({ ...o, ...Object.fromEntries(ARCH_KEYS.map(k => [k, 0])) })); setMsg(''); }, style: { fontSize: 11, padding: '4px 10px', borderRadius: 6, border: '1px solid #2E3541', color: '#9AA3AF' } }, "건축개요 지우기"),
         msg && React.createElement("span", { style: { fontSize: 11, color: '#93C5FD' } }, msg)),
+      has && !(f.archSaleM2 > 0) && React.createElement("p", { style: { fontSize: 11, color: '#FCD34D', marginTop: 6 } }, `[확인] ${p.res && p.id !== 'officetel' ? '공급면적' : '계약면적'} 합계가 비어 있어 추정값으로 매출을 계산 중이에요. 분양면적표 합계를 아래 칸에 넣어 주세요(매출에 바로 곱해지는 값).`),
       React.createElement("div", { className: "grid grid-cols-2 gap-2.5", style: { marginTop: 8 } },
         React.createElement(Num, { label: `지상 연면적${f.archAboveM2 > 0 ? ` (${py(f.archAboveM2 / 3.3058)}평)` : ` (자동 ${py(auto.above * 3.3058)})`}`, unit: "㎡", value: f.archAboveM2 || 0, step: 100, onChange: setK('archAboveM2') }),
         React.createElement(Num, { label: `지하 연면적${f.archBsmtM2 > 0 ? ` (${py(f.archBsmtM2 / 3.3058)}평)` : ` (자동 ${py((auto.gfa - auto.above) * 3.3058)})`}`, unit: "㎡", value: f.archBsmtM2 || 0, step: 100, onChange: setK('archBsmtM2') }),

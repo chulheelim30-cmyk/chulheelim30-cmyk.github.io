@@ -129,6 +129,7 @@ function ProSens({ f, R }) {
   if (!f.archAboveM2 && !f.gfaManual && f.sitePy < 300 && R.sc.far >= 300) chips.push(['w', '작은 대지 고용적률']);
   if ((R.sc.gfa > 0 && R.sc.gfa < 1000) || f.archFloorsUp >= 30) chips.push(['w', '소규모·고층 공사비']);
   if (!fl.hasDesign) chips.push(['w', '추정 위주 결과']);
+  else if (!(f.archSaleM2 > 0)) chips.push(['w', '분양면적 추정값 — 분양면적표 합계 입력 필요']);
   if (R.priced && R.margin < R.tm && R.profit >= 0) chips.push(['w', '목표 이익률 미달']);
   if (R.profit < 0) chips.push(['d', '적자']);
   if (R.capped) chips.push(['d', '토지비 단위 확인']);
