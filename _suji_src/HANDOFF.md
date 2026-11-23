@@ -57,6 +57,8 @@
 
 - 2026-11-23 로그인(미공개): `SjAuth`(헤더) — 카카오·구글·이메일 인증번호, supabase-js 2.49.4 CDN(PKCE). 표 `suji_profiles`(가입 시 트리거로 생성, trial_until = 가입+14일, plan/pro_until은 서버만 변경, 본인 읽기만). `SJ_LOGIN_ON=false` → 관리자·`?login=1`에서만 보임. 공개 전: 대시보드 제공자 키·리다이렉트 URL·메일 템플릿({{ .Token }})·SMTP, 개인정보처리방침 개정
 
+- 2026-11-23 전국 토지 시세: 표 `suji_land_price`(공개 읽기) ← 함수 `suji_refresh_land_price()`가 매주 월 04:41 KST(cron `suji-land-price-weekly`) `pub_land_trade` 최근 12개월로 재계산(100건 미만이면 유지). 앱은 시작 시 받아 `LAND_PRICE`에 없는 키만 채움. 전남광주는 '전남광주|'와 옛 '광주|'·'전남|' 키 둘 다
+
 ## 7. 디자인
 - 앱: 다크 건축 핀테크(배경 #0B0E13, 라임 #C5F04A), 데스크톱 좌측 내비+우측 패널
 - 2026-11-21 v2 UI 개편: `pro.css` 끝의 `theme-v2` 블록(랜딩 톤 — 배경 #0A0B0D, 둥근 18px 카드, 유리 떠있는 내비, 라벨 12px, 탭 전환 페이드, 데스크톱 패널 없을 때 가운데 정렬), 헤더 워드마크 Suzi+라임 Q(`apply.py`). 계산 로직 변경 없음
