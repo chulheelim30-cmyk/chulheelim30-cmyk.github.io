@@ -1873,7 +1873,7 @@ function render(c) {
       const pts = [[lx, ly]], hits = [];
       let x = lx, y = ly, vx = Math.cos(a), vy = Math.sin(a), bounces = 0, after = 0;
       const st = 4, r = L.r;
-      for (let i = 0; i < 600 && bounces < 3; i++) {
+      for (let i = 0; i < 1400 && bounces < 5; i++) { // 11-23 '경로가 중간에 잘림': 4번 튕길 때까지 길게
         let nx = x + vx * st, ny = y + vy * st, bounced = false;
         if (nx < L.bx + r) { nx = L.bx + r; vx = Math.abs(vx); bounced = true; }
         if (nx > L.bx + L.bw - r) { nx = L.bx + L.bw - r; vx = -Math.abs(vx); bounced = true; }
@@ -1885,7 +1885,7 @@ function render(c) {
         }
         x = nx; y = ny;
         if (bounced) { pts.push([x, y]); bounces++; after = 0; }
-        if (bounces) { after += st; if (after > L.cs * 2.2) break; }
+        if (bounces >= 4) { after += st; if (after > L.cs * 2) break; }
         if (y > L.floor - r) break;
       }
       pts.push([x, y]);

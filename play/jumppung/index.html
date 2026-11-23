@@ -1641,6 +1641,8 @@ function layout(W, H) {
   L.u = clamp((H - JE.safe.top - 260) / 9, 30, 52); // 한 층 높이
   L.ground = H - JE.safe.bottom - 64;
   L.js = L.cw * 0.5;                      // 젤리 크기
+  // 11-23 사용자 '계단을 돌아가며 올라가는 이미지': 기둥을 가운데 탑에 빙글빙글 감긴 계단으로 그림 (규칙은 그대로)
+  L.R = Math.min(W * 0.33, 150); L.rise = L.u * 0.55; L.anchor = H * 0.62;
 }
 
 const G = { cols: [], p: 0, px: 0, py: 0, jump: null, hold: null, cam: 0, press: 0, pressV: 0, t: 0, score: 0, shown: 0, stars: 0, doubles: 0, best: 0, fallT: 0, falling: null, sq: { v: 1, vel: 0 }, blinkT: 2 };
@@ -1695,7 +1697,7 @@ const F = K.flow({
 });
 function reset() {
   G.cols = []; ensure(14);
-  Object.assign(G, { p: 0, jump: null, hold: null, cam: 0, press: -2.6, pressV: 0.55, score: 0, shown: 0, stars: 0, doubles: 0, best: JE.best.get('main'), falling: null, fallT: 0, passedBest: false, spTier: 0 });
+  Object.assign(G, { camY: null, p: 0, jump: null, hold: null, cam: 0, press: -2.6, pressV: 0.55, score: 0, shown: 0, stars: 0, doubles: 0, best: JE.best.get('main'), falling: null, fallT: 0, passedBest: false, spTier: 0 });
   G.px = colX(0); G.py = lvY(G.cols[0].base);
 }
 function demo() { reset(); G.press = -99; }
@@ -1708,7 +1710,7 @@ function jump(n) {
   const dur = n === 1 ? 0.3 : 0.42;
   G.jump = { n, t: 0, dur, x0: G.px, y0: G.py, x1: colX(G.p + n), to };
   G.sq.vel -= 5; JE.audio.tone(n === 1 ? 520 : 440, 0.12, 'triangle', 0.16, n === 1 ? 1.6 : 2.2); JE.haptic('tap');
-  if (n === 2) { K.pop('한칸 더!', L.W * 0.32, G.py - 60 - (L.js), { size: 26, c1: '#ffe0f3', c2: '#ff6bc1', life: 0.7 }); }
+  if (n === 2) { K.pop('한칸 더!', L.W / 2, scrY(G.py, G.px) - 60 - (L.js), { size: 26, c1: '#ffe0f3', c2: '#ff6bc1', life: 0.7 }); }
 }
 function land() {
   const j = G.jump, to = j.to, idx = G.p + j.n;
@@ -1722,10 +1724,10 @@ function land() {
   G.sq.vel += 6 + Math.min(4, Math.max(0, drop) * 1.5);
   let gain = j.n === 2 ? 3 : 1;
   if (j.n === 2) G.doubles++;
-  if (to.star) { to.star = false; G.stars++; gain += 5; JE.sfx.coin(); K.pop('+5', L.W * 0.32, G.py - 70, { size: 24 }); JE.fx.burst(screenX(G.px), G.py - L.js, '#ffd23f', 12, 220); }
+  if (to.star) { to.star = false; G.stars++; gain += 5; JE.sfx.coin(); K.pop('+5', L.W / 2, scrY(G.py, G.px) - 70, { size: 24 }); JE.fx.burst(screenX(G.px), scrY(G.py, G.px) - L.js, '#ffd23f', 12, 220); }
   else JE.sfx.land();
   G.score += gain;
-  JE.fx.burst(screenX(G.px), G.py, to.col, 6, 140);
+  JE.fx.burst(screenX(G.px), scrY(G.py, G.px), to.col, 6, 140);
   { const tier = Math.floor(G.p / 20); if (tier > (G.spTier || 0)) { G.spTier = tier; K.pop('속도 UP!', L.W / 2, L.H * 0.36, { size: 30, c1: '#d7f6ff', c2: '#3ec5ff' }); } } // 기둥 20개마다 (프레스가 빨라지는 기준과 같음)
   if (!G.passedBest && G.best > 0 && G.score > G.best) { G.passedBest = true; K.pop('신기록!', L.W / 2, L.H * 0.3, { size: 36 }); JE.sfx.fanfare(); K.confetti(40); }
 }
@@ -1768,7 +1770,11 @@ JE.input.on({
 });
 
 /* ---------------- 업데이트 ---------------- */
-const screenX = x => x - G.cam + L.W * 0.3;
+const STEP = 0.62; // 계단 한 칸이 탑을 도는 각도(라디안)
+const rise = x => (x / L.cw) * L.rise;            // 칸마다 조금씩 위로
+const angOf = x => (x - G.cam) / L.cw * STEP;     // 카메라(주인공) 기준 각도
+const screenX = x => L.W / 2 + L.R * Math.sin(angOf(x));
+const scrY = (y, x) => y - rise(x) - (G.camY || 0) + L.anchor;
 function update(dt) {
   G.t += dt;
   JE.spring(G.sq, 1, dt, 300, 12);
@@ -1804,6 +1810,7 @@ function update(dt) {
   // 카메라
   const targ = G.px;
   G.cam += (targ - G.cam) * Math.min(1, dt * 6);
+  if (!G.falling) { const ty = G.py - rise(G.px); G.camY = G.camY == null ? ty : G.camY + (ty - G.camY) * Math.min(1, dt * 5); }
   ensure(Math.floor((G.cam + L.W) / L.cw) + 6);
 }
 
@@ -1811,89 +1818,88 @@ function update(dt) {
 function star(c, x, y, r) { c.beginPath(); for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5, q = i % 2 ? r * 0.45 : r; c.lineTo(x + Math.cos(a) * q, y + Math.sin(a) * q); } c.closePath(); }
 function render(c) {
   const { W, H } = L;
-  // 배경: 가로로 흐르는 공장 벽 (느린 시차)
-  c.save(); c.translate(-((G.cam * 0.3) % 92), 0); B.bg(c, 0, W + 184, H); c.restore();
-  // 먼 기계 실루엣
-  c.fillStyle = 'rgba(31,59,51,.10)';
-  for (let i = -1; i < 6; i++) { const x = i * 160 - ((G.cam * 0.5) % 160); JE.roundRect(c, x, H * 0.42, 90, H, 14); c.fill(); }
-  // 바닥 (구멍 아래 컨베이어)
-  B.tray(c, L.ground + 18, G.t);
-  const i0 = Math.max(0, Math.floor((G.cam - L.W * 0.3) / L.cw) - 1), i1 = i0 + Math.ceil(W / L.cw) + 3;
-  for (let i = i0; i <= i1; i++) {
+  // 배경: 위로 흐르는 공장 벽 (느린 시차)
+  const camY = G.camY || 0;
+  c.save(); c.translate(0, ((-camY * 0.3) % 92 + 92) % 92 - 92); B.bg(c, 0, W, H + 184); c.restore();
+  const cx = W / 2, spin = G.cam / L.cw * STEP;
+  // 가운데 탑 (돌아가는 줄무늬)
+  const tw = L.R * 0.62;
+  c.fillStyle = 'rgba(31,59,51,.10)'; JE.roundRect(c, cx - tw / 2, -20, tw, H + 40, 18); c.fill();
+  c.strokeStyle = 'rgba(31,59,51,.16)'; c.lineWidth = 3;
+  for (let k = 0; k < 10; k++) { const a = k * Math.PI / 5 - spin; if (Math.cos(a) < 0) continue; const x = cx + tw / 2 * Math.sin(a) * 0.92; c.beginPath(); c.moveTo(x, -20); c.lineTo(x, H + 20); c.stroke(); }
+  for (let y = ((-camY * 0.6) % 70 + 70) % 70 - 70; y < H; y += 70) { c.fillStyle = 'rgba(31,59,51,.08)'; c.fillRect(cx - tw / 2, y, tw, 5); }
+  // 계단 (뒤쪽 → 앞쪽 순서로)
+  const pc = G.cam / L.cw, list = [];
+  for (let i = Math.max(0, Math.floor(pc) - 4); i <= Math.ceil(pc) + 9; i++) {
     const col = G.cols[i]; if (!col) continue;
-    const x = screenX(colX(i));
-    if (col.hole) {
-      c.fillStyle = 'rgba(0,0,0,.35)'; c.fillRect(x - L.pw / 2, L.ground + 8, L.pw, 12);
-      continue;
-    }
-    const top = colTop(col, G.t), y = lvY(top);
-    // 리프트 레일
-    if (col.lift) {
-      c.fillStyle = BC.metal; c.fillRect(x - 3, lvY(col.base + col.amp) - 8, 6, lvY(col.base) - lvY(col.base + col.amp) + 8);
-      c.fillStyle = 'rgba(255,255,255,.3)'; c.fillRect(x - 1, lvY(col.base + col.amp) - 8, 2, lvY(col.base) - lvY(col.base + col.amp) + 8);
-    }
-    B.panel(c, x - L.pw / 2, y, L.pw, L.ground + 20 - y, 10, col.lift ? { top: '#35685b', bottom: BC.dark } : {});
-    // 층 눈금
-    c.fillStyle = 'rgba(255,255,255,.08)';
-    for (let lv = 1; lv < top; lv++) c.fillRect(x - L.pw / 2 + 8, lvY(lv), L.pw - 16, 2);
-    // 윗면 뚜껑: 기둥 색 젤리 띠 (리프트는 경고 줄무늬)
-    // 11-23 Gemini 손그림 뚜껑 (푸딩 젤리 / 테이프 리프트)
+    const d = (i - pc) * STEP; if (d < -2.4 || d > 3.2) continue;
+    list.push({ i, col, d, z: Math.cos(d) });
+  }
+  list.sort((a, b) => a.z - b.z);
+  const drawStep = st => {
+    const { i, col, d, z } = st, k = 0.72 + 0.28 * z, pw = L.pw * 1.15 * k;
+    const x = cx + L.R * Math.sin(d), wx = colX(i);
+    c.save(); if (z < 0) c.globalAlpha = 0.45 + 0.4 * (1 + z);
+    if (col.hole) { c.restore(); return; }
+    const top = colTop(col, G.t), y = scrY(lvY(top), wx);
+    if (col.lift) { const yt = scrY(lvY(col.base + col.amp), wx), yb = scrY(lvY(col.base), wx); c.fillStyle = BC.metal; c.fillRect(x - 3, yt - 8, 6, yb - yt + 8); }
+    // 받침: 탑에서 뻗어 나온 계단 판 + 버팀대
+    const ex = cx + (x > cx ? 1 : -1) * Math.min(Math.abs(x - cx), tw / 2);
+    c.strokeStyle = 'rgba(43,43,43,.55)'; c.lineWidth = 3 * k; c.lineCap = 'round';
+    c.beginPath(); c.moveTo(ex, y + L.u * 0.9); c.lineTo(x, y + 8); c.stroke();
+    c.fillStyle = 'rgba(255,253,246,.9)'; JE.roundRect(c, Math.min(ex, x) - 2, y + 4, Math.abs(x - ex) + 4, 8, 4); c.fill(); c.stroke();
+    B.panel(c, x - pw / 2, y, pw, L.u * 0.75, 10, col.lift ? { top: '#35685b', bottom: BC.dark } : {});
     const capK = col.lift ? 'jp_lift' : 'jp_pil' + [0, 1, 1, 2, 3, 3][COLORS.indexOf(col.col)];
-    if (!(JE.art && JE.art.draw(c, capK, x, y + 6, L.pw * 1.06, L.pw * 0.9, { ay: 1 }))) {
-      if (col.lift) B.hazard(c, x - L.pw / 2 + 3, y + 3, L.pw - 6, 9, G.t * 30);
-      else { c.fillStyle = col.col; JE.roundRect(c, x - L.pw / 2 + 3, y + 3, L.pw - 6, 9, 4); c.fill(); }
+    if (!(JE.art && JE.art.draw(c, capK, x, y + 6, pw * 1.06, pw * 0.9, { ay: 1 }))) {
+      if (col.lift) B.hazard(c, x - pw / 2 + 3, y + 3, pw - 6, 9, G.t * 30);
+      else { c.fillStyle = col.col; JE.roundRect(c, x - pw / 2 + 3, y + 3, pw - 6, 9, 4); c.fill(); }
     }
     if (col.star) {
       const sy = y - L.js * 1.3 + Math.sin(G.t * 4 + i) * 4;
-      if (!(JE.art && JE.art.draw(c, 'jp_star', x, sy, L.js * 0.8, L.js * 0.8, { rot: Math.sin(G.t * 3 + i) * 0.15 }))) { c.lineWidth = 3; c.strokeStyle = BC.ink; star(c, x, sy, L.js * 0.32); c.fillStyle = '#ffd23f'; c.fill(); c.stroke(); }
+      if (!(JE.art && JE.art.draw(c, 'jp_star', x, sy, L.js * 0.8 * k, L.js * 0.8 * k, { rot: Math.sin(G.t * 3 + i) * 0.15 }))) { c.lineWidth = 3; c.strokeStyle = BC.ink; star(c, x, sy, L.js * 0.32 * k); c.fillStyle = '#ffd23f'; c.fill(); c.stroke(); }
     }
-    // 번호 (10칸마다)
     if (i % 10 === 0 && i > 0) { c.font = B.font(14, 900); c.textAlign = 'center'; c.fillStyle = BC.gold; c.fillText(i, x, y + 30); }
-  }
-  // 최고 기록 깃발
-  if (G.best > 0 && F.state !== 'home') {
-    // 점수는 기둥 수와 다르므로 깃발은 생략, 대신 HUD BEST 사용
-  }
+    c.restore();
+  };
+  // 프레스: 뒤에서 계단을 따라 올라오는 누르개
+  const drawPress = () => {
+    if (F.state === 'home') return;
+    const d = (G.press - pc) * STEP; if (d < -2.4) return;
+    const wx = colX(Math.max(0, Math.round(G.press))), pcol = G.cols[Math.max(0, Math.round(G.press))];
+    const x = cx + L.R * Math.sin(d), lv = pcol && !pcol.hole ? colTop(pcol, G.t) : 0, y = scrY(lvY(lv), wx);
+    if (!(JE.art && JE.art.draw(c, 'jp_press', x, y + 6 + Math.abs(Math.sin(G.t * 5)) * -6, L.pw * 1.6, L.pw * 1.6, { ay: 1 }))) {
+      c.fillStyle = BC.metal2; JE.roundRect(c, x - L.pw * 0.7, y - L.pw * 1.2, L.pw * 1.4, L.pw * 1.2, 10); c.fill(); B.hazard(c, x - L.pw * 0.7, y - 14, L.pw * 1.4, 12, 0);
+    }
+  };
+  for (const st of list) if (st.z < 0) drawStep(st);
+  if (Math.cos((G.press - pc) * STEP) < 0) drawPress();
+  for (const st of list) if (st.z >= 0) drawStep(st);
+  if (Math.cos((G.press - pc) * STEP) >= 0) drawPress();
   // 플레이어
-  const sx = screenX(G.px), js = L.js;
+  const sx = screenX(G.px), js = L.js, py = scrY(G.py, G.px);
   const hold = G.hold ? Math.min(1, G.hold.t / HOLD) : 0;
   const sqv = G.sq.v - hold * 0.22;
   const mood = G.falling ? 'worried' : (G.jump ? 'happy' : 'normal');
   c.save();
-  if (G.falling && G.falling.squash) { c.translate(sx, G.py); c.scale(0.4, 1); c.translate(-sx, -G.py); }
-  if (G.falling && !G.falling.squash) { c.translate(sx, G.py - js / 2); c.rotate(G.falling.t * 6); c.translate(-sx, -(G.py - js / 2)); }
-  const heroK = G.falling ? (G.falling.squash ? 'jp_dizzy' : 'jp_fall') : G.jump ? 'jp_jump' : hold > 0.3 ? 'jp_crouch' : 'jp_stand'; // 11-23 Gemini 손그림 주인공
-  if (!(JE.art && JE.art.draw(c, heroK, sx, G.py + js * 0.08, js * 1.45, js * 1.35, { ay: 1, sx: 2 - sqv, sy: sqv })))
-    K.jellyFace(c, sx, G.py - js / 2, js, js * 0.9, COLORS[4], { sx: 2 - sqv, sy: sqv, mood, blink: G.blinkT < 0 ? 0.15 : 1 });
+  if (G.falling && G.falling.squash) { c.translate(sx, py); c.scale(0.4, 1); c.translate(-sx, -py); }
+  if (G.falling && !G.falling.squash) { c.translate(sx, py - js / 2); c.rotate(G.falling.t * 6); c.translate(-sx, -(py - js / 2)); }
+  const heroK = G.falling ? (G.falling.squash ? 'jp_dizzy' : 'jp_fall') : G.jump ? 'jp_jump' : hold > 0.3 ? 'jp_crouch' : 'jp_stand';
+  if (!(JE.art && JE.art.draw(c, heroK, sx, py + js * 0.08, js * 1.45, js * 1.35, { ay: 1, sx: 2 - sqv, sy: sqv })))
+    K.jellyFace(c, sx, py - js / 2, js, js * 0.9, COLORS[4], { sx: 2 - sqv, sy: sqv, mood, blink: G.blinkT < 0 ? 0.15 : 1 });
   c.restore();
   // 꾹 충전 링
   if (G.hold && F.playing()) {
-    c.lineWidth = 5; c.strokeStyle = hold >= 1 ? BC.pink : 'rgba(255,255,255,.6)';
-    c.beginPath(); c.arc(sx, G.py - js * 0.5, js * 0.85, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * hold); c.stroke();
-    if (hold >= 1) { c.font = B.font(14, 900); c.textAlign = 'center'; c.fillStyle = BC.pink; c.fillText('두 칸!', sx, G.py - js * 1.6); }
+    c.lineWidth = 5; c.strokeStyle = hold >= 1 ? BC.pink : 'rgba(43,43,43,.45)';
+    c.beginPath(); c.arc(sx, py - js * 0.5, js * 0.85, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * hold); c.stroke();
+    if (hold >= 1) { c.font = B.font(14, 900); c.textAlign = 'center'; c.fillStyle = BC.pink; c.fillText('두 칸!', sx, py - js * 1.6); }
   }
-  // 프레스
-  if (F.state !== 'home') {
-    const pxs = screenX(colX(G.press)) - L.pw / 2;
-    if (pxs > -40) {
-      const w = Math.max(0, pxs);
-      c.fillStyle = BC.metal2; c.fillRect(0, 0, w, H);
-      c.fillStyle = BC.metal; for (let y = (G.t * 60) % 40 - 40; y < H; y += 40) c.fillRect(0, y, w, 6);
-      B.hazard(c, w - 16, 0, 16, H, 0);
-      c.save(); c.translate(w - 16, 0); c.rotate(0); c.restore();
-      c.fillStyle = BC.ink; c.fillRect(w - 2, 0, 4, H);
-      if (JE.art) JE.art.draw(c, 'jp_press', w - L.pw * 0.2, L.ground + 10 + Math.abs(Math.sin(G.t * 5)) * -6, L.pw * 1.7, L.pw * 1.7, { ay: 1 }); // 11-23 쫓아오는 프레스 얼굴
-      // 경고
-      const gap = G.p - G.press;
-      if (gap < 1.6 && F.playing() && Math.floor(G.t * 8) % 2) { c.fillStyle = 'rgba(255,93,122,.18)'; c.fillRect(0, 0, W, H); }
-    }
-  }
+  if (F.state !== 'home') { const gap = G.p - G.press; if (gap < 1.6 && F.playing() && Math.floor(G.t * 4) % 2) { c.fillStyle = 'rgba(255,93,122,.12)'; c.fillRect(0, 0, W, H); } }
   // HUD
   if (F.state !== 'home') {
     pr = K.hud(c, G.shown, G.best || 0);
     const gap = Math.max(0, G.p - G.press);
     K.badges(c, [{ t: `기둥 ${G.p}`, fg: BC.soda }, { t: `프레스 ${gap.toFixed(1)}칸 뒤`, fg: gap < 2 ? BC.danger : BC.lime }], K.rowY() + 24);
-    if (G.p < 3 && F.playing()) K.hint(c, '톡 = 한 칸 · 꾹 눌렀다 떼기 = 두 칸', L.ground + 46);
+    if (G.p < 3 && F.playing()) K.hint(c, '톡 = 한 칸 · 꾹 눌렀다 떼기 = 두 칸', H - JE.safe.bottom - 40);
   }
 }
 

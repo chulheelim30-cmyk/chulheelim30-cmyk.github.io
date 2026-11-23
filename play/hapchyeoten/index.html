@@ -1622,7 +1622,8 @@ const COLS = 7, ROWS = 10;
 const START_TIME = 60, MAX_TIME = 75, COMBO_WIN = 2.5, CONTINUE_SEC = 15;
 // 터뜨리면 시간 보너스: 이은 칸당 0.5초 + 폭탄에 휩쓸린 칸당 0.2초 + 콤보 단계당 0.25초(최대 1초)
 // 시간은 갈수록 빨리 줄어들어서(90초마다 1배씩 더) 보너스만으로 무한히 버티진 못함. 보통 2~4분 판
-const T_PER_CELL = 0.5, T_PER_BLAST = 0.2, T_PER_COMBO = 0.25, T_COMBO_MAX = 1.0, DRAIN_RAMP = 90, BOMB_MIN = 5;
+// 11-23 사용자 '난이도 조절': 칸당 0.5→0.7초, 빨라지는 속도 90→150초마다 1배, 최대 2.5배까지만 (보통 3~4분 판)
+const T_PER_CELL = 0.7, T_PER_BLAST = 0.25, T_PER_COMBO = 0.25, T_COMBO_MAX = 1.0, DRAIN_RAMP = 150, DRAIN_MAX = 2.5, BOMB_MIN = 5;
 // 숫자별 젤리 색 = 풍년 공통 팔레트 (engine/pung-style.js)
 const BJ = JE.brand.JELLY, BX = JE.brand.EXTRA;
 const COLORS = ['', BJ[0], BJ[1], BJ[2], BJ[3], BX[0], BJ[4], BX[1], BJ[5], BX[2]];
@@ -1685,7 +1686,7 @@ function findMove(limit = 40) {
 // 새로 들어온 칸만 바꿔서 항상 10 조합이 남게 보정
 function ensureSolvable(fresh) {
   let guard = 0;
-  while (findMove(4).length < 4 && guard++ < 40) {
+  while (findMove(8).length < 8 && guard++ < 60) { // 11-23: 찾을 수 있는 10 조합을 4→8개 이상 남김
     const pool = fresh.length ? fresh : G.grid.flat();
     const c = pool[Math.floor(G.rng() * pool.length)];
     c.v = rndVal();
@@ -1885,7 +1886,7 @@ function update(dt) {
   G.gaugeFlash = Math.max(0, G.gaugeFlash - dt * 2.5);
   if (G.state !== 'play') return;
   G.elapsed += dt;
-  const drain = 1 + G.elapsed / DRAIN_RAMP; // 오래 버틸수록 빨리 줄어듦
+  const drain = Math.min(DRAIN_MAX, 1 + G.elapsed / DRAIN_RAMP); // 오래 버틸수록 빨리 줄어듦 (상한 있음)
   const before = G.time;
   G.time -= dt * drain;
   if (G.time < 10 && Math.ceil(before) !== Math.ceil(G.time)) JE.sfx.tick();

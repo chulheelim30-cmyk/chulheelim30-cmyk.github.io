@@ -1632,12 +1632,12 @@ function genRow() {
   for (let tries = 0; tries < 50; tries++) {
     const row = []; let c = 0, filled = 0;
     while (c < COLS) {
-      if (Math.random() < 0.3) { c++; continue; }
+      if (Math.random() < 0.2) { c++; continue; } // 11-23: 빈칸 조금 적게 → 줄이 더 자주 참
       const len = Math.min(COLS - c, [1, 1, 2, 2, 2, 3, 3, 4][Math.floor(Math.random() * 8)]);
       row.push({ c, len, col: COLORS[Math.floor(Math.random() * 6)], gold: Math.random() < 0.06 }); c += len + (Math.random() < 0.5 ? 1 : 0); filled += len;
     }
     const gaps = COLS - filled;
-    if (gaps >= 1 && gaps <= 4 && row.length >= 2) return row;
+    if (gaps >= 1 && gaps <= 3 && row.length >= 2) return row;
   }
   return [{ c: 0, len: 3, col: COLORS[0], gold: false }, { c: 4, len: 2, col: COLORS[3], gold: false }];
 }
@@ -1704,7 +1704,8 @@ async function afterMove() {
   G.busy = true; G.moves++;
   await gravity();
   const n = await clearLoop();
-  if (!n) G.combo = 0;
+  // 11-23 '콤보 잘 나오게': 한 번 못 지워도 콤보 유지, 3번 연속 못 지우면 끝
+  if (!n) { G.miss = (G.miss || 0) + 1; if (G.miss >= 3) { G.combo = 0; G.miss = 0; } } else G.miss = 0;
   if (!F.playing()) { G.busy = false; return; }
   const over = await riseRow();
   if (over) { G.busy = false; K.pop('넘쳤어요!', L.W / 2, L.by + 20, { size: 34, c1: '#ffd1da', c2: '#ff5d7a' }); F.fail('젤리가 맨 위를 넘었어요!', 0.8); return; }
@@ -1734,13 +1735,13 @@ const F = K.flow({
   scoreGoals: [1500, 5000, 12000],
   missions: [
     { k: 'lines', t: '오늘 줄 {n}개 지우기', goals: [15, 30, 50], mode: 'day' },
-    { k: 'combo', t: '한 판에 콤보 x{n}', goals: [2, 3, 4] },
+    { k: 'combo', t: '한 판에 콤보 x{n}', goals: [3, 5, 8] },
     { k: 'golds', t: '한 판에 황금 펑 {n}번', goals: [1, 2, 3] },
   ],
   missionStats: () => ({ lines: G.lines, combo: G.maxCombo, golds: G.golds }),
 });
 function setup() {
-  Object.assign(G, { blocks: [], drag: null, busy: false, score: 0, shown: 0, lines: 0, combo: 0, maxCombo: 0, golds: 0, moves: 0, best: JE.best.get('main'), passedBest: false });
+  Object.assign(G, { blocks: [], drag: null, busy: false, score: 0, shown: 0, lines: 0, combo: 0, miss: 0, maxCombo: 0, golds: 0, moves: 0, best: JE.best.get('main'), passedBest: false });
   for (let r = ROWS - 3; r < ROWS; r++) for (const d of genRow()) G.blocks.push(mk(r, d));
   G.next = genRow();
   // 시작부터 꽉 찬 줄이 있으면 정리
@@ -1821,7 +1822,7 @@ function render(c) {
     for (const n of G.next) { c.fillStyle = n.gold ? '#ffd23f' : n.col; c.globalAlpha = 0.8; JE.roundRect(c, L.bx + n.c * L.cs + 4, L.prevY + 6, n.len * L.cs - 8, L.cs * 0.55 - 12, 6); c.fill(); c.globalAlpha = 1; }
     c.font = B.font(12, 800); c.fillStyle = BC.sub; c.textAlign = 'center'; c.textBaseline = 'top'; c.fillText('다음에 올라올 줄', W / 2, L.prevY + L.cs * 0.55 + 6);
     pr = K.hud(c, G.shown, G.best || 0);
-    K.badges(c, [{ t: `지운 줄 ${G.lines}`, fg: BC.soda }, { t: G.combo >= 2 ? `콤보 x${G.combo}` : `밀기 ${G.moves}`, fg: G.combo >= 2 ? BC.gold : '#fff' }], K.rowY() + 24);
+    K.badges(c, [{ t: `지운 줄 ${G.lines}`, fg: BC.soda }, { t: G.combo >= 2 ? `콤보 x${G.combo}${G.miss ? ' ' + '•'.repeat(3 - G.miss) : ''}` : `밀기 ${G.moves}`, fg: G.combo >= 2 ? BC.gold : '#fff' }], K.rowY() + 24);
     if (G.moves === 0 && F.playing()) K.hint(c, '블록을 좌우로 끌었다 놓아요', H - JE.safe.bottom - 22);
   }
 }

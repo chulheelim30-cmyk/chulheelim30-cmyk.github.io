@@ -2218,8 +2218,16 @@ function drawFloor(c, fl, cx, cy, opt = {}) {
   const w = FW * 0.96, h = FH * 0.96;
   const mood = opt.rot ? 'worried' : (!opt.preview && fl.lit === 0) ? 'worried' : (fl.happyT && G.t - fl.happyT < 0.9) ? 'happy' : 'normal';
   if (JE.art && JE.art.has('slab_' + fl.type)) { // 11-23 Gemini 손그림 젤리 (얼굴 포함)
-    if (opt.glow) { c.save(); c.shadowColor = jc; c.shadowBlur = 24 * opt.glow; JE.art.draw(c, 'slab_' + fl.type, 0, 0, w * 1.04, h * 1.04, { fit: 'stretch' }); c.restore(); }
-    else JE.art.draw(c, 'slab_' + fl.type, 0, 0, w * 1.04, h * 1.04, { fit: 'stretch' });
+    // 11-23 '젤리가 이어지는 느낌이 없음': 아래로 조금 길게 그려 아래 젤리 윗부분을 덮고, 맞닿은 곳에 말랑한 이음매
+    const stacked = !opt.preview && !opt.rot && fl.idx > 0, ext = stacked ? h * 0.2 : 0;
+    if (stacked) { // 이음매: 아래 젤리 쪽으로 흘러내린 젤리 방울
+      c.save(); c.globalAlpha = 0.55; c.fillStyle = jc;
+      JE.roundRect(c, -w * 0.4, h * 0.36, w * 0.8, h * 0.28, h * 0.14); c.fill();
+      for (const [dx, r] of [[-0.24, 0.07], [0.05, 0.09], [0.3, 0.06]]) { c.beginPath(); c.arc(w * dx, h * 0.62, h * r * 1.4, 0, Math.PI * 2); c.fill(); }
+      c.restore();
+    }
+    if (opt.glow) { c.save(); c.shadowColor = jc; c.shadowBlur = 24 * opt.glow; JE.art.draw(c, 'slab_' + fl.type, 0, ext / 2, w * 1.04, h * 1.04 + ext, { fit: 'stretch' }); c.restore(); }
+    else JE.art.draw(c, 'slab_' + fl.type, 0, ext / 2, w * 1.04, h * 1.04 + ext, { fit: 'stretch' });
     if (mood === 'worried') { c.fillStyle = 'rgba(120,200,255,.9)'; const sx = w * 0.36, sy = -h * 0.12; c.beginPath(); c.moveTo(sx, sy - h * 0.12); c.quadraticCurveTo(sx + w * 0.05, sy, sx, sy + h * 0.04); c.quadraticCurveTo(sx - w * 0.05, sy, sx, sy - h * 0.12); c.fill(); }
     c.restore(); return;
   }

@@ -2021,7 +2021,8 @@ function place(i, gr, gc) {
     JE.shake.add(5 + lines.length * 3); FX.hit = 0.05 + Math.min(0.06, lines.length * 0.015); fxFlash(0.12 + lines.length * 0.06);
     const py = Math.min(cy, L.by + L.bs * 0.6);
     fxPop('+' + pts, L.W / 2, py, { size: 34 + Math.min(lines.length, 4) * 6, c1: '#fff', c2: '#ffd23f', rot: 0 });
-    if (G.combo >= 2) fxPop(JE.sketch ? `쫀득 ${G.combo}!` : `콤보 x${G.combo}`, L.W / 2, py - 50, { size: 30 + Math.min(G.combo, 8) * 2, c1: '#e8fbff', c2: '#3ec5ff', delay: 0.06, burst: G.combo >= 5 ? '#ffc93a' : '#8fd8ff' });
+    // 11-23 '쫀득이 화면을 너무 가림': 작게, 판 위쪽 가장자리에 잠깐만
+    if (G.combo >= 2) fxPop(JE.sketch ? `쫀득 ${G.combo}!` : `콤보 x${G.combo}`, L.W / 2, L.by - 14, { size: 20 + Math.min(G.combo, 8), life: 0.7, c1: '#e8fbff', c2: '#3ec5ff', delay: 0.06, burst: null });
     if (JE.sketch && (lines.length >= 3 || G.combo >= 5)) FX.pungi = { t: 0, say: lines.length >= 3 ? '대풍년!' : '풍년이다!' };
     if (lines.length >= 2) fxPop(['', '', '더블!', '트리플!', '쿼드!', '대박!!'][Math.min(lines.length, 5)], L.W / 2, py - 96, { size: 44, c1: '#fff3b0', c2: '#ff9a4d', delay: 0.1, wobble: true });
     if (nSame) {
