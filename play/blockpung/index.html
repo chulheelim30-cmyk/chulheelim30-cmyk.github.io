@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="ko">
-<head><!--PV--><meta http-equiv="Cache-Control" content="no-cache"><script>(function(){var V=36;if(!/github\.io$/.test(location.hostname))return;fetch('/play/version.json?t='+Date.now(),{cache:'no-store'}).then(function(r){return r.json()}).then(function(j){if(j&&j.v>V){var u=new URL(location.href);if(u.searchParams.get('v')!==String(j.v)){u.searchParams.set('v',j.v);location.replace(u.toString())}}}).catch(function(){})})()</script><!--/PV-->
+<head><!--PV--><meta http-equiv="Cache-Control" content="no-cache"><script>(function(){var V=35;if(!/github\.io$/.test(location.hostname))return;fetch('/play/version.json?t='+Date.now(),{cache:'no-store'}).then(function(r){return r.json()}).then(function(j){if(j&&j.v>V){var u=new URL(location.href);if(u.searchParams.get('v')!==String(j.v)){u.searchParams.set('v',j.v);location.replace(u.toString())}}}).catch(function(){})})()</script><!--/PV-->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#fbf6ea">
@@ -2339,6 +2339,9 @@ const cellY = r => L.by + r * L.p + L.gap / 2;
 const cs = () => L.p - L.gap;
 
 /* ---------------- 규칙 ---------------- */
+/* ROT_V1 톡 = 돌리기: 같은 블록(id)의 90도 돌린 모양 */
+function rotOf(sh) { const rc = norm(sh.cells.map(([r, c]) => [c, -r])), key = JSON.stringify(rc); return SHAPES.find(x => x.id === sh.id && JSON.stringify(x.cells) === key) || sh; }
+function canPlaceRot(b, sh) { let v = sh; for (let k = 0; k < 4; k++) { if (canPlaceAnywhere(b, v)) return true; v = rotOf(v); } return false; }
 function fits(b, sh, gr, gc) {
   for (const [r, c] of sh.cells) { const R = gr + r, C = gc + c; if (R < 0 || C < 0 || R >= N || C >= N || b[R][C]) return false; }
   return true;
@@ -2409,15 +2412,35 @@ const PERMS3 = [[0, 1, 2], [0, 2, 1], [1, 0, 2], [1, 2, 0], [2, 0, 1], [2, 1, 0]
 function setValue(b, set) {
   let best = -1e9; const b0 = b.map(r => r.map(x => !!x));
   for (const ord of PERMS3) {
-    let nb = b0, lines = 0, ok = true;
+    let nb = b0, lines = 0, ok = true, acHit = false;
     for (const i of ord) {
       const sh = set[i]; let bv = -1e9, bn = null, bl = 0;
       for (let r = 0; r <= N - sh.h; r++) for (let c = 0; c <= N - sh.wd; c++) { if (!fits(nb, sh, r, c)) continue; const a = boardAfter(nb, sh, r, c), v = a.lines * 100 - holesOf(a.nb) * 12; if (v > bv) { bv = v; bn = a.nb; bl = a.lines; } }
-      if (!bn) { ok = false; break; } nb = bn; lines += bl;
+      if (!bn) { ok = false; break; } nb = bn; lines += bl; if (bl && nb.every(r => r.every(x => !x))) acHit = true;
     }
-    if (ok) { let f = 0; for (const r of nb) for (const x of r) if (x) f++; best = Math.max(best, lines * 40 - holesOf(nb) * 25 - f * 8); }
+    if (ok) { let f = 0; for (const r of nb) for (const x of r) if (x) f++; best = Math.max(best, lines * 40 - holesOf(nb) * 25 - f * 8 + (acHit ? 900 : 0)); }
   }
   return best;
+}
+function findAllClear(b) { // 판을 싹 비울 수 있는 블록 3개 찾기 (순서 6가지 × 상위 5개 판을 이어 보는 빔 탐색)
+  const b0 = b.map(r => r.map(x => !!x)), t0 = performance.now();
+  const conc = nb => { let s = 0; for (let r = 0; r < N; r++) { let k = 0; for (let c = 0; c < N; c++) if (nb[r][c]) k++; s += k * k; } for (let c = 0; c < N; c++) { let k = 0; for (let r = 0; r < N; r++) if (nb[r][c]) k++; s += k * k; } return s; };
+  const pool = SHAPES.filter(x => x.cells.length <= 6);
+  for (let t = 0; t < 70 && performance.now() - t0 < 120; t++) {
+    const cand = [pool[Math.floor(Math.random() * pool.length)], pool[Math.floor(Math.random() * pool.length)], pool[Math.floor(Math.random() * pool.length)]];
+    if (new Set(cand.map(x => x.id)).size < 3) continue;
+    for (const ord of PERMS3) {
+      let beam = [b0];
+      for (const i of ord) { const sh = cand[i], next = [];
+        for (const nb of beam) for (let r = 0; r <= N - sh.h; r++) for (let c = 0; c <= N - sh.wd; c++) { if (!fits(nb, sh, r, c)) continue; const a = boardAfter(nb, sh, r, c); let f = 0; for (const rr of a.nb) for (const x of rr) if (x) f++; next.push({ nb: a.nb, v: (f === 0 && a.lines ? 1e6 : 0) + a.lines * 200 - f * 6 + conc(a.nb) }); }
+        if (!next.length) { beam = null; break; }
+        if (next.some(x => x.v >= 1e6)) return cand; // 중간에 판이 비면 올 클리어
+        next.sort((x, y) => y.v - x.v); beam = next.slice(0, 5).map(x => x.nb);
+      }
+      if (beam && beam.some(nb => nb.every(r => r.every(x => !x)))) return cand;
+    }
+  }
+  return null;
 }
 function newTray() {
   // dif 0~2: 0~1 = 1500→9000점, 1~2 = 9000→30000점
@@ -2426,7 +2449,8 @@ function newTray() {
   const early = 1 - clamp((G.placed || 0) / 45, 0, 1), giftFill = 29 - Math.round(early * 10), giftP = 0.6 + early * 0.35;
   let fill = 0; for (const r of b) for (const x of r) if (x) fill++;
   let set = null; const good = [];
-  for (let tries = 0; tries < 40 && good.length < 8; tries++) {
+  let acSet = null; if (fill > 0 && fill <= 24) acSet = findAllClear(b); // 올 클리어 기회 만들기
+  for (let tries = 0; tries < 40 && good.length < 8 && !acSet; tries++) {
     const ban = new Set(), cand = [];
     if (fill > giftFill && Math.random() < giftP) { const g = SHAPES.filter(s => clearsLine(b, s)); if (g.length) { const s = g[Math.floor(Math.random() * g.length)]; cand.push(s); ban.add(s.id); } }
     while (cand.length < 3) { const s = pickShape(dif, ban, early); cand.push(s); ban.add(s.id); }
@@ -2434,7 +2458,8 @@ function newTray() {
     if (setSolvable(b, cand)) { good.push(cand); continue; }
     if (!set && cand.some(s => canPlaceAnywhere(b, s))) set = cand;
   }
-  if (good.length) { // 판에 잘 맞는 세트 우선 (75%는 최고, 나머지는 상위 3개 중 하나 → 너무 뻔하지 않게)
+  if (acSet) { set = acSet; G.acFound = (G.acFound || 0) + 1; }
+  else if (good.length) { // 판에 잘 맞는 세트 우선 (75%는 최고, 나머지는 상위 3개 중 하나 → 너무 뻔하지 않게)
     const sc = good.map(c => ({ c, v: setValue(b, c) + Math.random() * 20 })).sort((x, y) => y.v - x.v);
     set = (Math.random() < 0.75 ? sc[0] : sc[Math.floor(Math.random() * Math.min(3, sc.length))]).c;
   }
@@ -2453,21 +2478,17 @@ function newTray() {
 
 /* ---------------- 입력 ---------------- */
 const inRect = (p, r) => p.x >= r.x && p.x <= r.x + r.w && p.y >= r.y && p.y <= r.y + r.h;
-/* HOLD_V1 보관 칸: 트레이 3칸(각 bs/3.6) + 오른쪽 보관 칸 */
-const SW = () => L.bs / 3.6;
-const slotRect = i => i === 3 ? { x: L.bx + 3 * SW() + 8, y: L.trayY - 2, w: L.bs - 3 * SW() - 8, h: L.trayH + 4 } : { x: L.bx + i * SW(), y: L.trayY - 6, w: SW(), h: L.trayH + 12 };
-const PC = i => i === 3 ? G.hold : G.tray[i];
+const slotRect = i => ({ x: L.bx + i * L.bs / 3, y: L.trayY - 6, w: L.bs / 3, h: L.trayH + 12 });
 const hudRowY = () => JE.safe.top + 40;
 const pauseRect = () => B.pauseRect(hudRowY());
-const TRAY_K = sh => Math.min(0.68, (SW() - 12) / (sh.wd * L.p), (L.trayH - 14) / (sh.h * L.p));
-const HOLD_K = sh => { const r = slotRect(3); return Math.min(0.5, (r.w - 14) / (sh.wd * L.p), (r.h - 26) / (sh.h * L.p)); };
+const TRAY_K = sh => Math.min(0.68, (L.bs / 3 - 12) / (sh.wd * L.p), (L.trayH - 14) / (sh.h * L.p));
 function dragOrigin(d) {
-  const sh = PC(d.i).sh, k = d.k, tk = d.i === 3 ? HOLD_K(sh) : TRAY_K(sh), p = L.p * (tk + (1 - tk) * k);
+  const sh = G.tray[d.i].sh, k = d.k, tk = TRAY_K(sh), p = L.p * (tk + (1 - tk) * k);
   const lift = (L.p * 1.1 + 18) * k;
   return { x: d.x - sh.wd * p / 2, y: d.y - sh.h * p - lift + (sh.h * p / 2) * (1 - k), p };
 }
 function snapOf(d) {
-  const o = dragOrigin(d), sh = PC(d.i).sh;
+  const o = dragOrigin(d), sh = G.tray[d.i].sh;
   const gc = Math.round((o.x - L.bx) / L.p), gr = Math.round((o.y - L.by) / L.p);
   return fits(G.board, sh, gr, gc) ? { gr, gc } : null;
 }
@@ -2476,21 +2497,25 @@ JE.input.on({
     if (G.state !== 'play') return;
     const pr = pauseRect();
     if (inRect(p, { x: pr.x - 10, y: pr.y - 10, w: pr.w + 20, h: pr.h + 20 })) return pause();
-    for (let i = 0; i < 4; i++) if (PC(i) && inRect(p, slotRect(i))) {
-      G.drag = { i, x: p.x, y: p.y, k: 0, snap: null };
+    for (let i = 0; i < 3; i++) if (G.tray[i] && inRect(p, slotRect(i))) {
+      G.drag = { i, x: p.x, y: p.y, sx: p.x, sy: p.y, t0: performance.now(), k: 0, snap: null };
       JE.tweens.to(G.drag, { k: 1 }, 0.12, 'outCubic');
       SND.pick(); JE.haptic('tap');
       return;
     }
   },
-  move(p) { const d = G.drag; if (!d) return; d.x = p.x; d.y = p.y; const s = snapOf(d); if (s && (!d.snap || s.gr !== d.snap.gr || s.gc !== d.snap.gc)) JE.haptic('tap'); d.snap = s; d.preview = s ? previewClear(PC(d.i), s) : null; },
+  move(p) { const d = G.drag; if (!d) return; d.x = p.x; d.y = p.y; const s = snapOf(d); if (s && (!d.snap || s.gr !== d.snap.gr || s.gc !== d.snap.gc)) JE.haptic('tap'); d.snap = s; d.preview = s ? previewClear(G.tray[d.i], s) : null; },
   up(p) {
     const d = G.drag; if (!d) return; G.drag = null;
     if (G.state !== 'play') return;
+    if (Math.hypot(p.x - d.sx, p.y - d.sy) < 12 && performance.now() - d.t0 < 350) { // 톡 → 돌리기
+      const pc = G.tray[d.i], nx = rotOf(pc.sh);
+      if (nx === pc.sh) { fxPop('돌려도 같아요', p.x, p.y - 30, { size: 18, life: 0.6 }); SND.bad(); }
+      else { pc.sh = nx; pc.face = Math.min(pc.face, nx.cells.length - 1); G.trayPop[d.i] = 0.4; JE.tweens.to(G.trayPop, { [d.i]: 1 }, 0.18, 'outBack'); SND.pick(); JE.haptic('tap'); G.rots = (G.rots || 0) + 1; save(); }
+      return;
+    }
     d.x = p.x; d.y = p.y; const s = snapOf(d);
-    const hr = slotRect(3), inHold = inRect(p, { x: hr.x - 6, y: hr.y - 10, w: hr.w + 12, h: hr.h + 20 });
-    if (!s && inHold && d.i !== 3) { holdSwap(d.i); return; }
-    if (s) place(d.i, s.gr, s.gc); else { SND.bad(); if (d.i < 3) G.trayPop[d.i] = 0; }
+    if (s) place(d.i, s.gr, s.gc); else { SND.bad(); G.trayPop[d.i] = 0; }
   },
 });
 function previewClear(pc, s) {
@@ -2503,14 +2528,8 @@ function previewClear(pc, s) {
 }
 
 /* ---------------- 놓기·지우기 ---------------- */
-function holdSwap(i) { // 트레이 블록 ↔ 보관 칸
-  const pc = G.tray[i]; G.tray[i] = G.hold || null; G.hold = pc; G.trayPop[i] = 0; G.holdPop = 0;
-  JE.tweens.to(G, { holdPop: 1 }, 0.25, 'outBack'); SND.pick(); JE.haptic('tap');
-  if (G.tray.every(x => !x)) newTray();
-  if (!G.tray.some(x => x && canPlaceAnywhere(G.board, x.sh)) && !(G.hold && canPlaceAnywhere(G.board, G.hold.sh))) stuck(); else save();
-}
 function place(i, gr, gc) {
-  const pc = PC(i); if (i === 3) G.hold = null; else G.tray[i] = null;
+  const pc = G.tray[i]; G.tray[i] = null;
   pc.sh.cells.forEach(([r, c], k) => { G.board[gr + r][gc + c] = { col: pc.col, face: k === pc.face, sq: { v: 0.6, vel: 0 }, gray: 0 }; });
   const n = pc.sh.cells.length;
   G.score += n; G.placed++;
@@ -2555,15 +2574,17 @@ function place(i, gr, gc) {
       fxStars(L.W / 2, L.by + L.bs / 2, 10 + nSame * 6, '#ffd6ef');
     }
     if (G.board.every(r => r.every(x => !x))) {
-      G.score += 300; SND.sweep(); fxConfetti(80); fxFlash(0.5, '255,220,90'); JE.shake.add(12);
-      fxPop('판 싹쓸이! +300', L.W / 2, L.by + L.bs * 0.35, { size: 42, rainbow: true, life: 1.6, delay: 0.25 });
+      G.score += 1000; G.allClear = (G.allClear || 0) + 1; SND.sweep(); JE.sfx.fanfare(); fxConfetti(140); fxFlash(0.6, '255,220,90'); JE.shake.add(14); JE.haptic('success');
+      fxPop('올 클리어!', L.W / 2, L.by + L.bs * 0.32, { size: 52, rainbow: true, life: 1.8, delay: 0.2, wobble: true });
+      fxPop('+1000', L.W / 2, L.by + L.bs * 0.32 + 56, { size: 34, c1: '#fff', c2: '#ffd23f', life: 1.6, delay: 0.35 });
+      if (JE.sketch) FX.pungi = { t: 0, say: '싹 비웠다!', mood: 'love' };
     }
   } else {
     G.miss++; if (G.miss >= 3 && G.combo) { G.combo = 0; } // 3번 연속 못 지우면 콤보 끝 [추정]
   }
   if (G.tray.every(x => !x)) newTray();
   checkBest();
-  if (!G.tray.some(x => x && canPlaceAnywhere(G.board, x.sh)) && !(G.hold && canPlaceAnywhere(G.board, G.hold.sh))) stuck();
+  if (!G.tray.some(x => x && canPlaceRot(G.board, x.sh))) stuck();
   else save();
 }
 function checkBest() {
@@ -2575,19 +2596,18 @@ function checkBest() {
 
 /* ---------------- 저장 (앱을 닫아도 이어서) ---------------- */
 function save() {
-  JE.store.set('save', { b: G.board.map(r => r.map(x => x ? [COLORS.indexOf(x.col), x.face ? 1 : 0] : 0)), t: G.tray.map(x => x ? [SHAPES.indexOf(x.sh), COLORS.indexOf(x.col), x.face] : 0), h: G.hold ? [SHAPES.indexOf(G.hold.sh), COLORS.indexOf(G.hold.col), G.hold.face] : 0, s: G.score, c: G.combo, m: G.miss, k: G.continued, st: [G.lines, G.sameLines, G.placed, G.maxCombo] });
+  JE.store.set('save', { b: G.board.map(r => r.map(x => x ? [COLORS.indexOf(x.col), x.face ? 1 : 0] : 0)), t: G.tray.map(x => x ? [SHAPES.indexOf(x.sh), COLORS.indexOf(x.col), x.face] : 0), s: G.score, c: G.combo, m: G.miss, k: G.continued, st: [G.lines, G.sameLines, G.placed, G.maxCombo] });
 }
 const clearSave = () => JE.store.set('save', null);
 function load(sv) {
   G.board = sv.b.map(r => r.map(x => x ? { col: COLORS[x[0]], face: !!x[1], sq: { v: 1, vel: 0 }, gray: 0 } : null));
   G.tray = sv.t.map(x => x ? { sh: SHAPES[x[0]], col: COLORS[x[1]], face: x[2] } : null);
-  G.hold = sv.h ? { sh: SHAPES[sv.h[0]], col: COLORS[sv.h[1]], face: sv.h[2] } : null;
   G.score = sv.s; G.combo = sv.c; G.miss = sv.m; G.continued = sv.k; [G.lines, G.sameLines, G.placed, G.maxCombo] = sv.st;
 }
 
 /* ---------------- 흐름 ---------------- */
 function reset() {
-  Object.assign(G, { board: emptyBoard(), score: 0, scoreShown: 0, combo: 0, miss: 0, maxCombo: 0, lines: 0, sameLines: 0, placed: 0, drag: null, hold: null, holdPop: 1, continued: 0, glowLines: [], passedBest: false, best: JE.best.get('main') });
+  Object.assign(G, { board: emptyBoard(), score: 0, scoreShown: 0, combo: 0, miss: 0, maxCombo: 0, lines: 0, sameLines: 0, placed: 0, drag: null, continued: 0, glowLines: [], passedBest: false, best: JE.best.get('main') });
   FX.parts = []; FX.pops = []; FX.rings = []; FX.dying = []; FX.flash = 0;
 }
 function start(resume) {
@@ -2597,7 +2617,7 @@ function start(resume) {
   if (sv) { load(sv); G.scoreShown = G.score; } else { newTray(); clearSave(); }
   G.state = 'play';
   JE.sfx.ready();
-  if (!G.tray.some(x => x && canPlaceAnywhere(G.board, x.sh)) && !(G.hold && canPlaceAnywhere(G.board, G.hold.sh))) stuck();
+  if (!G.tray.some(x => x && canPlaceRot(G.board, x.sh))) stuck();
 }
 async function again() { if (interstitialDue()) await showInterstitial(); start(false); }
 function pause() {
@@ -2677,7 +2697,7 @@ function home() {
   ] : [{ label: '시작하기', onClick: () => start(false) }];
   btns.push({ label: '랭킹 보기', cls: 'ghost', onClick: () => openRanking() });
   const hm = JE.ui.modal(B.homeHTML({ title: '블락풍', extra: JE.kit.meta.homeExtra(), best: JE.best.get('main'), colors: [COLORS[0], COLORS[5], COLORS[2], COLORS[3], COLORS[4]],
-    desc: '젤리 블록을 끌어다 놓고<br>가로·세로 한 줄을 채우면 펑!<br><b style="color:#ff9ad5">같은 색 6칸 이상</b> 줄은 <b style="color:#ff9ad5">점수 2배</b><br>연달아 지우면 <b style="color:#7ee0ff">콤보</b>!<br>남는 블록은 <b>보관 칸</b>에 맡겨요' }), btns);
+    desc: '젤리 블록을 끌어다 놓고 <b>톡 누르면 돌려요</b><br>가로·세로 한 줄을 채우면 펑!<br><b style="color:#ff9ad5">같은 색 6칸 이상</b> 줄은 <b style="color:#ff9ad5">점수 2배</b><br>연달아 지우면 <b style="color:#7ee0ff">콤보</b>!' }), btns);
   JE.kit.meta.bind(hm);
   banner(true);
 }
@@ -2739,7 +2759,7 @@ function render(c) {
     const v = x.sq.v; drawCube(c, cellX(col), cellY(r), s, x.col, { face: x.face, sx: 2 - v, sy: v, gray: x.gray });
   }
   // 고스트
-  if (d && d.snap) { const pc = PC(d.i); for (const [r, col] of pc.sh.cells) drawCube(c, cellX(d.snap.gc + col), cellY(d.snap.gr + r), s, pc.col, { alpha: 0.38 }); }
+  if (d && d.snap) { const pc = G.tray[d.i]; for (const [r, col] of pc.sh.cells) drawCube(c, cellX(d.snap.gc + col), cellY(d.snap.gr + r), s, pc.col, { alpha: 0.38 }); }
   // 지워지는 줄 섬광
   for (const gl of G.glowLines) {
     const k = gl.t / 0.5, x = gl.k === 'r' ? L.bx : L.bx + gl.i * L.p, y = gl.k === 'r' ? L.by + gl.i * L.p : L.by;
@@ -2761,22 +2781,14 @@ function render(c) {
     let anyDim = false;
         for (let i = 0; i < 3; i++) {
       const pc = G.tray[i]; if (!pc || (d && d.i === i)) continue;
-      const sr = slotRect(i), ok = canPlaceAnywhere(G.board, pc.sh); if (!ok) anyDim = true; const tp = L.p * TRAY_K(pc.sh);
+      const sr = slotRect(i), ok = canPlaceRot(G.board, pc.sh); if (!ok) anyDim = true; const tp = L.p * TRAY_K(pc.sh);
       const pop = clamp(G.trayPop[i], 0, 1), e = pop < 1 ? JE.ease.outBack(pop) : 1;
       const ox = sr.x + sr.w / 2 - pc.sh.wd * tp / 2, oy = sr.y + sr.h / 2 - pc.sh.h * tp / 2;
       const bob = Math.sin(G.t * 2.2 + i) * 1.5;
       pc.sh.cells.forEach(([r, col], k) => drawCube(c, ox + col * tp + tp * 0.04, oy + r * tp + bob, tp * 0.92, pc.col, { face: k === pc.face, scale: Math.max(0, e), alpha: ok ? 1 : 0.32 }));
     }
-    { const hr = slotRect(3), hl = G.hold && !(d && d.i === 3), over = d && d.i !== 3 && inRect({ x: d.x, y: d.y }, { x: hr.x - 6, y: hr.y - 10, w: hr.w + 12, h: hr.h + 20 });
-      c.save(); c.setLineDash([5, 4]); c.lineWidth = over ? 2.6 : 1.8; c.strokeStyle = over ? BC.pink : (JE.sketch ? BC.ink : 'rgba(255,255,255,.5)'); c.fillStyle = over ? 'rgba(255,140,190,.12)' : 'rgba(255,255,255,.06)';
-      rr(c, hr.x, hr.y, hr.w, hr.h, 12); c.fill(); c.stroke(); c.restore();
-      c.font = `800 11px ${JE.FONT}`; c.textAlign = 'center'; c.textBaseline = 'top'; c.fillStyle = JE.sketch ? BC.ink : BC.sub; c.fillText('보관', hr.x + hr.w / 2, hr.y + 5);
-      if (hl) { const pc = G.hold, tp = L.p * HOLD_K(pc.sh), e = Math.max(0, Math.min(1.2, G.holdPop == null ? 1 : G.holdPop)), ok = canPlaceAnywhere(G.board, pc.sh);
-        const ox = hr.x + hr.w / 2 - pc.sh.wd * tp / 2, oy = hr.y + 12 + (hr.h - 12) / 2 - pc.sh.h * tp / 2;
-        pc.sh.cells.forEach(([r, col], k) => drawCube(c, ox + col * tp + tp * 0.04, oy + r * tp, tp * 0.92, pc.col, { face: k === pc.face, scale: e, alpha: ok ? 1 : 0.32 })); }
-      else if (!G.hold && G.placed < 6) { c.font = `700 10px ${JE.FONT}`; c.fillStyle = BC.sub; c.textBaseline = 'middle'; c.fillText('끌어서', hr.x + hr.w / 2, hr.y + hr.h / 2 + 2); c.fillText('맡기기', hr.x + hr.w / 2, hr.y + hr.h / 2 + 15); } }
     c.font = `700 12px ${JE.FONT}`; c.textAlign = 'center'; c.fillStyle = BC.sub;
-    const hint = G.placed < 2 ? '블록을 끌어서 판에 놓아요' : anyDim ? '흐린 블록은 지금 놓을 자리가 없어요' : '';
+    const hint = G.placed < 2 ? '끌어서 놓기 · 톡 누르면 돌려요' : anyDim ? '흐린 블록은 돌려도 놓을 자리가 없어요' : (G.rots || 0) < 1 && G.placed < 12 ? '블록을 톡 누르면 돌릴 수 있어요' : '';
     if (hint) c.fillText(hint, W / 2, L.hintY + 10); // 흐린 블록이 있을 때만 (11-22 점검)
   }
   if (G.state !== 'home') {
@@ -2794,7 +2806,7 @@ function render(c) {
   fxRenderParts(c);
   // 끌고 있는 블록 (손가락 위로 띄움)
   if (d) {
-    const pc = PC(d.i), o = dragOrigin(d), ps = o.p - L.gap * d.k;
+    const pc = G.tray[d.i], o = dragOrigin(d), ps = o.p - L.gap * d.k;
     pc.sh.cells.forEach(([r, col], k) => drawCube(c, o.x + col * o.p, o.y + r * o.p, ps, pc.col, { face: k === pc.face, alpha: d.snap ? 1 : 0.92 }));
   }
   fxRenderPops(c);
@@ -2812,7 +2824,7 @@ layout(JE.W, JE.H); buildBg(canvas.getContext('2d'));
 JE.run(update, render);
 home();
 // 테스트 훅
-window.__G = G; window.__bp = { newTray, fits, boardAfter, N }; window.__L = () => L; window.__place = place; window.__fits = (i, r, c) => fits(G.board, G.tray[i].sh, r, c); window.__SHAPES = SHAPES;
+window.__G = G; window.__bp = { newTray, fits, boardAfter, N, findAllClear }; window.__L = () => L; window.__place = place; window.__fits = (i, r, c) => fits(G.board, G.tray[i].sh, r, c); window.__SHAPES = SHAPES;
 // 스토어 스크린샷 자동 촬영용 (release/tools/shots.js). 게임 동작엔 영향 없음
 window.__pung = { G, L, fits, slotRect };
 })();
