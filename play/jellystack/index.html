@@ -1414,6 +1414,7 @@ JE.art.add('slab_yellow','data:image/webp;base64,UklGRrwbAABXRUJQVlA4WAoAAAAQAAA
 
   async function send(game, s, dur) {
     const m = me(); if (!m) return { queued: true };
+    if (navigator.onLine === false) { pendSet(game, s, dur); return { queued: true }; }
     try {
       const r = await rpc('pung_submit', { p_id: m.id, p_secret: m.secret, p_game: game, p_score: Math.floor(s), p_dur_ms: Math.floor(dur), p_sig: await sig(game, Math.floor(s), m.id) });
       if (r && r.error === 'rate') { pendSet(game, s, dur); return r; }
@@ -1471,7 +1472,7 @@ JE.art.add('slab_yellow','data:image/webp;base64,UklGRrwbAABXRUJQVlA4WAoAAAAQAAA
   .pr-list .n{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .pr-list .s{font-weight:700}
   .pr-list .x{flex:none;border:0;background:none;color:#b0a090;font:700 15px var(--pr-font);padding:0 2px;cursor:pointer}
-  .pr-list .msg{justify-content:center;color:#8a7a6a;background:none!important;padding:22px 6px;text-align:center;line-height:1.4}
+  .pr-list li.msg{display:block;justify-content:center;font-size:16px;color:#8a7a6a;background:none!important;padding:22px 6px;text-align:center;line-height:1.4}
   .pr-mine{margin:8px 0 0;font-size:16px;color:#5b5550}
   .pr-mine b{color:#e08a00}
   .pr-join{margin:6px 0 0;padding:10px;border:2px dashed #2b2b2b;border-radius:14px;background:#fff}
@@ -1511,7 +1512,7 @@ JE.art.add('slab_yellow','data:image/webp;base64,UklGRrwbAABXRUJQVlA4WAoAAAAQAAA
     return new Promise(resolve => {
       const ov = document.createElement('div'); ov.className = 'pr-ov';
       const card = document.createElement('div'); card.className = 'pr-card'; ov.appendChild(card);
-      let tab = opts.tab || 'week', view = 'board', closed = false, data = null, busy = false;
+      let tab = opts.tab || (navigator.onLine === false ? 'mine' : 'week'), view = 'board', closed = false, data = null, busy = false;
       const close = () => { if (closed) return; closed = true; ov.classList.remove('on'); ov.style.pointerEvents = 'none'; setTimeout(() => ov.remove(), 200); resolve(); };
       ov.addEventListener('pointerdown', e => { if (e.target === ov) close(); });
       ['pointerdown', 'pointermove', 'pointerup', 'touchstart', 'touchmove', 'touchend', 'mousedown', 'mouseup', 'click'].forEach(t => card.addEventListener(t, e => e.stopPropagation()));
@@ -1524,7 +1525,7 @@ JE.art.add('slab_yellow','data:image/webp;base64,UklGRrwbAABXRUJQVlA4WAoAAAAQAAA
       }
       function boardList() {
         if (!data) return '<li class="msg">불러오는 중…</li>';
-        if (data.err) return `<li class="msg">랭킹을 불러오지 못했어요.<br>인터넷 연결을 확인해 주세요.</li>`;
+        if (data.err) { const pd = LS.get('pend', {})[game]; return `<li class="msg">지금은 인터넷이 안 돼서 친구 순위를 못 불러왔어요.<br>게임은 그대로 할 수 있어요!${pd ? `<br>올릴 기록 <b>${fmt(pd.s)}점</b>은 저장해 뒀다가<br>연결되면 자동으로 올려요.` : ''}<br>내 기록은 '내 기록' 탭에서 볼 수 있어요.</li>`; }
         if (!data.top.length) return `<li class="msg">${tab === 'week' ? '이번 주' : '아직'} 랭킹이 비어 있어요.<br>첫 번째 주인공이 되어 보세요!</li>`;
         const m = me();
         return data.top.map(r => `<li class="${r.me ? 'me' : ''}"><span class="r">${r.rank}</span><span class="n">${esc(r.nick)}</span><span class="s">${fmt(r.score)}</span>${m && !r.me ? `<button class="x" data-rep="${esc(r.pid)}" data-nick="${esc(r.nick)}" aria-label="신고">⋯</button>` : ''}</li>`).join('');
@@ -1570,7 +1571,8 @@ JE.art.add('slab_yellow','data:image/webp;base64,UklGRrwbAABXRUJQVlA4WAoAAAAQAAA
       async function load() {
         data = null; if (tab === 'mine') return render();
         render(); const want = tab;
-        try {
+        if (navigator.onLine === false) { data = { err: true, top: [] }; return render(); }
+        try { await flush();
           const m = me();
           const r = await rpc('pung_board', { p_game: game, p_period: want, p_me: m ? m.id : null, p_limit: 50 });
           if (want !== tab || closed) return; data = r || { top: [] }; data.top = data.top || [];
@@ -1623,6 +1625,12 @@ JE.art.add('slab_yellow','data:image/webp;base64,UklGRrwbAABXRUJQVlA4WAoAAAAQAAA
     });
   }
   function toast(t) { try { if (global.JE && JE.ui) JE.ui.toast(t); } catch (e) {} }
+
+  // 인터넷이 다시 연결되거나 앱으로 돌아오면 밀린 점수 올리기
+  try {
+    global.addEventListener('online', () => setTimeout(flush, 800));
+    document.addEventListener('visibilitychange', () => { if (!document.hidden && navigator.onLine !== false) setTimeout(flush, 1500); });
+  } catch (e) {}
 
   /* ---------------- 엔진 연결 ---------------- */
   const JE = global.JE;
@@ -2184,8 +2192,8 @@ function newCards() {
 function spawnMover() {
   newCards();
   const n = G.floors.length;
-  // 난이도: 쌓일수록 빨라짐 (0단 1.4 → 10단 2.3 → 20단 3.2 → 31단 이후 4.2배 폭/초)
-  const speed = L.FW * Math.min(4.2, 1.4 + n * 0.09) * (G.feverT > 0 ? 0.6 : 1);
+  // 난이도: 쌓일수록 빨라짐. 11-24 재조정: 처음 10단은 천천히(1.3→1.9), 그 뒤 꾸준히 올라 30단 4.2배(3배 규칙 유지)
+  const speed = L.FW * (n < 10 ? 1.3 + n * 0.06 : Math.min(4.2, 1.9 + (n - 10) * 0.115)) * (G.feverT > 0 ? 0.6 : 1);
   if (n > 0 && n % 10 === 0) {
     fxPop('속도 UP!', L.cx, L.H * 0.42, { big: 1, group: 'spd' + n, size: 40, c1: '#ffe1c2', c2: '#ff7a3d', life: 1.1 });
     JE.audio.tone(440, 0.12, 'sawtooth', 0.08, 2); JE.audio.tone(880, 0.16, 'square', 0.06, 1.5, 0.1);
@@ -2256,8 +2264,9 @@ function land(f) {
   const below = G.floors.length ? G.floors[G.floors.length - 1] : null;
   const supX = below ? below.x : 0;
   let dx = f.x - supX;
-  // 꾹 판정 폭도 높이 올라갈수록 좁아짐 (5% → 30단 이후 3%)
-  const perfectTol = Math.max(4, L.FW * (0.05 - Math.min(0.02, G.floors.length * 0.0007)));
+  // 꾹 판정 폭도 높이 올라갈수록 좁아짐 (처음 8단은 8%→5%로 넉넉하게, 그 뒤 5% → 30단 이후 3%) [11-24]
+  const nF = G.floors.length;
+  const perfectTol = Math.max(4, L.FW * (nF < 8 ? 0.08 - nF * 0.00375 : 0.05 - Math.min(0.02, nF * 0.0007)));
   const perfect = Math.abs(dx) <= perfectTol;
   if (perfect) dx = 0;
   const x = supX + dx;

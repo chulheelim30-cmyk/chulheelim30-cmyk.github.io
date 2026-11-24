@@ -1412,6 +1412,7 @@ JE.art.add('jp_star','data:image/webp;base64,UklGRr4RAABXRUJQVlA4WAoAAAAQAAAAvgA
 
   async function send(game, s, dur) {
     const m = me(); if (!m) return { queued: true };
+    if (navigator.onLine === false) { pendSet(game, s, dur); return { queued: true }; }
     try {
       const r = await rpc('pung_submit', { p_id: m.id, p_secret: m.secret, p_game: game, p_score: Math.floor(s), p_dur_ms: Math.floor(dur), p_sig: await sig(game, Math.floor(s), m.id) });
       if (r && r.error === 'rate') { pendSet(game, s, dur); return r; }
@@ -1469,7 +1470,7 @@ JE.art.add('jp_star','data:image/webp;base64,UklGRr4RAABXRUJQVlA4WAoAAAAQAAAAvgA
   .pr-list .n{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .pr-list .s{font-weight:700}
   .pr-list .x{flex:none;border:0;background:none;color:#b0a090;font:700 15px var(--pr-font);padding:0 2px;cursor:pointer}
-  .pr-list .msg{justify-content:center;color:#8a7a6a;background:none!important;padding:22px 6px;text-align:center;line-height:1.4}
+  .pr-list li.msg{display:block;justify-content:center;font-size:16px;color:#8a7a6a;background:none!important;padding:22px 6px;text-align:center;line-height:1.4}
   .pr-mine{margin:8px 0 0;font-size:16px;color:#5b5550}
   .pr-mine b{color:#e08a00}
   .pr-join{margin:6px 0 0;padding:10px;border:2px dashed #2b2b2b;border-radius:14px;background:#fff}
@@ -1509,7 +1510,7 @@ JE.art.add('jp_star','data:image/webp;base64,UklGRr4RAABXRUJQVlA4WAoAAAAQAAAAvgA
     return new Promise(resolve => {
       const ov = document.createElement('div'); ov.className = 'pr-ov';
       const card = document.createElement('div'); card.className = 'pr-card'; ov.appendChild(card);
-      let tab = opts.tab || 'week', view = 'board', closed = false, data = null, busy = false;
+      let tab = opts.tab || (navigator.onLine === false ? 'mine' : 'week'), view = 'board', closed = false, data = null, busy = false;
       const close = () => { if (closed) return; closed = true; ov.classList.remove('on'); ov.style.pointerEvents = 'none'; setTimeout(() => ov.remove(), 200); resolve(); };
       ov.addEventListener('pointerdown', e => { if (e.target === ov) close(); });
       ['pointerdown', 'pointermove', 'pointerup', 'touchstart', 'touchmove', 'touchend', 'mousedown', 'mouseup', 'click'].forEach(t => card.addEventListener(t, e => e.stopPropagation()));
@@ -1522,7 +1523,7 @@ JE.art.add('jp_star','data:image/webp;base64,UklGRr4RAABXRUJQVlA4WAoAAAAQAAAAvgA
       }
       function boardList() {
         if (!data) return '<li class="msg">불러오는 중…</li>';
-        if (data.err) return `<li class="msg">랭킹을 불러오지 못했어요.<br>인터넷 연결을 확인해 주세요.</li>`;
+        if (data.err) { const pd = LS.get('pend', {})[game]; return `<li class="msg">지금은 인터넷이 안 돼서 친구 순위를 못 불러왔어요.<br>게임은 그대로 할 수 있어요!${pd ? `<br>올릴 기록 <b>${fmt(pd.s)}점</b>은 저장해 뒀다가<br>연결되면 자동으로 올려요.` : ''}<br>내 기록은 '내 기록' 탭에서 볼 수 있어요.</li>`; }
         if (!data.top.length) return `<li class="msg">${tab === 'week' ? '이번 주' : '아직'} 랭킹이 비어 있어요.<br>첫 번째 주인공이 되어 보세요!</li>`;
         const m = me();
         return data.top.map(r => `<li class="${r.me ? 'me' : ''}"><span class="r">${r.rank}</span><span class="n">${esc(r.nick)}</span><span class="s">${fmt(r.score)}</span>${m && !r.me ? `<button class="x" data-rep="${esc(r.pid)}" data-nick="${esc(r.nick)}" aria-label="신고">⋯</button>` : ''}</li>`).join('');
@@ -1568,7 +1569,8 @@ JE.art.add('jp_star','data:image/webp;base64,UklGRr4RAABXRUJQVlA4WAoAAAAQAAAAvgA
       async function load() {
         data = null; if (tab === 'mine') return render();
         render(); const want = tab;
-        try {
+        if (navigator.onLine === false) { data = { err: true, top: [] }; return render(); }
+        try { await flush();
           const m = me();
           const r = await rpc('pung_board', { p_game: game, p_period: want, p_me: m ? m.id : null, p_limit: 50 });
           if (want !== tab || closed) return; data = r || { top: [] }; data.top = data.top || [];
@@ -1621,6 +1623,12 @@ JE.art.add('jp_star','data:image/webp;base64,UklGRr4RAABXRUJQVlA4WAoAAAAQAAAAvgA
     });
   }
   function toast(t) { try { if (global.JE && JE.ui) JE.ui.toast(t); } catch (e) {} }
+
+  // 인터넷이 다시 연결되거나 앱으로 돌아오면 밀린 점수 올리기
+  try {
+    global.addEventListener('online', () => setTimeout(flush, 800));
+    document.addEventListener('visibilitychange', () => { if (!document.hidden && navigator.onLine !== false) setTimeout(flush, 1500); });
+  } catch (e) {}
 
   /* ---------------- 엔진 연결 ---------------- */
   const JE = global.JE;
@@ -2021,18 +2029,19 @@ const G = { cols: [], p: 0, px: 0, py: 0, jump: null, hold: null, cam: 0, press:
 function colTop(col, t) { return col.lift ? col.base + col.amp * (0.5 + 0.5 * Math.sin(t * col.w + col.ph)) : col.base; }
 function genCol(i) {
   const prev = G.cols[i - 1], prev2 = G.cols[i - 2];
-  const d = Math.min(1, i / 120);           // 난이도 0..1
+  const d = Math.min(1, i / 150);           // 난이도 0..1 (11-24: 120→150칸에 걸쳐 천천히)
   const ref = prev && !prev.hole ? prev : prev2; // 직전 발판
   const refLo = ref ? ref.base : 3;
   const col = { i, base: 2, lift: false, hole: false, amp: 0, w: 0, ph: 0, star: false, col: COLORS[i % 6] };
   if (i < 4) { col.base = 3; G.cols[i] = col; return col; }
   const r = Math.random();
-  if (prev && !prev.hole && r < 0.12 + d * 0.14) { col.hole = true; G.cols[i] = col; return col; }
+  const e = i < 20 ? 0.6 : 1; // 11-24: 처음 20칸은 구멍·리프트를 덜 내서 손에 익게
+  if (prev && !prev.hole && r < (0.12 + d * 0.14) * e) { col.hole = true; G.cols[i] = col; return col; }
   // 높이: 이전 발판보다 최대 1층 위, 아래로는 자유
   let h = refLo + (Math.random() < 0.5 ? 1 : -Math.floor(Math.random() * 3));
   if (prev && prev.hole) h = Math.min(h, refLo + 1);
   col.base = clamp(h, 1, 7);
-  if (Math.random() < 0.15 + d * 0.3) { // 리프트: base 가 가장 낮은 곳 (건널 수 있는 높이)
+  if (Math.random() < (0.15 + d * 0.3) * e) { // 리프트: base 가 가장 낮은 곳 (건널 수 있는 높이)
     col.lift = true; col.amp = 1 + Math.floor(Math.random() * (1 + d * 2.5));
     if (col.base + col.amp > 8) col.amp = 8 - col.base;
     if (col.amp < 1) col.lift = false;
@@ -2171,7 +2180,7 @@ function update(dt) {
     }
     // 프레스 (기둥 단위 위치)
     if (F.state === 'play') {
-      G.pressV = 0.55 + Math.min(1.25, G.p / 70);
+      G.pressV = 0.5 + Math.min(1.1, G.p / 100); // 11-24: 1분쯤 벽처럼 막히던 것 → 100칸·110칸에 걸쳐 천천히 (최대 1.6)
       const gap = G.p - G.press;
       G.press += G.pressV * dt * (gap > 6 ? 2.2 : 1); // 너무 멀면 따라붙음
       if (G.press > G.p - 0.15 && !G.jump) crushed();
