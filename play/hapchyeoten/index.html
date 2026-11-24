@@ -1657,7 +1657,7 @@ JE.art.add('tile_k','data:image/webp;base64,UklGRgIUAABXRUJQVlA4WAoAAAAQAAAAzwAA
  * 풍년 게임 진행 키트 (JE.kit)  v1.0
  * - src.html 에 <!--KIT--> 자리가 있으면 build.py 가 엔진·디자인 뒤에 붙인다.
  * - 들어 있는 것
- *   1) 광고: 블록 블라스트식. 하트 없음, 보상형 이어하기 한 판 5번까지(11-24 사용자, 예전 1번),
+ *   1) 광고: 블록 블라스트식. 하트 없음, 보상형 이어하기 횟수 제한 없음(11-24 사용자, 예전 1번, K.CONT_MAX),
  *      전면광고는 '한 판 더'를 누를 때만 3판마다(2분 간격), 배너는 홈·결과에서만.
  *   2) 흐름: 홈 → 시작 → (실패 → 이어하기?) → 결과 → 한 판 더 / 랭킹 / 처음으로
  *   3) 연출: 큰 팝 글자, 색종이, 화면 번쩍
@@ -1667,9 +1667,9 @@ JE.art.add('tile_k','data:image/webp;base64,UklGRgIUAABXRUJQVlA4WAoAAAAQAAAAzwAA
   'use strict';
   const JE = window.JE, B = JE.brand, C = B.C;
   const K = {}; JE.kit = K;
-  // 11-24 사용자 '5번까지': 한 판에 광고 보고 이어하기 최대 5번. 남은 횟수를 이어하기 창에 표시
-  K.CONT_MAX = 5;
-  K.contLeft = used => `(이어하기 남은 기회 <b>${K.CONT_MAX - (used | 0)}</b>/${K.CONT_MAX}번)`;
+  // 11-24 사용자: 한 판에 광고 보고 이어하기 '5번까지' → '일단 무제한'. 숫자로 바꾸면 그 횟수까지만 + 남은 횟수 표시
+  K.CONT_MAX = Infinity;
+  K.contLeft = used => K.CONT_MAX === Infinity ? ((used | 0) ? `(이번 판 이어하기 ${(used | 0) + 1}번째 · 횟수 제한 없음)` : '(횟수 제한 없이 이어할 수 있어요)') : `(이어하기 남은 기회 <b>${K.CONT_MAX - (used | 0)}</b>/${K.CONT_MAX}번)`;
   const rnd = (a, b) => a + Math.random() * (b - a);
   K.rnd = rnd;
 
@@ -1735,7 +1735,7 @@ JE.art.add('tile_k','data:image/webp;base64,UklGRgIUAABXRUJQVlA4WAoAAAAQAAAAzwAA
         { label: '그만하기', cls: 'ghost', onClick: () => F.over() },
       ]);
     };
-    /** 실패. delay 초 뒤에 이어하기 제안(한 판 5번까지) 또는 결과 */
+    /** 실패. delay 초 뒤에 이어하기 제안(K.CONT_MAX, 지금 무제한) 또는 결과 */
     F.fail = function (title = '아쉬워요!', delay = 1.1) {
       if (F.state !== 'play') return;
       F.state = 'fail';
