@@ -18,6 +18,9 @@
 - 수집 주기: 시세 통계 주간
 
 ## 사람이 할 일(계정 주인)
+0. **12/10 일괄 결제(대표 결정 2026-11-24)**: 회사 도메인(pungnyeon.kr 등, SuziQ·풍년게임즈 공용) + 선택 suziq.kr, 플레이 개발자 계정(25달러), 메일 발송(SMTP), **게임제작업·게임배급업 등록**(게임산업법 제25조①, 시·군·구청 — 풍년게임즈 출시 전 필수), 그 밖의 유료 항목
+   - 영향: 이메일 인증번호 로그인은 도메인·SMTP 이후라 `SJ_LOGIN_ON=true`는 12/10 이후로 밀림(12/1 처리방침 교체는 그대로 가능)
+   - 앱 런칭 후 웹은 닫음(브라우저 접속자에게 '앱에서 이용하세요' 안내, 앱은 같은 주소를 계속 불러옴) → 웹 결제(토스) 불필요, 구글 플레이 결제만
 1. Supabase·GitHub·카카오·구글 관리 계정 2단계 인증
 2. D-U-N-S: 홈택스 영문 사업자등록증명 → D&B 무료 신청(상호·주소 철자 모든 곳 동일)
 3. Supabase Auth: URL 설정(사이트 https://chulheelim30-cmyk.github.io/suji/, 리다이렉트에 `com.pungnyeon.suziq://login-callback` 추가), 카카오(비즈앱)·구글 OAuth 키 등록, 메일 템플릿에 `{{ .Token }}`, SMTP(Resend 등)
@@ -30,7 +33,9 @@
 - [ ] 실제 ID 받으면: `base.html` SJ_ADMOB(rewardId, test:false) · `AndroidManifest.xml` APPLICATION_ID · `app-ads.txt` 주석 해제 → 빌드
 - [ ] 유료 전환일: `BETA_OPEN=false`, `SJ_ADS_ON=true` (무료 한도는 지금 기기 저장값 → 로그인 공개 후 서버 기록으로)
 - [ ] 앱 안 보고서 'PDF로 저장·인쇄' 버튼이 웹뷰에서 안 될 수 있음 → 실기기 확인 후 공유/다운로드 방식 검토
-- [ ] 12/1: 3번 끝났으면 `privacy-20261201.html` → `privacy.html` 교체, `SJ_LOGIN_ON=true`
+- [ ] 12/1: `privacy-20261201.html` → `privacy.html` 교체 / `SJ_LOGIN_ON=true`는 12/10 도메인·SMTP 이후
+- [ ] 12/10 이후: 회사 도메인 연결(SuziQ·풍년게임즈), app-ads.txt를 새 도메인 최상위로, 앱 server.url·스토어 주소 교체(앱 업로드 전에)
+- [ ] 웹 닫기: 브라우저 접속 시 '앱에서 이용하세요' 화면(처리방침·약관·계정 삭제 안내는 공개 유지)
 - [ ] 관리자 모드를 로그인 계정 기준으로 변경(지금은 브라우저 저장값)
 - [ ] 인증번호 메일 폭탄 방지 캡차(Cloudflare Turnstile, 사이트 키 필요)
 - [ ] 관리자 접속 기록 1년 보관 장치, 유출 72시간 통지 양식
