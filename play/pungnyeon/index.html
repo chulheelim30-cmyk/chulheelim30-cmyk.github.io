@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="ko"><head><meta charset="utf-8">
+<!DOCTYPE html><html lang="ko"><head><!--PV--><meta http-equiv="Cache-Control" content="no-cache"><script>(function(){var V=18;if(!/github\.io$/.test(location.hostname))return;fetch('/play/version.json?t='+Date.now(),{cache:'no-store'}).then(function(r){return r.json()}).then(function(j){if(j&&j.v>V){var u=new URL(location.href);if(u.searchParams.get('v')!==String(j.v)){u.searchParams.set('v',j.v);location.replace(u.toString())}}}).catch(function(){})})()</script><!--/PV--><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <title>풍년이의 모험</title>
 <meta name="robots" content="noindex,nofollow">
@@ -171,7 +171,7 @@ Object.assign(SPR,{"dp0": {"src": "data:image/webp;base64,UklGRio/AABXRUJQVlA4IB
   }
 
   /* ---------------- 상태 ---------------- */
-  let markT = Date.now();               // 지난 제출(또는 시작) 시각 → 플레이 시간 추정
+  let markT = Date.now(), inviting = false;               // 지난 제출(또는 시작) 시각 → 플레이 시간 추정
   const me = () => LS.get('me', null);  // {id, secret, nick}
   function pendSet(game, s, dur) { const p = LS.get('pend', {}); if (!p[game] || s > p[game].s) { p[game] = { s, dur }; LS.set('pend', p); } }
 
@@ -211,6 +211,17 @@ Object.assign(SPR,{"dp0": {"src": "data:image/webp;base64,UklGRio/AABXRUJQVlA4IB
     flush,
     /** 랭킹 화면. 닫으면 resolve */
     open(game, opts = {}) { return openUI(game || (global.JE && JE.gameId), opts); },
+    /** 한 판 끝난 뒤 닉네임 없으면 참여 권유 카드(첫 판, 3번째, 6번째, 그 뒤 8판마다). 띄웠으면 true */
+    maybeInvite(game, score, opts = {}) {
+      if (me() || !(score > 0) || inviting) return false;
+      const n = (LS.get('inv:n', 0) || 0) + 1; LS.set('inv:n', n);
+      if (!(n === 1 || n === 3 || n === 6 || (n > 6 && (n - 6) % 8 === 0))) return false;
+      inviting = true;
+      setTimeout(() => { ensureCSS(); openUI(game, Object.assign({}, opts, { invite: { score } })).then(() => { inviting = false; }); }, opts.delay != null ? opts.delay : 1300);
+      return true;
+    },
+    /** 홈 화면용 '닉네임 등록하고 랭킹 참여하기' 버튼 HTML (등록했으면 빈 문자열) */
+    homeCTA() { if (me()) return ''; try { ensureCSS(); } catch (e) {} return '<button class="pr-homecta" type="button">🏆 <b>닉네임 등록</b>하고 랭킹 참여하기</button>'; },
   };
   global.PungRank = PR;
 
@@ -251,6 +262,14 @@ Object.assign(SPR,{"dp0": {"src": "data:image/webp;base64,UklGRio/AABXRUJQVlA4IB
   .pr-link{border:0;background:none;font:700 15px var(--pr-font);color:#3a7bd5;text-decoration:underline;cursor:pointer;padding:2px 4px}
   .pr-small{font-size:13px;color:#8a7a6a;margin:6px 0 0;line-height:1.35}
   .pr-acts{display:block}
+  .pr-pungi{display:block;width:78px;height:auto;margin:-6px auto 0}
+  .pr-inv-h{font-size:27px;line-height:1.15}
+  .pr-inv-p{margin:0 0 6px;font-size:16px;line-height:1.4;color:#5b5550}.pr-inv-p b{color:#e08a00}
+  .pr-later{display:block;margin:8px auto 0;color:#8a7a6a}
+  .pr-short .pr-pungi{width:48px}.pr-short .pr-inv-h{font-size:20px}.pr-short .pr-inv-p{font-size:14px;margin:0 0 3px}
+  .pr-homecta{display:block;width:100%;margin:10px 0 0;font:700 18px var(--pr-font,inherit);color:#2b2b2b;border:2.5px dashed #2b2b2b;border-radius:14px;background:#fff3c4;padding:8px 6px;cursor:pointer;animation:prWig 2.4s ease-in-out infinite}
+  .pr-homecta b{color:#e08a00}
+  @keyframes prWig{0%,86%,100%{transform:rotate(0)}90%{transform:rotate(-1.5deg)}95%{transform:rotate(1.5deg)}}
   .pr-short{padding:8px 12px!important}
   .pr-short .pr-card{width:min(560px,100%);padding:10px 14px 8px}
   .pr-short .pr-card::before,.pr-short .pr-tag,.pr-short .pr-small{display:none}
@@ -296,6 +315,17 @@ Object.assign(SPR,{"dp0": {"src": "data:image/webp;base64,UklGRio/AABXRUJQVlA4IB
       function render() {
         const m = me();
         let h = `<span class="pr-tag">풍년게임즈 랭킹</span><div class="pr-h">${esc(title)}</div>`;
+        if (view === 'invite') {
+          const img = (global.JE && JE.art && JE.art.tag && JE.art.tag('pungi_cheer', 'pr-pungi')) || opts.img || '';
+          card.innerHTML = `${img}<div class="pr-h pr-inv-h">닉네임 등록하고<br>랭킹 참여하기</div>
+            <p class="pr-inv-p">${opts.invite && opts.invite.score > 0 ? `방금 <b>${fmt(opts.invite.score)}점</b>! ` : ''}친구들과 이번 주 순위를 겨뤄 봐요.<br>지금까지 세운 최고 기록도 같이 올라가요.</p>
+            <div class="pr-join"><input id="pr-in" maxlength="10" placeholder="닉네임 (2~10자)" autocomplete="off" autocapitalize="off" spellcheck="false">
+            <div class="pr-err" id="pr-err"></div>
+            <button class="pr-btn" id="pr-ok">랭킹 참여하기</button>
+            <p class="pr-small">닉네임과 점수만 저장돼요. 개인정보는 받지 않아요.</p></div>
+            <button class="pr-link pr-later" id="pr-back">나중에 할게요</button>`;
+          return bind();
+        }
         if (view === 'nick' || view === 'join') {
           h += `<div class="pr-join"><p>${view === 'join' ? '닉네임을 정하면<br>친구들과 순위를 겨룰 수 있어요.' : '새 닉네임을 적어 주세요.'}</p>
             <input id="pr-in" maxlength="10" placeholder="닉네임 (2~10자)" value="${m && view === 'nick' ? esc(m.nick) : ''}" autocomplete="off" autocapitalize="off" spellcheck="false">
@@ -351,7 +381,8 @@ Object.assign(SPR,{"dp0": {"src": "data:image/webp;base64,UklGRio/AABXRUJQVlA4IB
         on('pr-set', () => { view = 'set'; render(); });
         on('pr-ren', () => { view = 'nick'; render(); });
         on('pr-del', () => { view = 'delask'; render(); });
-        on('pr-back', () => { view = (view === 'delask' || view === 'nick') && me() ? 'set' : 'board'; if (view === 'board') load(); else render(); });
+        if (view === 'invite') { on('pr-back', () => { LS.set('inv:skip', (LS.get('inv:skip', 0) || 0) + 1); close(); }); }
+        else on('pr-back', () => { view = (view === 'delask' || view === 'nick') && me() ? 'set' : 'board'; if (view === 'board') load(); else render(); });
         on('pr-ok', async el => {
           if (busy) return; const v = ($('pr-in').value || '').trim(); const bad = checkNick(v); if (bad) return err(bad);
           busy = true; el.disabled = true; err('');
@@ -384,10 +415,20 @@ Object.assign(SPR,{"dp0": {"src": "data:image/webp;base64,UklGRio/AABXRUJQVlA4IB
       const host = opts.host || document.body; if (opts.host) ov.style.position = 'absolute';
       host.appendChild(ov); if ((opts.host ? host.clientHeight : innerHeight) < 560) ov.classList.add('pr-short'); requestAnimationFrame(() => ov.classList.add('on'));
       if (!me() && opts.join) view = 'join';
+      if (!me() && opts.invite) view = 'invite';
       load();
     });
   }
   function toast(t) { try { if (global.JE && JE.ui) JE.ui.toast(t); } catch (e) {} }
+
+  // 홈 화면 참여 버튼(.pr-homecta) 누르면 참여 화면
+  try {
+    document.addEventListener('click', e => {
+      const b = e.target && e.target.closest && e.target.closest('.pr-homecta'); if (!b) return;
+      e.stopPropagation(); e.preventDefault(); tap();
+      PR.open(b.dataset.game || (global.JE && JE.gameId), { join: true, host: b.dataset.host ? document.getElementById(b.dataset.host) : undefined }).then(() => { if (me()) document.querySelectorAll('.pr-homecta').forEach(x => x.remove()); });
+    }, true);
+  } catch (e) {}
 
   // 인터넷이 다시 연결되거나 앱으로 돌아오면 밀린 점수 올리기
   try {
@@ -403,12 +444,17 @@ Object.assign(SPR,{"dp0": {"src": "data:image/webp;base64,UklGRio/AABXRUJQVlA4IB
       const isNew = base(score, mode);
       if (mode === 'main' && JE.gameId) {
         PR.submit(JE.gameId, score).then(r => {
-          if (r && r.queued && !me() && !LS.get('nudged:' + JE.gameId) && score > 0) { LS.set('nudged:' + JE.gameId, 1); setTimeout(() => toast('랭킹 보기에서 닉네임을 정하면 친구들과 순위를 겨뤄요!'), 900); }
-          else if (r && r.ok && r.week) setTimeout(() => toast('이번 주 랭킹에 올랐어요!'), 900);
+          if (r && r.ok && r.week) setTimeout(() => toast('이번 주 랭킹에 올랐어요!'), 900);
         });
       }
+      if (mode === 'main' && JE.gameId && !me()) PR.maybeInvite(JE.gameId, score);
       return isNew;
     };
+    // 홈 화면에 참여 버튼 (등록 전까지)
+    if (JE.brand && JE.brand.homeHTML) {
+      const baseHome = JE.brand.homeHTML;
+      JE.brand.homeHTML = function (o) { return baseHome.call(this, o) + PR.homeCTA(); };
+    }
     const baseLB = JE.ui.leaderboard.bind(JE.ui);
     JE.ui.leaderboard = function (mode = 'main', title) { return mode === 'main' ? PR.open(JE.gameId) : baseLB(mode, title); };
     if (JE.sdk) JE.sdk.openLeaderboard = function (mode) { return JE.ui.leaderboard(mode || 'main'); };
@@ -958,10 +1004,11 @@ let last = performance.now();
 function frame(now) { const raw = (now - last) / 1000, dt = Math.max(0, Math.min(1 / 30, raw)); last = now; perf(raw); update(dt); if (G.state === 'play') { missionTick(); if (G.tut > 0) { G.tut -= dt; if (G.tut <= 0) localStorage.setItem('pa2_tut', '1'); } } draw(); requestAnimationFrame(frame); }
 const $ = id => document.getElementById(id);
 function start() { try { PungRank.start(); } catch (e) {} $('home').hidden = true; $('over').hidden = true; reset(false); G.state = 'play'; document.body.classList.add('playing'); try { AC = AC || new (window.AudioContext || window.webkitAudioContext)(); AC.resume(); } catch (e) {} }
-function showOver() { try { PungRank.submit('pungadventure', score()); } catch (e) {} localStorage.setItem('pa2_distT', +(localStorage.getItem('pa2_distT') || 0) + Math.floor(G.dist / 10)); $('ov-score').textContent = score().toLocaleString(); $('ov-best').textContent = G.best.toLocaleString(); $('ov-stats').innerHTML = `<span>달린 거리 <b>${Math.floor(G.dist / 10)}m</b></span><span>간식 <b>${G.snacks}</b></span><span>기억 조각 <b>${(G.stage - 1) * 6 + G.pieces}</b></span><span>꿀잠 <b>${G.naps}번</b></span>`; $('over').hidden = false; document.body.classList.remove('playing'); }
+function showOver() { try { PungRank.submit('pungadventure', score()); PungRank.maybeInvite('pungadventure', score(), { host: wrap }); } catch (e) {} localStorage.setItem('pa2_distT', +(localStorage.getItem('pa2_distT') || 0) + Math.floor(G.dist / 10)); $('ov-score').textContent = score().toLocaleString(); $('ov-best').textContent = G.best.toLocaleString(); $('ov-stats').innerHTML = `<span>달린 거리 <b>${Math.floor(G.dist / 10)}m</b></span><span>간식 <b>${G.snacks}</b></span><span>기억 조각 <b>${(G.stage - 1) * 6 + G.pieces}</b></span><span>꿀잠 <b>${G.naps}번</b></span>`; $('over').hidden = false; document.body.classList.remove('playing'); }
 function goHome() { $('polar').classList.remove('show'); renderMis(); $('over').hidden = true; $('home').hidden = false; reset(true); G.state = 'home'; }
 // 11-24 닉네임 랭킹 (PungRank)
-['rank-btn', 'ov-rank'].forEach(id => { const el = $(id); if (el) el.addEventListener('click', () => { try { PungRank.open('pungadventure', { host: wrap }); } catch (e) {} }); });
+['rank-btn', 'ov-rank'].forEach(id => { const el = $(id); if (el) el.addEventListener('click', () => { try { PungRank.open('pungadventure', { host: wrap, join: true }).then(() => { if (PungRank.me()) { const rb = $('rank-btn'); rb.textContent = '랭킹'; rb.style.cssText = ''; } }); } catch (e) {} }); });
+try { if (!PungRank.me()) { const rb = $('rank-btn'); rb.textContent = '🏆 닉네임 등록하고 랭킹 참여'; rb.style.cssText = 'background:#fff3c4;border:2px dashed #c26a10;color:#7a3a00'; } } catch (e) {}
 try { PungRank.legacy('pungadventure', +localStorage.getItem('pa2_best') || 0); setTimeout(() => PungRank.flush(), 1500); } catch (e) {}
 $('go').addEventListener('click', start); $('again').addEventListener('click', start); $('tohome').addEventListener('click', goHome);
 $('snd').addEventListener('pointerdown', e => { e.stopPropagation(); muted = !muted; $('snd').textContent = muted ? '🔇' : '🔊'; });
