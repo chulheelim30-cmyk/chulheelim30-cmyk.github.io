@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="ko"><head><!--PV--><meta http-equiv="Cache-Control" content="no-cache"><script>(function(){var V=37;if(!/github\.io$/.test(location.hostname))return;fetch('/play/version.json?t='+Date.now(),{cache:'no-store'}).then(function(r){return r.json()}).then(function(j){if(j&&j.v>V){var u=new URL(location.href);if(u.searchParams.get('v')!==String(j.v)){u.searchParams.set('v',j.v);location.replace(u.toString())}}}).catch(function(){})})()</script><!--/PV--><meta charset="utf-8">
+<!DOCTYPE html><html lang="ko"><head><!--PV--><meta http-equiv="Cache-Control" content="no-cache"><script>(function(){var V=38;if(!/github\.io$/.test(location.hostname))return;fetch('/play/version.json?t='+Date.now(),{cache:'no-store'}).then(function(r){return r.json()}).then(function(j){if(j&&j.v>V){var u=new URL(location.href);if(u.searchParams.get('v')!==String(j.v)){u.searchParams.set('v',j.v);location.replace(u.toString())}}}).catch(function(){})})()</script><!--/PV--><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <title>풍년이의 모험</title>
 <meta name="robots" content="noindex,nofollow">
@@ -1319,7 +1319,7 @@ const DECOS = [
   { k: 'santa', name: '산타 모자', icon: '🎅', dist: 20000 },
   { k: 'raincoat', name: '노란 우비', icon: '🌂', naps: 10 },
   { k: 'backpack', name: '소풍 가방', icon: '🎒', days: 7 },
-  { k: 'band', name: '투쟁 머리띠', icon: '🎌', bk: 5 },
+  { k: 'band', name: '투쟁 머리띠', icon: '🇰🇷', bk: 5 },
 ];
 const DECO = { cur: localStorage.getItem('pa2_deco') || '', tot: +(localStorage.getItem('pa2_snk') || 0) };
 let snkSave = 0;
@@ -1633,7 +1633,8 @@ function bossWin() {
   let beat = []; try { beat = JSON.parse(localStorage.getItem('pa2_bk') || '[]'); } catch (e) {}
   const first = !beat.includes(B.kind); if (first) { beat.push(B.kind); localStorage.setItem('pa2_bk', JSON.stringify(beat)); }
   addCoin(30 * B.lv + (first ? 100 : 0));
-  G.banner = 3; G.bannerTxt = D.win; G.bannerSub = `보너스 +${bon}` + (first ? ' · 첫 승리 선물 🐟 간식 100개 (상점)' : ` · 상점 간식 +${30 * B.lv}`);
+  const chW = Math.floor((((bIdx() - 1) % 15) + 15) % 15 / 5); // WINLINE_V38
+  G.banner = 3; G.bannerTxt = ['친구가 됐어요!', '우정이 깊어졌어요!', '고마워, 친구야!'][chW]; G.bannerSub = `${D.n} · +${bon}` + (first ? ' · 첫 승리 간식 100개' : '');
   const BOSS_LINES = {crow: ['츄르 나눠 먹고 친구!', '"또 나눠 줄 거지?"', '"하늘에서 길 봐 줄게!"'], goose: ['"수고 많으세요~"', '"통행증 확인 완료!"', '꽥! 경례로 배웅'], robot: ['길 알려 주고 친구!', '"또 길 잃었어요…"', '"지름길 안내 시작!"'], owl: ['별자리 길이 열렸어요', '"왕년이 놀래켜서 미안~"', '"이제 다 왔다"'], raccoon: ['꺼내 주고 친구!', '"츄르 또 있어?"', '"다리 건너가!"']}; pop(B.x, bossCY(B) - 90, (BOSS_LINES[B.kind] || [D.story])[Math.floor((((bIdx() - 1) % 15) + 15) % 15 / 5)] || D.story, '#fff3c8', 17); sfx('big'); feverJingle(); vib([40, 40, 80]); burst(B.x, bossCY(B), 60, 'conf', FX, 520); burst(B.x, bossCY(B), 30, 'spark', FX, 380);
   objs.forEach(o => { if (o.t === 'cone' || o.t === 'bolt' || o.t === 'wave') o.gone = true; }); buls = [];
   for (let i = 0; i < 36; i++) objs.push({ t: 'snack', k: i % 9 === 4 ? 'sack' : SNACKS[i % 5], x: PX() + 260 + i * 30, y: GY - 36 - Math.abs(Math.sin(i * 0.45)) * 140 });
