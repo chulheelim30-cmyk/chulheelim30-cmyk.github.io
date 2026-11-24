@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="ko">
-<head><!--PV--><meta http-equiv="Cache-Control" content="no-cache"><script>(function(){var V=18;if(!/github\.io$/.test(location.hostname))return;fetch('/play/version.json?t='+Date.now(),{cache:'no-store'}).then(function(r){return r.json()}).then(function(j){if(j&&j.v>V){var u=new URL(location.href);if(u.searchParams.get('v')!==String(j.v)){u.searchParams.set('v',j.v);location.replace(u.toString())}}}).catch(function(){})})()</script><!--/PV-->
+<head><!--PV--><meta http-equiv="Cache-Control" content="no-cache"><script>(function(){var V=20;if(!/github\.io$/.test(location.hostname))return;fetch('/play/version.json?t='+Date.now(),{cache:'no-store'}).then(function(r){return r.json()}).then(function(j){if(j&&j.v>V){var u=new URL(location.href);if(u.searchParams.get('v')!==String(j.v)){u.searchParams.set('v',j.v);location.replace(u.toString())}}}).catch(function(){})})()</script><!--/PV-->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#fbf6ea">
@@ -1462,6 +1462,25 @@ JE.art.add('tt_sprout','data:image/webp;base64,UklGRroMAABXRUJQVlA4WAoAAAAQAAAAm
   };
   global.PungRank = PR;
 
+  // 입장 알림(11-24 대표): 닉네임 없으면 게임 홈 화면에서 하루 1번 등록 권유 카드. 판 중이면 띄우지 않음
+  const kstDay = () => new Date(Date.now() + 9 * 36e5).toISOString().slice(0, 10);
+  PR.entryInvite = function (game, opts = {}) {
+    try {
+      if (me() || inviting || LS.get('inv:day', '') === kstDay()) return false;
+      const onHome = opts.onlyIf || (() => { const b = document.querySelector('.pr-homecta'); return !!(b && b.offsetParent); });
+      setTimeout(() => {
+        if (me() || inviting || !onHome()) return;
+        LS.set('inv:day', kstDay()); inviting = true; ensureCSS();
+        openUI(game, Object.assign({}, opts, { invite: { score: 0 } })).then(() => {
+          inviting = false;
+          if (me()) document.querySelectorAll('.pr-homecta').forEach(x => x.remove());
+          if (opts.done) try { opts.done(); } catch (e) {}
+        });
+      }, opts.delay != null ? opts.delay : 1200);
+      return true;
+    } catch (e) { return false; }
+  };
+
   /* ---------------- 화면 ---------------- */
   const CSS = `
   .pr-ov{position:fixed;inset:0;z-index:80;display:flex;align-items:center;justify-content:center;background:rgba(70,55,35,.42);padding:calc(env(safe-area-inset-top,0px) + 14px) 14px calc(env(safe-area-inset-bottom,0px) + 14px);box-sizing:border-box;opacity:0;transition:opacity .18s;font-family:var(--pr-font);-webkit-user-select:none;user-select:none}
@@ -1697,7 +1716,7 @@ JE.art.add('tt_sprout','data:image/webp;base64,UklGRroMAABXRUJQVlA4WAoAAAAQAAAAm
     if (JE.sdk) JE.sdk.openLeaderboard = function (mode) { return JE.ui.leaderboard(mode || 'main'); };
     // 엔진 init 뒤(게임 id 가 정해진 뒤) 예전 최고점·밀린 점수 올리기
     const baseInit = JE.init && JE.init.bind(JE);
-    if (baseInit) JE.init = function (o) { const r = baseInit(o); try { PR.legacy(JE.gameId, JE.best.get('main')); setTimeout(flush, 1500); } catch (e) {} return r; };
+    if (baseInit) JE.init = function (o) { const r = baseInit(o); try { PR.legacy(JE.gameId, JE.best.get('main')); setTimeout(flush, 1500); } catch (e) {} try { PR.entryInvite(JE.gameId); } catch (e) {} return r; };
   }
 })(window);
 

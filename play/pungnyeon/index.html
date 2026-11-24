@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="ko"><head><!--PV--><meta http-equiv="Cache-Control" content="no-cache"><script>(function(){var V=18;if(!/github\.io$/.test(location.hostname))return;fetch('/play/version.json?t='+Date.now(),{cache:'no-store'}).then(function(r){return r.json()}).then(function(j){if(j&&j.v>V){var u=new URL(location.href);if(u.searchParams.get('v')!==String(j.v)){u.searchParams.set('v',j.v);location.replace(u.toString())}}}).catch(function(){})})()</script><!--/PV--><meta charset="utf-8">
+<!DOCTYPE html><html lang="ko"><head><!--PV--><meta http-equiv="Cache-Control" content="no-cache"><script>(function(){var V=20;if(!/github\.io$/.test(location.hostname))return;fetch('/play/version.json?t='+Date.now(),{cache:'no-store'}).then(function(r){return r.json()}).then(function(j){if(j&&j.v>V){var u=new URL(location.href);if(u.searchParams.get('v')!==String(j.v)){u.searchParams.set('v',j.v);location.replace(u.toString())}}}).catch(function(){})})()</script><!--/PV--><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <title>풍년이의 모험</title>
 <meta name="robots" content="noindex,nofollow">
@@ -224,6 +224,25 @@ Object.assign(SPR,{"dp0": {"src": "data:image/webp;base64,UklGRio/AABXRUJQVlA4IB
     homeCTA() { if (me()) return ''; try { ensureCSS(); } catch (e) {} return '<button class="pr-homecta" type="button">🏆 <b>닉네임 등록</b>하고 랭킹 참여하기</button>'; },
   };
   global.PungRank = PR;
+
+  // 입장 알림(11-24 대표): 닉네임 없으면 게임 홈 화면에서 하루 1번 등록 권유 카드. 판 중이면 띄우지 않음
+  const kstDay = () => new Date(Date.now() + 9 * 36e5).toISOString().slice(0, 10);
+  PR.entryInvite = function (game, opts = {}) {
+    try {
+      if (me() || inviting || LS.get('inv:day', '') === kstDay()) return false;
+      const onHome = opts.onlyIf || (() => { const b = document.querySelector('.pr-homecta'); return !!(b && b.offsetParent); });
+      setTimeout(() => {
+        if (me() || inviting || !onHome()) return;
+        LS.set('inv:day', kstDay()); inviting = true; ensureCSS();
+        openUI(game, Object.assign({}, opts, { invite: { score: 0 } })).then(() => {
+          inviting = false;
+          if (me()) document.querySelectorAll('.pr-homecta').forEach(x => x.remove());
+          if (opts.done) try { opts.done(); } catch (e) {}
+        });
+      }, opts.delay != null ? opts.delay : 1200);
+      return true;
+    } catch (e) { return false; }
+  };
 
   /* ---------------- 화면 ---------------- */
   const CSS = `
@@ -1010,6 +1029,7 @@ function goHome() { $('polar').classList.remove('show'); renderMis(); $('over').
 ['rank-btn', 'ov-rank'].forEach(id => { const el = $(id); if (el) el.addEventListener('click', () => { try { PungRank.open('pungadventure', { host: wrap, join: true }).then(() => { if (PungRank.me()) { const rb = $('rank-btn'); rb.textContent = '랭킹'; rb.style.cssText = ''; } }); } catch (e) {} }); });
 try { if (!PungRank.me()) { const rb = $('rank-btn'); rb.textContent = '🏆 닉네임 등록하고 랭킹 참여'; rb.style.cssText = 'background:#fff3c4;border:2px dashed #c26a10;color:#7a3a00'; } } catch (e) {}
 try { PungRank.legacy('pungadventure', +localStorage.getItem('pa2_best') || 0); setTimeout(() => PungRank.flush(), 1500); } catch (e) {}
+try { PungRank.entryInvite('pungadventure', { host: wrap, onlyIf: () => !$('home').hidden, done: () => { if (PungRank.me()) { const rb = $('rank-btn'); rb.textContent = '랭킹'; rb.style.cssText = ''; } } }); } catch (e) {}
 $('go').addEventListener('click', start); $('again').addEventListener('click', start); $('tohome').addEventListener('click', goHome);
 $('snd').addEventListener('pointerdown', e => { e.stopPropagation(); muted = !muted; $('snd').textContent = muted ? '🔇' : '🔊'; });
 addEventListener('resize', resize); addEventListener('orientationchange', () => setTimeout(resize, 200));
