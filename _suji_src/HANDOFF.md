@@ -61,6 +61,8 @@
 
 - 2026-11-23 플레이스토어 준비: `_suji_app/`(Capacitor 8, 패키지 com.pungnyeon.suziq, SDK 36, 원격 URL 방식) — 빌드 안내 `_suji_app/README.md`, 등록 자료 `_suji_app/store/`. 회원 탈퇴 함수 `suji-account-delete`(소스 supabase/), 계정 삭제 안내 `suji/account-delete.html`, 개인정보처리방침 개정안 `suji/privacy-20261201.html`(12/1 시행 예정 — 그날 privacy.html로 교체하고 SJ_LOGIN_ON=true). 앱에서 소셜 로그인은 시스템 브라우저 + login-callback 딥링크
 
+- 2026-11-24 보상형 광고(AdMob, `@capacitor-community/admob` 8.4.2): `base.html`의 `SJ_ADS_ON`·`SJ_ADMOB`·`sjRepQuota`·`sjShowReward`·`sjReportWin`, `report()`에서 사용. 규칙: 프로 무제한 / 무료는 14일·3건 광고 없음 → 이후(또는 3건 소진) 앱은 광고 1번에 하루 1건, 웹은 광고 없이 하루 1건. 광고를 못 받아오면(no fill) 그냥 허용, 중간에 닫으면 불허. 비맞춤형(npa). 한도 기록은 localStorage `sj_rep`. 지금은 테스트 ID·`SJ_ADS_ON=false`, 시험은 앱에서 `?adtest=1`(`?adtest=0` 해제). 앱(웹뷰)에서는 보고서를 새 창 대신 화면 위 덮개로 보여 줌. 앱 ID는 `_suji_app/android/app/src/main/AndroidManifest.xml`, `AD_ID` 권한 추가. `app-ads.txt`(저장소 최상위)는 게시자 ID 대기
+
 ## 7. 디자인
 - 앱: 다크 건축 핀테크(배경 #0B0E13, 라임 #C5F04A), 데스크톱 좌측 내비+우측 패널
 - 2026-11-21 v2 UI 개편: `pro.css` 끝의 `theme-v2` 블록(랜딩 톤 — 배경 #0A0B0D, 둥근 18px 카드, 유리 떠있는 내비, 라벨 12px, 탭 전환 페이드, 데스크톱 패널 없을 때 가운데 정렬), 헤더 워드마크 Suzi+라임 Q(`apply.py`). 계산 로직 변경 없음

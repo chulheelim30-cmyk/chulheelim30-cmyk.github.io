@@ -6,6 +6,7 @@
 - target/compile SDK 36 (2026-08-31부터 신규 앱 필수), min SDK 24
 - 인터넷 없을 때: `www/index.html` 안내 화면
 - 로그인 복귀 주소: `com.pungnyeon.suziq://login-callback` (카카오·구글 로그인은 시스템 브라우저로 열고 이 주소로 돌아옴 — 구글은 앱 내부 화면 로그인을 막음)
+- 보상형 광고: `@capacitor-community/admob`. 앱 ID는 `AndroidManifest.xml`의 `com.google.android.gms.ads.APPLICATION_ID`(지금은 구글 테스트 ID), 광고 단위 ID는 웹 쪽 `_suji_src/base.html`의 `SJ_ADMOB`. 앱 ID를 바꾸면 .aab를 다시 빌드해야 함(광고 단위 ID는 웹만 고치면 됨)
 - 아이콘·스플래시: `android/app/src/main/res/` (에메랄드, `suji/icon-*.png`에서 생성)
 
 ## 빌드 (PC, Android Studio 필요)

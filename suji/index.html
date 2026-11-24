@@ -2256,6 +2256,76 @@ function sjSb() {
   });
   return sjSbP;
 }
+// ── 보상형 광고 (2026-11-24, AdMob · @capacitor-community/admob 8). 광고는 안드로이드 앱에서만 나온다(웹은 애드몹 불가)
+// 무료 규칙(요금표와 같음): 처음 14일 보고서 3건 광고 없음 → 이후(또는 3건을 다 쓰면) 광고 1번 보고 하루 1건. 프로·관리자는 제한 없음
+// SJ_ADS_ON=false 인 동안(베타)은 한도·광고 모두 꺼짐. 관리자 시험: 앱에서 주소에 ?adtest=1 (테스트 광고)
+// 한도 기록은 지금은 이 기기 저장값(로그인 공개 후 서버 기록으로 옮김)
+const SJ_ADS_ON = false;
+// 구글 공식 테스트 단위. 실제 광고 단위 ID를 받으면 rewardId 교체 + test:false (앱 ID는 AndroidManifest.xml)
+// npa:true = 비맞춤형 광고(관심사 기반 맞춤 광고 안 함 → 처리방침의 행태정보 항목 불필요). 바꾸면 처리방침도 같이 고친다
+const SJ_ADMOB = { test: true, npa: true, rewardId: 'ca-app-pub-3940256099942544/5224354917' };
+const SJ_TRIAL_DAYS = 14, SJ_TRIAL_REPORTS = 3;
+const sjAdTest = (() => { try { if (/[?&]adtest=1/.test(location.search)) sessionStorage.setItem('sj_adtest', '1'); if (/[?&]adtest=0/.test(location.search)) sessionStorage.removeItem('sj_adtest'); return sessionStorage.getItem('sj_adtest') === '1'; } catch { return false; } })();
+function sjNative() { const C = window.Capacitor; return C && C.isNativePlatform && C.isNativePlatform() ? C : null; }
+function sjAdMob() { const C = sjNative(); return C && C.Plugins && C.Plugins.AdMob || null; }
+let sjAdInit = null;
+function sjAdReady() {
+  const A = sjAdMob();
+  if (!A) return Promise.resolve(null);
+  if (!sjAdInit) sjAdInit = (async () => {
+    await A.initialize({ initializeForTesting: SJ_ADMOB.test });
+    try { const ci = await A.requestConsentInfo(); if (ci && ci.isConsentFormAvailable && ci.status === 'REQUIRED') await A.showConsentForm(); } catch {}
+    return A;
+  })().catch(e => { sjAdInit = null; throw e; });
+  return sjAdInit;
+}
+// 결과: 'rewarded'(끝까지 봄) · 'cancel'(중간에 닫음) · 'nofill'(광고를 못 받아옴 → 이용자 탓이 아니므로 그냥 허용)
+async function sjShowReward() {
+  let A;
+  try { A = await sjAdReady(); } catch { return 'nofill'; }
+  if (!A) return 'nofill';
+  try { await A.prepareRewardVideoAd({ adId: SJ_ADMOB.rewardId, isTesting: SJ_ADMOB.test, npa: SJ_ADMOB.npa }); } catch { return 'nofill'; }
+  try { await A.showRewardVideoAd(); return 'rewarded'; } catch (e) { return e && e.code === 'REWARDED_AD_CANCELLED' ? 'cancel' : 'nofill'; }
+}
+const sjDay = () => { const d = new Date(Date.now() + 9 * 36e5); return d.toISOString().slice(0, 10); }; // 한국 날짜
+function sjRepLog() { try { return JSON.parse(localStorage.getItem('sj_rep') || '{}') || {}; } catch { return {}; } }
+function sjRepAdd(mode) {
+  const o = sjRepLog(), d = sjDay();
+  o.first = o.first || Date.now(); o.total = (o.total || 0) + 1;
+  if (o.day !== d) { o.day = d; o.dayN = 0; }
+  if (mode !== 'trial') o.dayN = (o.dayN || 0) + 1; // 체험 3건은 하루 1건 한도와 따로 센다
+  try { localStorage.setItem('sj_rep', JSON.stringify(o)); } catch {}
+}
+// 이번 보고서를 어떻게 줄지: free(제한 없음) · trial(체험, 광고 없음) · ad(광고 보고) · web(웹: 광고가 없어 하루 1건 그대로) · used(오늘 다 씀)
+function sjRepQuota(pro) {
+  if (pro || !(SJ_ADS_ON && !BETA_OPEN || sjAdTest)) return { mode: 'free' };
+  const o = sjRepLog(), P = window.sjProfile;
+  const first = o.first || Date.now();
+  const trialEnd = P && P.trial_until ? new Date(P.trial_until).getTime() : first + SJ_TRIAL_DAYS * 864e5;
+  if (P && P.plan === 'pro' && (!P.pro_until || new Date(P.pro_until) > new Date())) return { mode: 'free' };
+  if (Date.now() < trialEnd && (o.total || 0) < SJ_TRIAL_REPORTS) return { mode: 'trial', left: SJ_TRIAL_REPORTS - (o.total || 0) };
+  if (o.day === sjDay() && (o.dayN || 0) >= 1) return { mode: 'used' };
+  return { mode: sjNative() ? 'ad' : 'web' };
+}
+// 보고서 창: 웹은 새 창, 앱(웹뷰)은 새 창이 안 열리므로 화면 위에 덮어 보여 준다
+function sjReportWin() {
+  if (!sjNative()) {
+    const w = window.open('', '_blank');
+    return w ? { write: h => { w.document.open(); w.document.write(h); w.document.close(); }, close: () => w.close() } : null;
+  }
+  const box = document.createElement('div');
+  box.style.cssText = 'position:fixed;inset:0;z-index:2147483000;background:#fff;display:flex;flex-direction:column';
+  const bar = document.createElement('div');
+  bar.style.cssText = 'display:flex;justify-content:flex-end;padding:10px 12px;padding-top:max(10px,env(safe-area-inset-top));background:#09130F';
+  const x = document.createElement('button');
+  x.textContent = '닫기'; x.style.cssText = 'font:700 15px sans-serif;color:#fff;background:#10B981;border:0;border-radius:10px;padding:8px 16px';
+  const fr = document.createElement('iframe');
+  fr.style.cssText = 'flex:1;border:0;width:100%;background:#fff';
+  const close = () => { box.remove(); window.removeEventListener('popstate', close); };
+  x.onclick = () => close();
+  bar.appendChild(x); box.appendChild(bar); box.appendChild(fr); document.body.appendChild(box);
+  return { write: h => { fr.srcdoc = h; }, close };
+}
 const SjAuth = ({ owner }) => {
   const show = SJ_LOGIN_ON || owner || /[?&]login=1/.test(location.search) || /[?&#](code|access_token)=/.test(location.href);
   const [user, setUser] = useState(null);
@@ -3859,16 +3929,29 @@ function App() {
     }
     setTimeout(() => setCopied(''), 2000);
   };
-  const report = () => {
-    // 베타(12/20까지 모두 무료 공지) 동안은 보고서를 누구나 만들 수 있게(무료판 표시). 유료 전환(BETA_OPEN=false) 후에는 다시 결제 안내
-    if (!pro && !BETA_OPEN) return setPay(true);
+  const report = async () => {
+    // 베타(BETA_OPEN) 동안은 누구나(무료판 표시). 유료 전환 후: 프로 무제한, 무료는 체험 3건 → 광고 1번에 하루 1건(sjRepQuota)
+    if (!pro && !BETA_OPEN && !SJ_ADS_ON) return setPay(true);
     if (!R || R.empty) return window.alert('대지면적·토지비를 넣어 계산한 뒤 만들 수 있습니다');
-    window.peTrack && window.peTrack("report");
-    const w = window.open('', '_blank');
+    const q = sjRepQuota(pro);
+    if (q.mode === 'used') {
+      window.alert('오늘 무료 보고서 1건을 이미 만들었어요. 내일 다시 만들 수 있고, 프로는 제한이 없습니다.');
+      return setPay(true);
+    }
+    if (q.mode === 'ad' && !window.confirm('광고 1번(약 15~30초)을 끝까지 보면 오늘 보고서 1건을 만들 수 있어요. 광고를 볼까요?')) return;
+    const w = sjReportWin();
     if (!w) return window.alert('팝업이 막혀 있습니다. 팝업을 허용해 주세요');
-    w.document.write('<p style="font-family:sans-serif;padding:24px">보고서를 만드는 중입니다… 주변 실거래를 불러오고 있어요.</p>');
+    if (q.mode === 'ad') {
+      w.write('<p style="font-family:sans-serif;padding:24px">광고를 다 보면 보고서가 열립니다…</p>');
+      const r = await sjShowReward();
+      window.peTrack && window.peTrack(r === 'rewarded' ? 'ad_reward' : r === 'cancel' ? 'ad_cancel' : 'ad_nofill');
+      if (r === 'cancel') { w.close(); return window.alert('광고를 끝까지 보지 않아 보고서를 만들지 않았어요. 다시 누르면 처음부터 볼 수 있습니다.'); }
+    }
+    if (q.mode !== 'free') sjRepAdd(q.mode);
+    window.peTrack && window.peTrack("report");
+    w.write('<p style="font-family:sans-serif;padding:24px">보고서를 만드는 중입니다… 주변 실거래를 불러오고 있어요.</p>');
     const t = RTMS_TYPE[R.p.id];
-    const done = rt => { w.document.open(); w.document.write(buildReportHTML(result, R, rt)); w.document.close(); };
+    const done = rt => w.write(buildReportHTML(result, R, rt));
     if (!t || !result.lawd) return done(null);
     const ac = new AbortController(); const tm = setTimeout(() => ac.abort(), 15000);
     Promise.all(t.map(ty => fetch(`${RTMS_URL}?type=${ty}&lawd=${result.lawd}&months=12`, { signal: ac.signal }).then(r => r.json()).then(d => d && !d.error ? d : { type: ty, error: d && d.error }).catch(() => ({ type: ty, error: '시간 초과' })))).then(list => {
