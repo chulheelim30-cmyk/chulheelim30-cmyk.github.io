@@ -9,7 +9,7 @@ const OP_SC = [ // [길이(초), 그림, 자막]
   { d: 4.6, k: 'run', img: 'bg_sunset', cap: '', sub: '' },
 ];
 const OP_T = OP_SC.reduce((a, s) => a + s.d, 0);
-function opSize() { const d = Math.min(2, window.devicePixelRatio || 1); OP.W = innerWidth; OP.H = innerHeight; OP.cv.width = OP.W * d; OP.cv.height = OP.H * d; OP.g.setTransform(d, 0, 0, d, 0, 0); }
+function opSize() { const d = Math.min(2.5, window.devicePixelRatio || 1); const el = $('op'); OP.W = el.clientWidth || innerWidth; OP.H = el.clientHeight || innerHeight; /* 세로 화면에선 게임 전체가 90도 돌아가 있어서 창 크기 대신 실제 영역 크기 */ OP.cv.width = OP.W * d; OP.cv.height = OP.H * d; OP.g.setTransform(d, 0, 0, d, 0, 0); }
 function opCover(g, im, zx, zy, z) { // 화면을 덮게 그리기 (zx,zy: 0~1 초점, z: 확대)
   if (!im || !im.complete || !im.naturalWidth) return; const W = OP.W, H = OP.H, s = Math.max(W / im.naturalWidth, H / im.naturalHeight) * z, w = im.naturalWidth * s, h = im.naturalHeight * s;
   g.drawImage(im, (W - w) * zx, (H - h) * zy, w, h);
@@ -88,5 +88,5 @@ function opOpen(autoTap) { // 첫 실행: '눌러서 시작' 카드 (소리를 �
 $('op-tap').addEventListener('click', opStart);
 $('op-skip').addEventListener('click', e => { e.stopPropagation(); opEnd(); });
 $('op-btn').addEventListener('click', () => opOpen(false));
-addEventListener('resize', () => { if (!$('op').hidden && OP.cv) opSize(); });
+addEventListener('resize', () => { if (!$('op').hidden && OP.cv) setTimeout(opSize, 60); });
 if (!localStorage.getItem('pa2_op') && !/[?&]noop/.test(location.search)) { const go = () => opOpen(true); if (IMG.bg_sunset.complete) go(); else IMG.bg_sunset.addEventListener('load', go, { once: true }); }
