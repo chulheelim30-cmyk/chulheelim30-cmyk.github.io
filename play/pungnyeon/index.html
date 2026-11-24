@@ -61,6 +61,8 @@ body.playing .pad{display:flex}
 #polar.show{transform:translateX(0) rotate(4deg);opacity:1}
 #polar img{width:100%;height:110px;object-fit:cover;display:block}#polar span{display:block;font-size:12px;line-height:1.3;color:#5a3a20;margin-top:5px;font-family:"Noto Sans KR",sans-serif}
 #pick-grid{display:flex;gap:10px;margin:10px 0 4px}.pc{flex:1;width:180px;border:2px solid #f2c97a;background:linear-gradient(#fff8ea,#ffeccc);border-radius:16px;padding:10px 8px;font:inherit;color:#5a3a20;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;box-shadow:0 4px 0 #e0b060}.pc:active{transform:translateY(3px);box-shadow:0 1px 0 #e0b060}.pc i{font-style:normal;font-size:34px}.pc b{font-weight:400;font-size:19px;color:#c26a10}.pc span{font-size:12.5px;font-family:"Noto Sans KR",sans-serif;line-height:1.35}.pc em{font-style:normal;font-size:12px;color:#8a6ac8;margin-top:2px}
+.dy{max-width:560px}.dy h2{font-size:26px}.dy small{font-size:15px;color:#9a88b8}.dy-page{display:flex;gap:16px;align-items:center;text-align:left;margin:10px 0 14px;background:repeating-linear-gradient(#fffdf6 0 25px,#e8dcc6 25px 26px);border:2px solid #f2c97a;border-radius:14px;padding:12px 16px}.dy-page img{width:130px;height:110px;object-fit:contain;flex:none}#dy-no{font-size:14px;color:#c26a10;margin-bottom:6px}#dy-txt{font-size:20px;line-height:1.45;color:#4a3020}.dy .btn{font-size:17px;padding:9px 18px}
+#polar.diary img{object-fit:contain;background:#fff8ea}#polar span b{display:block;font-family:Jua,sans-serif;font-weight:400;color:#c26a10;font-size:13px}
 </style></head><body>
 <div id="wrap">
 <canvas id="c"></canvas>
@@ -73,7 +75,7 @@ body.playing .pad{display:flex}
  <div class="desc" style="opacity:.85;margin:-6px 0 10px">일산호수공원에서 우리를 간택한 고양이, 풍년이</div>
  <div class="desc">간식 냠냠 · 배부르면 피버 · 너무 먹으면 벌러덩 꿀잠</div>
  <div id="mis"></div>
- <button class="btn" id="go">달리기 시작</button><button class="btn ghost" id="album-btn">추억 앨범</button><button class="btn ghost" id="deco-btn">꾸미기</button>
+ <button class="btn" id="go">달리기 시작</button><button class="btn ghost" id="album-btn">추억 앨범</button><button class="btn ghost" id="diary-btn">그림일기</button><button class="btn ghost" id="deco-btn">꾸미기</button>
 </div></div>
 <div class="ov" id="over" hidden style="background:rgba(20,14,50,.45)"><div class="card">
  <img id="ov-cat" alt="" style="height:70px;float:left;margin:-6px 6px 0 -6px"><h2>풍년이가 낮잠 자러 갔어요</h2><div class="big" id="ov-score">0</div>
@@ -98,6 +100,11 @@ body.playing .pad{display:flex}
  <button class="btn" id="vw-close">닫기</button></div>
 </div></div>
 <div class="ov" id="pick" hidden style="background:rgba(20,14,50,.55)"><div class="card alb"><h2>능력 카드 고르기 <small>간식 50개 냠냠! 하나를 골라요</small></h2><div id="pick-grid"></div></div></div>
+<div class="ov" id="diary" hidden style="background:rgba(20,14,50,.6)"><div class="card dy">
+ <h2>풍년이 그림일기 <small id="dy-n"></small></h2>
+ <div class="dy-page"><img id="dy-img" alt=""><div><div id="dy-no"></div><div id="dy-txt"></div></div></div>
+ <button class="btn ghost" id="dy-prev">◀</button><button class="btn ghost" id="dy-next">▶</button><button class="btn" id="dy-close">닫기</button>
+</div></div>
 <div id="polar"><img alt=""><span></span></div>
 <div class="ov" id="deco" hidden style="background:rgba(20,14,50,.6)"><div class="card alb">
  <h2><img id="deco-cat" alt="" style="height:40px;vertical-align:middle;margin:-8px 4px 0 0">풍년이 꾸미기 <small id="deco-n"></small></h2>
@@ -339,7 +346,7 @@ const BUD = { x: 0, y: 0, flash: 0 }; // 별 친구 (반짝이)
 const CAT_W = 136; // 화면에 그리는 풍년이 폭
 
 function reset(demo) {
-  Object.assign(G, { fevers: 0, bigs: 0, revived: false, tut: !demo && !localStorage.getItem('pa2_tut') ? 9 : 0, naps: 0, nap: 0, napWant: false, feverEat: 0, yarn: 0, up: {}, boss: null, tok: Math.random(), nextCard: 50, cards: 0, safe: 0, bossWin: 0, dist: 0, speed: 300, bonus: 0, snacks: 0, pieces: 0, stage: 1, hp: 3, gauge: 0, fever: 0, kills: 0, shake: 0, banner: 0, demo });
+  Object.assign(G, { fevers: 0, bigs: 0, revived: false, tut: !demo && !localStorage.getItem('pa2_tut') ? 9 : 0, naps: 0, nap: 0, napWant: false, feverEat: 0, memT: false, consFx: 0, newPages: 0, yarn: 0, up: {}, boss: null, tok: Math.random(), nextCard: 50, cards: 0, safe: 0, bossWin: 0, dist: 0, speed: 300, bonus: 0, snacks: 0, pieces: 0, stage: 1, hp: 3, gauge: 0, fever: 0, kills: 0, shake: 0, banner: 0, demo });
   Object.assign(PL, { y: GY, vy: 0, ground: true, jumps: 0, slide: false, hurt: 0, anim: 0, fire: 0, sq: 1 }); BUD.x = -26; BUD.y = GY - 118;
   segs = [{ x0: -600, n: 14, x1: -600 + 80 + 14 * 120, v: Array.from({ length: 14 }, (_, i) => i % 3) }]; genX = segs[0].x1;
   objs = []; buls = []; parts = []; pops = []; nextPiece = 900; gen();
@@ -460,7 +467,7 @@ function update(dt) {
     if (o.gone) continue;
     if (pb.x1 > box.x0 && pb.x0 < box.x1 && pb.y1 > box.y0 && pb.y0 < box.y1) { if (!o.passed) { o.passed = true; if (fv) { burst(o.x, PL.y - 40, 10, 'spark', FX, 200); } else hurt(); } }
   }
-  if (fv) { G.fever -= dt; if (G.fever <= 0) { G.fever = 0; G.gauge = 0; if (G.feverEat >= 15) G.napWant = true; } }
+  if (fv) { G.fever -= dt; if (G.fever <= 0) { G.fever = 0; G.gauge = 0; G.memT = false; if (G.feverEat >= 15) G.napWant = true; } }
   if (G.napWant && PL.ground && !G.demo) { G.napWant = false; G.nap = 2.6; G.naps++; localStorage.setItem('pa2_napT', +(localStorage.getItem('pa2_napT') || 0) + 1); G.banner = 2.2; G.bannerTxt = '배불러서 벌러덩…'; G.bannerSub = `피버 때 간식 ${G.feverEat}개 냠냠 · 잠깐 꿀잠`; slideHeld = false; }
   if (fv) { G.flash = Math.max(0, (G.flash || 0) - dt); if (Math.random() < dt * 16) objs.push({ t: 'snack', k: SNACKS[Math.floor(Math.random() * 5)], x: G.cam + LW * rnd(0.55, 1.1), y: rnd(GY - 230, GY - 40) }); }
   if (!G.demo) stepX(dt);
@@ -488,8 +495,9 @@ function collect(o) {
   else if (o.t === 'heart') { G.hp = Math.min(3, G.hp + 1); pop(o.x, o.y - 24, '하트 +1', '#ffd27a', 22); burst(o.x, o.y, 14, 'spark', ['#ffd27a', '#fff'], 220); sfx('big'); }
   else if (o.t === 'piece') {
     G.pieces++; G.bonus += 200; const phI = ALBUM ? unlockPhoto() : -1; sfx('big'); vib(30); burst(o.x, o.y, 30, 'spark', ['#ffe58a', '#fff', '#ffc93a'], 340);
-    if (G.pieces >= 6) { G.bonus += 1000; G.banner = 2.4; G.bannerTxt = '기억이 모두 모였어요!'; G.bannerSub = `스테이지 ${G.stage} 완료 · 보너스 +1000`; G.pieces = 0; G.stage++; G.bannerSub += ' · ' + THEMES[(G.stage - 1) % THEMES.length].name + ' 풍경으로'; }
-    else { G.banner = 2.2; G.bannerTxt = `기억 조각 ${G.pieces}/6`; G.bannerSub = ALBUM ? PHOTOS[phI].txt : MEM[(G.pieces - 1 + (G.stage - 1) * 6) % MEM.length]; }
+    const line = ALBUM ? PHOTOS[phI].txt : memPiece();
+    if (G.pieces >= 6) { G.bonus += 1000; const st = G.stage; G.pieces = 0; G.stage++; memComplete(st); G.bannerSub += ` · 보너스 +1000`; }
+    else { G.banner = 2.2; G.bannerTxt = `기억 조각 ${G.pieces}/6`; G.bannerSub = consOf(G.stage).n + ' 별자리에 별 하나가 켜졌어요'; }
     if (ALBUM) showPolar(phI);
     if (G.stage % 10 === 0 && !G.boss) startBoss();
   }
@@ -549,7 +557,8 @@ function draw() {
   if (G.fever > 0) feverFx();
   ctx.restore();
   if (G.banner > 0) banner();
-  if (G.state !== 'home') hud();
+  if (G.state !== 'home') { hud(); consHud(); } else homeCons();
+  G.consFx = Math.max(0, (G.consFx || 0) - G.dt);
   if (G.tut > 0 && G.state === 'play') tutHint();
 }
 function feverFx() {
@@ -617,7 +626,7 @@ function hud() {
   const gx = 64, gy = 52, gw = 110, gh = 9, k = G.fever > 0 ? Math.min(1, G.fever / FEVER_T) : G.gauge / 100;
   rr(ctx, gx, gy, gw, gh, 4.5); ctx.fillStyle = 'rgba(30,20,60,.5)'; ctx.fill(); ctx.strokeStyle = 'rgba(255,255,255,.7)'; ctx.lineWidth = 1.2; ctx.stroke();
   if (k > 0.01) { rr(ctx, gx + 1.5, gy + 1.5, (gw - 3) * k, gh - 3, 3); const gr = ctx.createLinearGradient(gx, 0, gx + gw, 0); if (G.fever > 0) { const o = (G.t * 1.5) % 1; ['#ff6b9a', '#ffb347', '#ffe27a', '#7fd84a', '#7fd6ff', '#b58cff'].forEach((c, i) => gr.addColorStop((i / 6 + o) % 1, c)); } else { gr.addColorStop(0, '#ff9ac0'); gr.addColorStop(1, '#ffd27a'); } ctx.fillStyle = gr; ctx.fill(); }
-  if (G.fever > 0) { const pu = 1 + Math.sin(G.t * 12) * 0.08; ctx.save(); ctx.translate(gx + gw + 40, gy + 5); ctx.scale(pu, pu); text(G.feverEat >= 15 ? '너무 배불러!' : 'FEVER ×2', 0, 0, 15, 'center', FX[Math.floor(G.t * 8) % 4]); ctx.restore(); } else text('배부름', gx + gw + 8, gy + 5, 12, 'left', '#ffe3f0');
+  if (G.fever > 0) { const pu = 1 + Math.sin(G.t * 12) * 0.08; ctx.save(); ctx.translate(gx + gw + 40, gy + 5); ctx.scale(pu, pu); text(G.feverEat >= 15 ? '너무 배불러!' : G.memT ? '추억 타임' : 'FEVER ×2', 0, 0, 15, 'center', FX[Math.floor(G.t * 8) % 4]); ctx.restore(); } else text('배부름', gx + gw + 8, gy + 5, 12, 'left', '#ffe3f0');
   text('풍년이의 모험', 16, 84, 22, 'left', '#ffffff', { out: '#4a2a14' }); text("PUNGNYEON'S ADVENTURE", 17, 104, 10, 'left', '#ffffff', { out: '#4a2a14' });
   // 오른쪽 위: 기억 조각 + 점수
   put(ART.piece(), LW - 170, 26, { s: 0.8 });
@@ -641,7 +650,7 @@ function frame(now) { const raw = (now - last) / 1000, dt = Math.max(0, Math.min
 const $ = id => document.getElementById(id);
 function start() { $('home').hidden = true; $('over').hidden = true; reset(false); G.state = 'play'; document.body.classList.add('playing'); try { AC = AC || new (window.AudioContext || window.webkitAudioContext)(); AC.resume(); } catch (e) {} }
 function showOver() { localStorage.setItem('pa2_distT', +(localStorage.getItem('pa2_distT') || 0) + Math.floor(G.dist / 10)); $('ov-score').textContent = score().toLocaleString(); $('ov-best').textContent = G.best.toLocaleString(); $('ov-stats').innerHTML = `<span>달린 거리 <b>${Math.floor(G.dist / 10)}m</b></span><span>간식 <b>${G.snacks}</b></span><span>기억 조각 <b>${(G.stage - 1) * 6 + G.pieces}</b></span><span>꿀잠 <b>${G.naps}번</b></span>`; $('over').hidden = false; document.body.classList.remove('playing'); }
-function goHome() { renderMis(); $('over').hidden = true; $('home').hidden = false; reset(true); G.state = 'home'; }
+function goHome() { $('polar').classList.remove('show'); renderMis(); $('over').hidden = true; $('home').hidden = false; reset(true); G.state = 'home'; }
 $('go').addEventListener('click', start); $('again').addEventListener('click', start); $('tohome').addEventListener('click', goHome);
 $('snd').addEventListener('pointerdown', e => { e.stopPropagation(); muted = !muted; $('snd').textContent = muted ? '🔇' : '🔊'; });
 addEventListener('resize', resize); addEventListener('orientationchange', () => setTimeout(resize, 200));
@@ -1063,6 +1072,73 @@ $('pick-grid').addEventListener('click', e => {
   $('pick').hidden = true; document.body.classList.add('playing'); G.state = 'play'; G.safe = 1.2;
   burst(SX() + G.cam, PL.y - 40, 26, 'spark', FX, 300); pop(PX(), PL.y - 100, CARDS.find(c => c.k === k).n + '!', '#ffd27a', 20);
 });
+/* ---------- 기억 조각: 별자리 + 풍년이 그림일기 ---------- */
+const CONS = [ // 점 6개(0~1 상자) + 잇는 선
+  { n: '앉은 풍년이', p: [[.3, 0], [.15, .38], [.3, 1], [.75, 1], [.72, .42], [.55, 0]], e: [[0, 1], [1, 2], [2, 3], [3, 4], [4, 5], [5, 0]] },
+  { n: '붕어빵', p: [[0, .5], [.35, .12], [.72, .45], [1, .12], [1, .88], [.35, .88]], e: [[0, 1], [1, 2], [2, 3], [3, 4], [4, 2], [2, 5], [5, 0]] },
+  { n: '하트', p: [[.5, .3], [.22, 0], [0, .32], [.5, 1], [1, .32], [.78, 0]], e: [[0, 1], [1, 2], [2, 3], [3, 4], [4, 5], [5, 0]] },
+  { n: '밥그릇', p: [[.35, .05], [.65, .05], [0, .35], [1, .35], [.85, .95], [.15, .95]], e: [[0, 1], [2, 3], [3, 4], [4, 5], [5, 2]] },
+  { n: '발바닥', p: [[.08, .4], [.33, .05], [.67, .05], [.92, .4], [.5, .62], [.5, .98]], e: [[0, 4], [1, 4], [2, 4], [3, 4], [4, 5]] },
+  { n: '털실공', p: [[.5, 0], [.95, .3], [.85, .9], [.15, .9], [.05, .3], [1.15, 1]], e: [[0, 1], [1, 2], [2, 3], [3, 4], [4, 0], [0, 2], [2, 5]] },
+  { n: '초승달', p: [[.6, 0], [.2, .2], [.1, .6], [.5, 1], [.35, .6], [.4, .25]], e: [[0, 1], [1, 2], [2, 3], [3, 4], [4, 5], [5, 0]] },
+  { n: '살랑 꼬리', p: [[0, 1], [.25, .7], [.35, .35], [.6, .2], [.85, .35], [1, .1]], e: [[0, 1], [1, 2], [2, 3], [3, 4], [4, 5]] },
+  { n: '반짝 별', p: [[.5, 0], [.62, .38], [1, .4], [.7, .65], [.8, 1], [.2, 1]], e: [[0, 1], [1, 2], [2, 3], [3, 4], [4, 5], [5, 0]] },
+];
+const consOf = st => CONS[(st - 1) % CONS.length];
+function drawCons(c, n, cx, cy, w, h, a, glowK) {
+  const P = c.p.map(([x, y]) => [cx - w / 2 + x * w, cy - h / 2 + y * h]);
+  ctx.save(); ctx.globalAlpha = a; ctx.lineCap = 'round';
+  for (const [i, j] of c.e) { const on = i < n && j < n; ctx.strokeStyle = on ? 'rgba(255,236,170,.9)' : 'rgba(255,255,255,.3)'; ctx.lineWidth = on ? 1.8 : 1; if (!on) ctx.setLineDash([2, 4]); ctx.beginPath(); ctx.moveTo(P[i][0], P[i][1]); ctx.lineTo(P[j][0], P[j][1]); ctx.stroke(); ctx.setLineDash([]); }
+  ctx.globalCompositeOperation = 'lighter';
+  P.forEach(([x, y], i) => { const on = i < n, tw = 0.75 + 0.25 * Math.sin(G.t * 4 + i * 1.7), r = on ? 7 + glowK * 10 : 3; ctx.fillStyle = rg(ctx, x, y, 0, r * 2, [on ? `rgba(255,230,140,${0.8 * tw})` : 'rgba(255,255,255,.7)', 'rgba(255,230,140,0)']); ctx.fillRect(x - r * 2, y - r * 2, r * 4, r * 4); if (on) { ctx.fillStyle = '#fffbe6'; ctx.beginPath(); ctx.arc(x, y, 2.2 + glowK * 2, 0, 7); ctx.fill(); } });
+  ctx.restore();
+}
+function consHud() {
+  if (G.boss || G.state === 'home' || G.demo) return;
+  const c = consOf(G.stage), k = Math.max(0, G.consFx || 0), cx = Math.round(LW * 0.6), w = 84 + k * 18, h = 50 + k * 10;
+  drawCons(c, G.pieces || (k > 0 ? 6 : 0), cx, 44, w, h, 0.95, k);
+  text(c.n + ' 별자리', cx, 84 + k * 5, 12, 'center', 'rgba(255,240,200,.9)');
+}
+function homeCons() {
+  if (G.state !== 'home') return; const L = JSON.parse(localStorage.getItem('pa2_cons') || '[]'); if (!L.length) return;
+  const cols = 5; L.slice(-15).forEach((ci, i) => { const c = CONS[ci % CONS.length]; drawCons(c, 6, 50 + (i % cols) * 78 + ((i / cols | 0) % 2) * 30, 34 + (i / cols | 0) * 62, 52, 34, 0.75, 0); });
+}
+/* 풍년이 그림일기 54쪽 (풍년이 말투) — 그림은 지금 있는 풍년이 그림을 쓰고, Gemini 그림이 오면 교체 */
+const DIARY = [
+  ['c_wave', '오늘 호수공원에서 마음에 드는 사람들을 찾았다. 내가 골랐다.'], ['c_love', '새집은 냄새가 좋다. 밥그릇도 내 거다.'], ['c_doze', '소파는 이제 내 자리. 엄마 옆이 제일 따뜻하다.'], ['c_eat', '밥 달라고 불렀더니 진짜 줬다. 내일도 불러야지.'], ['c_sleep', '다 먹고 벌러덩. 배 만지는 건 오늘만 봐준다.'], ['c_yay', '이름이 생겼다. 풍년이. 넉넉하고 좋은 이름이다.'],
+  ['c_doze', '밤에 창밖 달을 봤다. 동그란 게 밥그릇 같다.'], ['g_r2', '아빠 발소리가 들리면 현관까지 마중 간다.'], ['c_wave2', '손님이 왔다. 반갑다고 인사했더니 다들 웃었다.'], ['c_love', '개냥이라고 불렸다. 무슨 뜻인지 몰라도 칭찬 같다.'], ['c_sleep', '밤에 몰래 이불 속에 들어갔다. 아무도 모른다.'], ['g_boost', '꿈에서 호수공원을 끝까지 달렸다.'],
+  ['g_jump', '꽃잎이 날린다. 잡으려고 폴짝 뛰었다.'], ['c_doze', '창가 햇볕 자리를 찾았다. 오늘부터 내 자리.'], ['c_eat', '밥 달라고 열 번 불렀다. 열 번 다 들어줬다.'], ['c_love', '츄르는 세상에서 제일 맛있다. 진짜다.'], ['c_yay', '엄마가 내 털이 은빛으로 반짝인대. 알고 있었다.'], ['c_sleep', '낮잠 자다 깨 보니 담요가 덮여 있었다.'],
+  ['c_daze', '하얀 게 하늘에서 내린다. 차갑고 신기하다.'], ['c_doze', '보일러 앞이 최고다. 아무도 비켜 주지 않을 거다.'], ['c_wave', '가족이 다 모인 날. 나도 가운데 앉았다.'], ['c_eat', '생선 냄새가 난다. 부엌 앞에서 기다려야지.'], ['c_love', '꾹꾹이를 했더니 엄마가 좋아했다.'], ['c_yay', '올해도 잘 먹고 잘 잤다. 진짜 풍년이다.'],
+  ['c_wave2', '아침마다 제일 먼저 밥 달라고 깨운다. 내 일이다.'], ['g_roll', '새 장난감 털실공. 굴러가면 쫓아간다.'], ['c_love', '소파에 누우면 옆에 가서 기댄다. 그게 애교래.'], ['g_slide', '택배 상자는 들어가 봐야 한다. 규칙이다.'], ['c_wave', '초록 눈으로 빤히 보면 간식이 나온다.'], ['c_sleep', '오늘은 조금 많이 먹었다. 바로 누웠다.'],
+  ['c_doze', '가족이 늦게 와도 기다린다. 오면 야옹 한 번.'], ['c_yay', '별이 많은 밤. 하나쯤은 내 별일 거다.'], ['g_boost', '새벽에 우다다 달렸다. 기분이 좋았다.'], ['c_love', '엄마 무릎은 딱 내 크기다.'], ['c_daze', '손님 가방 냄새를 맡았다. 다 확인해야 한다.'], ['c_sleep', '자는 척하면 다들 조용히 쓰다듬는다.'],
+  ['c_wave', '봄바람 냄새. 창문을 열어 달라고 했다.'], ['g_leap', '새 소리를 들으면 꼬리가 저절로 움직인다.'], ['c_doze', '햇볕에 털을 말리면 몸이 노곤해진다.'], ['c_eat', '밥을 다 먹고 한 그릇 더 달라고 했다.'], ['c_wave2', '가족 사진 찍을 때 나도 꼭 들어간다.'], ['g_r5', '오늘도 씩씩하게 집 안을 순찰했다.'],
+  ['c_sleep', '추운 날엔 이불 속이 내 집이다.'], ['c_love', '엄마 아빠 사이에 누우면 걱정이 없다.'], ['c_eat', '나이가 들어도 밥 조르는 건 여전히 잘한다.'], ['c_doze', '천천히 걸어도 괜찮다. 다들 기다려 준다.'], ['c_love', '쓰다듬는 손이 따뜻하다. 오래오래 좋다.'], ['c_yay', '올해도 함께여서 다행이다.'],
+  ['g_boost', '꿈속에서는 다리가 가볍다. 마음껏 달린다.'], ['g_r1', '호수공원 길을 다시 달렸다. 처음 만난 그 길.'], ['c_wave', '바람이 좋다. 노을이 예쁘다. 배도 부르다.'], ['c_love', '내가 고른 가족. 역시 내 눈이 맞았다.'], ['g_jump', '언제든 부르면 달려갈게. 밥 시간이면 더 빨리.'], ['c_wave2', '고마워. 나는 언제나 풍년이야.'],
+];
+const diaryN = () => +(localStorage.getItem('pa2_diary') || 0);
+const pageImg = i => { const k = (IMG.dy && IMG['dy' + i] && IMG['dy' + i].complete) ? 'dy' + i : DIARY[i][0]; return (SPR[k] || SPR.c_wave).src; };
+function memPiece() { // 조각 하나 = 별 하나 + 일기 한 쪽
+  let n = diaryN(), i; if (n < DIARY.length) { i = n; localStorage.setItem('pa2_diary', n + 1); } else i = Math.floor(Math.random() * DIARY.length);
+  G.newPages = (G.newPages || 0) + (n < DIARY.length ? 1 : 0);
+  const el = $('polar'); el.classList.add('diary'); el.querySelector('img').src = pageImg(i); el.querySelector('span').innerHTML = `<b>풍년이 일기 ${i + 1}쪽</b>${DIARY[i][1]}`;
+  el.classList.remove('show'); void el.offsetWidth; el.classList.add('show'); clearTimeout(polT); polT = setTimeout(() => el.classList.remove('show'), 4200);
+  return DIARY[i][1];
+}
+function memComplete(st) { // 별자리 완성 → 추억 타임
+  const ci = (st - 1) % CONS.length, L = JSON.parse(localStorage.getItem('pa2_cons') || '[]'); L.push(ci); localStorage.setItem('pa2_cons', JSON.stringify(L.slice(-60)));
+  G.consFx = 1.6; G.memT = true; if (G.fever > 0) G.fever = Math.max(G.fever, 10); else { startFever(); G.fever = 10 + upL('fever') * 2; }
+  G.bannerTxt = `${CONS[ci].n} 별자리 완성!`; G.bannerSub = '추억 타임 · 무적 · 점수 2배 · 간식 비'; G.banner = 2.6;
+}
+let diaryI = 0;
+function openDiary() { const n = diaryN(); if (!n) { diaryI = -1; } else diaryI = Math.min(diaryI < 0 ? 0 : diaryI, n - 1); if (diaryI < 0) diaryI = n - 1; showDiary(); $('diary').hidden = false; }
+function showDiary() {
+  const n = diaryN(); $('dy-n').textContent = `${n} / ${DIARY.length}쪽`;
+  if (!n) { $('dy-img').src = SPR.c_doze.src; $('dy-no').textContent = ''; $('dy-txt').textContent = '달리면서 기억 조각(별)을 모으면 풍년이 일기가 한 쪽씩 열려요.'; return; }
+  diaryI = (diaryI + n) % n; $('dy-img').src = pageImg(diaryI); $('dy-no').textContent = `${diaryI + 1}쪽 · ${['노을', '밤하늘', '벚꽃', '눈 오는 날'][Math.floor(diaryI / 6) % 4]}`; $('dy-txt').textContent = DIARY[diaryI][1];
+}
+$('diary-btn').addEventListener('click', () => { diaryI = diaryN() - 1; openDiary(); });
+$('dy-prev').addEventListener('click', () => { diaryI--; showDiary(); }); $('dy-next').addEventListener('click', () => { diaryI++; showDiary(); });
+$('dy-close').addEventListener('click', () => { $('diary').hidden = true; });
 try { $('ov-cat').src = SPR.c_wave.src; $('deco-cat').src = SPR.c_wave2.src; } catch (e) {}
 window.__G = G; window.__DECO = DECO; window.__PL = PL; window.__start = start;
 </script>
