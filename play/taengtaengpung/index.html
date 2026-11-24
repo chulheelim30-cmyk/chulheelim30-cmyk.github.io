@@ -2358,9 +2358,9 @@ function render(c) {
       const a = clamp(Math.atan2(dy, dx), -Math.PI + 0.12, -0.12);
       // 11-23 "경로가 안 보여 답답": 밝은 공책 위에서도 보이는 진한 점선 + 벽·천장·첫 블록 반사까지 미리 보여 줌
       const pts = [[lx, ly]], hits = [];
-      let x = lx, y = ly, vx = Math.cos(a), vy = Math.sin(a), bounces = 0, after = 0;
+      let x = lx, y = ly, vx = Math.cos(a), vy = Math.sin(a), bounces = 0, after = 0, len = 0; const maxLen = (L.bh || L.floor - L.by) * 0.72; // 11-24 '선이 너무 길다': 첫 블록에 닿거나 벽에 한 번 튕긴 뒤 짧게, 전체 길이 상한
       const st = 4, r = L.r;
-      for (let i = 0; i < 1400 && bounces < 5; i++) { // 11-23 '경로가 중간에 잘림': 4번 튕길 때까지 길게
+      for (let i = 0; i < 1400 && bounces < 2 && len < maxLen; i++) { len += st; // 11-23 '경로가 중간에 잘림': 4번 튕길 때까지 길게
         let nx = x + vx * st, ny = y + vy * st, bounced = false;
         if (nx < L.bx + r) { nx = L.bx + r; vx = Math.abs(vx); bounced = true; }
         if (nx > L.bx + L.bw - r) { nx = L.bx + L.bw - r; vx = -Math.abs(vx); bounced = true; }
@@ -2368,20 +2368,20 @@ function render(c) {
         if (collide({ x: nx, y: ny })) {
           const hx = collide({ x: nx, y }), hy = collide({ x, y: ny });
           if (hx && !hy) vx = -vx; else if (hy && !hx) vy = -vy; else { vx = -vx; vy = -vy; }
-          hits.push([x, y]); pts.push([x, y]); bounces++; after = 0; continue;
+          hits.push([x, y]); pts.push([x, y]); break;
         }
         x = nx; y = ny;
         if (bounced) { pts.push([x, y]); bounces++; after = 0; }
-        if (bounces >= 4) { after += st; if (after > L.cs * 2) break; }
+        if (bounces >= 1) { after += st; if (after > L.cs * 1.6) break; }
         if (y > L.floor - r) break;
       }
       pts.push([x, y]);
       c.save(); c.lineCap = 'round'; c.lineJoin = 'round';
-      c.setLineDash([8, 7]); c.lineWidth = 5; c.strokeStyle = 'rgba(255,253,246,.9)';
+      c.setLineDash([6, 7]); c.lineWidth = 3; c.strokeStyle = 'rgba(255,253,246,.85)';
       c.beginPath(); pts.forEach(([px, py], i) => i ? c.lineTo(px, py) : c.moveTo(px, py)); c.stroke();
-      c.lineWidth = 2.6; c.strokeStyle = 'rgba(43,43,43,.78)'; c.stroke();
+      c.lineWidth = 1.4; c.strokeStyle = 'rgba(43,43,43,.72)'; c.stroke();
       c.setLineDash([]);
-      for (const [hx, hy] of hits.slice(0, 1)) { c.lineWidth = 2; c.strokeStyle = 'rgba(43,43,43,.8)'; c.fillStyle = 'rgba(255,253,246,.85)'; c.beginPath(); c.arc(hx, hy, r * 1.15, 0, Math.PI * 2); c.fill(); c.stroke(); }
+      for (const [hx, hy] of hits.slice(0, 1)) { c.lineWidth = 1.4; c.strokeStyle = 'rgba(43,43,43,.75)'; c.fillStyle = 'rgba(255,253,246,.8)'; c.beginPath(); c.arc(hx, hy, r * 1.0, 0, Math.PI * 2); c.fill(); c.stroke(); }
       c.restore();
     }
   }
