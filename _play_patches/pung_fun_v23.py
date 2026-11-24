@@ -47,7 +47,7 @@ let COIN = +(localStorage.getItem('pa2_coin') || 0), coinSave = 0;
 function addCoin(n) { COIN += n; G.coinRun = (G.coinRun | 0) + n; if ((coinSave += n) >= 10 || n >= 20) { coinSave = 0; localStorage.setItem('pa2_coin', COIN); } }
 /* 11-24 동네: 보스를 깰 때마다 바뀜 */
 const ZONES = [
-  { n: '호수공원', tint: null },
+  { n: '동네 공원', tint: null },
   { n: '시장 골목', tint: 'rgba(255,150,70,.14)' },
   { n: '지붕 위', tint: 'rgba(100,130,255,.16)' },
   { n: '밤 산책길', tint: 'rgba(16,8,50,.38)' },
