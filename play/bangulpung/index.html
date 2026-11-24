@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="ko">
-<head><!--PV--><meta http-equiv="Cache-Control" content="no-cache"><script>(function(){var V=35;if(!/github\.io$/.test(location.hostname))return;fetch('/play/version.json?t='+Date.now(),{cache:'no-store'}).then(function(r){return r.json()}).then(function(j){if(j&&j.v>V){var u=new URL(location.href);if(u.searchParams.get('v')!==String(j.v)){u.searchParams.set('v',j.v);location.replace(u.toString())}}}).catch(function(){})})()</script><!--/PV-->
+<head><!--PV--><meta http-equiv="Cache-Control" content="no-cache"><script>(function(){var V=36;if(!/github\.io$/.test(location.hostname))return;fetch('/play/version.json?t='+Date.now(),{cache:'no-store'}).then(function(r){return r.json()}).then(function(j){if(j&&j.v>V){var u=new URL(location.href);if(u.searchParams.get('v')!==String(j.v)){u.searchParams.set('v',j.v);location.replace(u.toString())}}}).catch(function(){})})()</script><!--/PV-->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#fbf6ea">
@@ -2143,6 +2143,13 @@ function sprite(col, mood) {
   const s = L.d, dpr = JE.dpr, cv = document.createElement('canvas');
   cv.width = cv.height = Math.ceil(s * 1.2 * dpr); const c = cv.getContext('2d'); c.scale(dpr, dpr);
   const m = s * 0.6;
+  if (col === 'paint') { // PAINT_V1 풍년 방울: 무지개 젤리
+    const gr = c.createLinearGradient(m - s * 0.45, m - s * 0.45, m + s * 0.45, m + s * 0.45); ['#ff7a9a', '#ffcf3f', '#a9ec6c', '#7ee0ff', '#b58cff'].forEach((k, i) => gr.addColorStop(i / 4, k));
+    c.beginPath(); c.arc(m, m, s * 0.45, 0, 7); c.fillStyle = gr; c.fill(); c.lineWidth = 2.2; c.strokeStyle = '#2b2b2b'; c.stroke();
+    c.fillStyle = 'rgba(255,255,255,.55)'; c.beginPath(); c.ellipse(m - s * 0.16, m - s * 0.2, s * 0.12, s * 0.07, -0.5, 0, 7); c.fill();
+    c.font = B.font(s * 0.36); c.textAlign = 'center'; c.textBaseline = 'middle'; c.lineWidth = 3; c.strokeStyle = '#2b2b2b'; c.strokeText('풍', m, m + 2); c.fillStyle = '#fff'; c.fillText('풍', m, m + 2);
+    SPR[key] = cv; return cv;
+  }
   if (col === 'bomb') {
     JE.jelly(c, m, m, s * 0.9, s * 0.9, '#3b3f3d', { radius: 0.5 });
     c.fillStyle = '#ffcf3f'; c.font = B.font(s * 0.42); c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('★', m, m + 2);
@@ -2153,7 +2160,7 @@ function sprite(col, mood) {
   SPR[key] = cv; return cv;
 }
 function drawBub(c, x, y, col, mood = 'normal', k = 1) {
-  const ak = col === 'bomb' ? 'bub_bomb' : 'bub_' + COLORS.indexOf(col); // 11-23 Gemini 손그림 방울
+  const ak = col === 'bomb' ? 'bub_bomb' : col === 'paint' ? 'bub_paint_none' : 'bub_' + COLORS.indexOf(col); // 11-23 Gemini 손그림 방울
   if (JE.art && JE.art.draw(c, ak, x, y, L.d * 1.0 * k, L.d * 1.0 * k)) return;
   const sp = sprite(col, mood), s = L.d * 1.2 * k;
   c.drawImage(sp, x - s / 2, y - s / 2, s, s);
@@ -2176,16 +2183,17 @@ function lowestRow() { for (let r = G.rows.length - 1; r >= 0; r--) if (G.rows[r
 function checkDead() { if (lowestRow() >= DEAD && F.playing()) { K.pop('앗, 선을 넘었어요!', L.W / 2, L.deadY - 30, { size: 26, c1: '#ffd1da', c2: '#ff5d7a' }); F.fail('방울이 선까지 내려왔어요!', 0.9); } }
 function nextShot() {
   G.cur = G.next;
-  if (G.pops >= G.bombAt) { G.next = 'bomb'; G.bombAt += 20; }
+  if (G.paintNext) { G.next = 'paint'; G.paintNext = false; }
+  else if (G.pops >= G.bombAt) { G.next = 'bomb'; G.bombAt += 20; }
   else { const left = colorsLeft(); G.next = randCol(left); }
-  if (G.cur !== 'bomb' && !colorsLeft().includes(G.cur) && colorsLeft().length) G.cur = randCol(colorsLeft());
+  if (G.cur !== 'bomb' && G.cur !== 'paint' && !colorsLeft().includes(G.cur) && colorsLeft().length) G.cur = randCol(colorsLeft());
 }
 
 /* ---------------- 흐름 ---------------- */
 const F = K.flow({
   title: '방울풍',
   colors: [COLORS[0], COLORS[2], COLORS[4], COLORS[3], COLORS[5]],
-  desc: '끌어서 조준, 손을 떼면 발사!<br>같은 색 <b style="color:#ffd23f">3개 이상</b> 붙이면 펑.<br>매달린 방울은 우르르 떨어져 보너스.<br>빨간 선까지 내려오면 끝이에요.',
+  desc: '끌어서 조준, 손을 떼면 발사!<br>같은 색 <b style="color:#ffd23f">3개 이상</b> 붙이면 펑.<br>매달린 방울은 우르르 떨어져 보너스.<br>3연속 펑이면 <b style="color:#ff9ad5">풍년 방울</b>: 둘레를 한 색으로!<br>빨간 선까지 내려오면 끝이에요.',
   onHome: () => { setup(); },
   onStart: () => { setup(); },
   onRevive: () => {
@@ -2247,6 +2255,15 @@ function snap(s) {
 function land(r, c, col) {
   JE.sfx.land();
   let popped = [];
+  if (col === 'paint') { // 둘레 2칸을 가장 많은 색으로 칠함
+    const seen = new Set([r + ',' + c]), q = [[r, c, 0]], area = [], cnt = {};
+    while (q.length) { const [a, b, k] = q.shift(); area.push([a, b]); if (k >= 2) continue; for (const [x, y] of neighbors(a, b)) if (!seen.has(x + ',' + y) && get(x, y) != null && get(x, y) !== 'bomb') { seen.add(x + ',' + y); q.push([x, y, k + 1]); } }
+    area.forEach(([a, b]) => { const v = get(a, b); if (v && v !== 'paint') cnt[v] = (cnt[v] || 0) + 1; });
+    const best = Object.keys(cnt).sort((x, y) => cnt[y] - cnt[x])[0] || randCol(colorsLeft());
+    area.forEach(([a, b]) => { G.rows[a][b] = best; JE.fx.burst(px(a, b), py(a), best, 4, 120); });
+    col = best; JE.sfx.select(6); K.flash(0.25, '255,230,140');
+    K.pop('풍년 방울! 한 색으로', px(r, c), py(r) - 30, { size: 24, c1: '#fff3c8', c2: '#ff9ad5' });
+  }
   if (col === 'bomb') {
     const seen = new Set([r + ',' + c]), q = [[r, c, 0]];
     while (q.length) { const [a, b, k] = q.shift(); popped.push([a, b]); if (k >= 2) continue; for (const [x, y] of neighbors(a, b)) if (!seen.has(x + ',' + y) && get(x, y) != null) { seen.add(x + ',' + y); q.push([x, y, k + 1]); } }
@@ -2258,6 +2275,7 @@ function land(r, c, col) {
   }
   if (popped.length) {
     G.combo++; G.maxCombo = Math.max(G.maxCombo, G.combo);
+    if (G.combo % 3 === 0 && G.next !== 'paint') { G.paintNext = true; K.pop('풍년 방울 준비!', L.W / 2, L.deadY - 150, { size: 22, c1: '#fff3c8', c2: '#ff9ad5' }); }
     popped.forEach(([a, b], i) => { G.dying.push({ x: px(a, b), y: py(a), col: get(a, b), t: -i * 0.03 }); G.rows[a][b] = null; });
     G.pops += popped.length;
     // 매달린 방울 찾기
@@ -2279,7 +2297,7 @@ function land(r, c, col) {
       G.score += 1000; K.confetti(80); JE.sfx.fanfare(); K.pop('판 싹쓸이 +1000', L.W / 2, L.H * 0.4, { size: 30 });
       G.ncol = Math.min(6, G.ncol + 1);
       for (let rr = 0; rr < 6; rr++) G.rows[rr] = newRow(rr);
-      if (!colorsLeft().includes(G.cur)) G.cur = randCol(colorsLeft());
+      if (G.cur !== 'paint' && !colorsLeft().includes(G.cur)) G.cur = randCol(colorsLeft());
     }
   } else {
     G.combo = 0; G.miss++;
@@ -2386,7 +2404,7 @@ function render(c) {
   if (F.state !== 'home') {
     pr = K.hud(c, G.shown, G.best || 0);
     const left = Math.max(1, missLimit() - G.miss);
-    K.badges(c, [{ t: `한 줄 내려오기까지 ${left}발`, fg: left <= 2 ? BC.danger : BC.lime }, { t: G.next === 'bomb' ? '다음: 폭탄!' : `폭탄까지 ${Math.max(0, G.bombAt - G.pops)}개`, fg: BC.gold }], K.rowY() + 24);
+    K.badges(c, [{ t: `한 줄 내려오기까지 ${left}발`, fg: left <= 2 ? BC.danger : BC.lime }, { t: G.next === 'paint' ? '다음: 풍년 방울!' : G.next === 'bomb' ? '다음: 폭탄!' : `폭탄까지 ${Math.max(0, G.bombAt - G.pops)}개`, fg: BC.gold }], K.rowY() + 24);
     if (G.pops === 0 && F.playing() && !G.aim) K.hint(c, '위로 끌어 조준하고 손을 떼요', L.gunY - L.d * 1.4);
   }
 }
