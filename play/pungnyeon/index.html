@@ -43,6 +43,7 @@ body.playing .pad{display:flex}
 .mc.lock{background:#eee8f6;border-color:#d4c8e6;color:#9a8ab4}.mc.lock .q{width:42px;height:42px;border-radius:50%;margin:0 auto 3px;background:#d9cfe8;font-size:24px;line-height:42px;color:#fff;font-family:Jua,sans-serif}.mc.lock b{color:#9a8ab4}
 .title{font-size:46px}
 #home .hrow{position:absolute;left:max(14px,env(safe-area-inset-left));bottom:12px;white-space:nowrap}#home .hrow .btn.ghost{font-size:14px;padding:8px 11px;margin-right:4px;box-shadow:0 3px 0 #b9a8d8}@media (max-height:430px){.home .desc+.desc{display:none}}.home .btn{margin-right:6px}.home #go{padding:12px 20px}
+#op{position:fixed;inset:0;z-index:30;background:#140c24}#op[hidden],#op-tap[hidden]{display:none}#op-cv{position:absolute;inset:0;width:100%;height:100%}#op-tap{position:absolute;inset:0;border:0;background:transparent;color:#fff;font-family:Jua,"Noto Sans KR",sans-serif;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;cursor:pointer}#op-tap b{font-weight:400;font-size:min(64px,11vw);color:#ffe27a;text-shadow:0 3px 0 #7a3a10,0 0 24px rgba(255,200,120,.6)}#op-tap span{font-size:20px;animation:opb 1.2s ease-in-out infinite}@keyframes opb{50%{opacity:.35}}#op-skip{position:absolute;right:max(16px,env(safe-area-inset-right));bottom:14px;z-index:2;border:0;border-radius:14px;padding:8px 14px;font:16px Jua,"Noto Sans KR",sans-serif;background:rgba(255,255,255,.2);color:#fff;cursor:pointer}
 #shop-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:4px 0 8px}#shop-grid .dc{padding:6px 6px}#shop-grid .dc span{font-size:11.5px}#shop-grid .dc em{font-style:normal;font-size:13px;color:#c26a10;font-family:"Noto Sans KR",sans-serif;font-weight:700}#shop-grid .dc.max em{color:#2a9a5a}
 #deco-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:5px;margin:4px 0 8px}
 .dc{border:2px solid #f2c97a;background:linear-gradient(#fff8ea,#ffeccc);border-radius:14px;padding:6px 4px;font:inherit;color:#5a3a20;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:1px}
@@ -78,7 +79,7 @@ body.playing .pad{display:flex}
  <div id="pr-hb-slot"></div>
  <div id="mis"></div>
  <button class="btn" id="go">달리기 시작</button>
-</div><div class="hrow"><button class="btn ghost" id="album-btn">추억 앨범</button><button class="btn ghost" id="diary-btn">그림일기</button><button class="btn ghost" id="shop-btn">🐟 간식 상점</button><button class="btn ghost" id="deco-btn">꾸미기</button><button class="btn ghost" id="rank-btn">랭킹</button></div></div>
+</div><div class="hrow"><button class="btn ghost" id="album-btn">추억 앨범</button><button class="btn ghost" id="diary-btn">그림일기</button><button class="btn ghost" id="shop-btn">🐟 간식 상점</button><button class="btn ghost" id="deco-btn">꾸미기</button><button class="btn ghost" id="op-btn">🎬 오프닝</button><button class="btn ghost" id="rank-btn">랭킹</button></div></div>
 <div class="ov" id="over" hidden style="background:rgba(20,14,50,.45)"><div class="card">
  <img id="ov-cat" alt="" style="height:70px;float:left;margin:-6px 6px 0 -6px"><h2>풍년이가 낮잠 자러 갔어요</h2><div class="big" id="ov-score">0</div>
  <div>최고 기록 <b id="ov-best">0</b></div><div class="stats" id="ov-stats"></div>
@@ -108,6 +109,7 @@ body.playing .pad{display:flex}
  <button class="btn ghost" id="dy-prev">◀</button><button class="btn ghost" id="dy-next">▶</button><button class="btn" id="dy-close">닫기</button>
 </div></div>
 <div id="polar"><img alt=""><span></span></div>
+<div id="op" hidden><canvas id="op-cv"></canvas><button id="op-tap" hidden><b>풍년이의 모험</b><span>화면을 눌러 시작 ▶</span></button><button id="op-skip">건너뛰기 ▶▶</button></div>
 <div class="ov" id="shop" hidden style="background:rgba(20,14,50,.6)"><div class="card alb">
  <h2>🐟 간식 상점 <small id="shop-n"></small></h2>
  <div class="sub" style="margin:2px 0 6px">달리며 모은 간식으로 풍년이를 영구 강화해요 · 보스를 처음 이기면 간식 100개 선물</div>
@@ -1116,7 +1118,7 @@ try { if (!PungRank.me()) { const rb = $('rank-btn'); rb.textContent = '🏆 랭
 try { if (!PungRank.me()) { const ob = $('ov-rank'); ob.textContent = '🏆 닉네임 등록하고 랭킹에 올리기'; ob.style.cssText += ';background:#fff3c4;border:2px dashed #c26a10;color:#7a3a00'; } } catch (e) {}
 try { PungRank.legacy('pungadventure', +localStorage.getItem('pa2_best') || 0); setTimeout(() => PungRank.flush(), 1500); } catch (e) {}
 try { const s = $('pr-hb-slot'); if (s) s.innerHTML = PungRank.homeBoardHTML('pungadventure', true); } catch (e) {}
-try { PungRank.entryInvite('pungadventure', { host: wrap, onlyIf: () => !$('home').hidden, done: () => { if (PungRank.me()) { const rb = $('rank-btn'); rb.textContent = '랭킹'; rb.style.cssText = ''; const ob = $('ov-rank'); ob.textContent = '랭킹'; ob.style.cssText = 'margin-left:6px'; } } }); } catch (e) {}
+try { PungRank.entryInvite('pungadventure', { host: wrap, onlyIf: () => !$('home').hidden && $('op').hidden, done: () => { if (PungRank.me()) { const rb = $('rank-btn'); rb.textContent = '랭킹'; rb.style.cssText = ''; const ob = $('ov-rank'); ob.textContent = '랭킹'; ob.style.cssText = 'margin-left:6px'; } } }); } catch (e) {}
 $('go').addEventListener('click', start); $('again').addEventListener('click', start); $('tohome').addEventListener('click', goHome);
 $('snd').addEventListener('pointerdown', e => { e.stopPropagation(); muted = !muted; $('snd').textContent = muted ? '🔇' : '🔊'; });
 addEventListener('resize', resize); addEventListener('orientationchange', () => setTimeout(resize, 200));
@@ -1810,6 +1812,98 @@ $('diary-btn').addEventListener('click', () => { diaryI = diaryN() - 1; openDiar
 $('dy-prev').addEventListener('click', () => { diaryI--; showDiary(); }); $('dy-next').addEventListener('click', () => { diaryI++; showDiary(); });
 $('dy-close').addEventListener('click', () => { $('diary').hidden = true; });
 try { $('ov-cat').src = SPR.c_wave.src; $('deco-cat').src = SPR.c_wave2.src; } catch (e) {}
-window.__G = G; window.__startBoss = startBoss; window.__shop = { addCoin, openShop, PERM_LV }; window.__objsPush = o => objs.push(o); window.__DECO = DECO; window.__PL = PL; window.__start = start;
+/* 11-24 오프닝: 그림책처럼 넘어가는 20초 컷신 (처음 한 번 자동, 처음 화면 '오프닝'으로 다시 보기) */
+const OP = { on: false, t: 0, cv: null, g: null, W: 0, H: 0, raf: 0, music: null, last: 0 };
+const OP_SC = [ // [길이(초), 그림, 자막]
+  { d: 3.6, k: 'bg', img: 'bg_sunset', cap: '어느 가을 저녁, 일산호수공원', sub: '' },
+  { d: 4.0, k: 'pic', img: 'dp0', cap: '작은 회색 고양이가', sub: '우리 가족을 골랐어요' },
+  { d: 3.8, k: 'pic', img: 'dp4', cap: '소파 한가운데는', sub: '언제나 풍년이 자리' },
+  { d: 3.8, k: 'pic', img: 'dp3', cap: '밥 달라고 열 번 부르면', sub: '열 번 다 들어줬죠' },
+  { d: 4.2, k: 'night', img: 'bg_night', cap: '밤하늘에 흩어진 기억 조각들', sub: '모으면 별자리가 돼요' },
+  { d: 4.6, k: 'run', img: 'bg_sunset', cap: '', sub: '' },
+];
+const OP_T = OP_SC.reduce((a, s) => a + s.d, 0);
+function opSize() { const d = Math.min(2, window.devicePixelRatio || 1); OP.W = innerWidth; OP.H = innerHeight; OP.cv.width = OP.W * d; OP.cv.height = OP.H * d; OP.g.setTransform(d, 0, 0, d, 0, 0); }
+function opCover(g, im, zx, zy, z) { // 화면을 덮게 그리기 (zx,zy: 0~1 초점, z: 확대)
+  if (!im || !im.complete || !im.naturalWidth) return; const W = OP.W, H = OP.H, s = Math.max(W / im.naturalWidth, H / im.naturalHeight) * z, w = im.naturalWidth * s, h = im.naturalHeight * s;
+  g.drawImage(im, (W - w) * zx, (H - h) * zy, w, h);
+}
+function opText(g, str, x, y, size, col, a, align = 'center') {
+  if (!str || a <= 0) return; g.save(); g.globalAlpha = Math.min(1, a); g.font = `${size}px Jua, "Noto Sans KR", sans-serif`; g.textAlign = align; g.textBaseline = 'middle';
+  g.lineJoin = 'round'; g.lineWidth = size * 0.22; g.strokeStyle = 'rgba(40,20,50,.75)'; g.strokeText(str, x, y); g.fillStyle = col; g.fillText(str, x, y); g.restore();
+}
+function opScene(g, i, p, alpha) {
+  const S = OP_SC[i], W = OP.W, H = OP.H, im = IMG[S.img], ease = x => x * x * (3 - 2 * x);
+  g.save(); g.globalAlpha = alpha;
+  if (S.k === 'bg' || S.k === 'night' || S.k === 'run') {
+    if (S.k === 'run') opCover(g, im, 0.5 - p * 0.15, 0.6, 1.25); else opCover(g, im, 0.35 + p * 0.3, S.k === 'night' ? 0.3 + p * 0.3 : 0.55, 1.12 + p * 0.1);
+    if (S.k === 'night') { for (let k = 0; k < 40; k++) { const sx = (k * 197) % W, sy = (k * 89) % (H * 0.55), tw = 0.4 + 0.6 * Math.sin(OP.t * 3 + k) ** 2; g.fillStyle = `rgba(255,250,210,${tw * Math.min(1, p * 3)})`; g.beginPath(); g.arc(sx, sy, 1.2 + (k % 3), 0, 7); g.fill(); }
+      const cx = W * 0.5, cy = H * 0.32, pts = [[-120, 20], [-60, -30], [0, 0], [60, -40], [130, 10]], n = Math.min(pts.length, Math.floor(p * 7));
+      g.strokeStyle = 'rgba(255,240,180,.7)'; g.lineWidth = 2; g.beginPath(); pts.slice(0, n).forEach(([x, y], j) => j ? g.lineTo(cx + x, cy + y) : g.moveTo(cx + x, cy + y)); g.stroke();
+      pts.slice(0, n).forEach(([x, y]) => { g.fillStyle = 'rgba(255,240,170,.35)'; g.beginPath(); g.arc(cx + x, cy + y, 12, 0, 7); g.fill(); g.fillStyle = '#fff6c8'; g.beginPath(); g.arc(cx + x, cy + y, 4, 0, 7); g.fill(); });
+      const cat = IMG.c_doze; if (cat && cat.complete) { const h = H * 0.26, w = cat.naturalWidth * h / cat.naturalHeight; g.drawImage(cat, W * 0.16 - w / 2, H * 0.9 - h, w, h); } }
+    if (S.k === 'run') {
+      g.fillStyle = 'rgba(30,10,40,.18)'; g.fillRect(0, 0, W, H);
+      const fr = IMG['g_r' + (Math.floor(OP.t * 12) % 8)], h = H * 0.3; if (fr && fr.complete) { const w = fr.naturalWidth * h / fr.naturalHeight, x = -w + (W * 0.5 + w * 0.5) * Math.min(1, ease(Math.min(1, p * 1.6))); g.drawImage(fr, x, H * 0.88 - h - Math.abs(Math.sin(OP.t * 12)) * 6, w, h);
+        for (let k = 0; k < 6; k++) { g.fillStyle = `rgba(255,240,200,${0.5 - k * 0.08})`; g.beginPath(); g.arc(x + w * 0.15 - k * 22, H * 0.86 - k * 3, 6 - k * 0.7, 0, 7); g.fill(); } }
+      const k = Math.max(0, (p - 0.28) / 0.3), s = 1 + (1 - Math.min(1, k)) * 0.4;
+      if (k > 0) { g.save(); g.translate(W / 2, H * 0.3); g.scale(s, s); opText(g, '풍년이의 모험', 0, 0, Math.min(64, W * 0.09), '#ffe27a', k); g.restore(); opText(g, "PUNGNYEON'S ADVENTURE", W / 2, H * 0.3 + Math.min(46, W * 0.065), Math.min(18, W * 0.03), '#fff', k); }
+      opText(g, '간식 훔쳐 간 큰까마귀를 혼내 주러 출발!', W / 2, H * 0.48, Math.min(24, W * 0.04), '#fff', (p - 0.55) * 4);
+    }
+  } else { // 그림일기 한 장 + 흐린 배경
+    opCover(g, IMG.bg_sunset, 0.5, 0.5, 1.3); g.fillStyle = 'rgba(30,14,40,.45)'; g.fillRect(0, 0, W, H);
+    const side = Math.min(H * 0.62, W * 0.42), z = 1 + p * 0.06, x = W * 0.3, y = H * 0.5 + (1 - ease(Math.min(1, p * 3))) * 30;
+    g.save(); g.translate(x, y); g.rotate((i % 2 ? 1 : -1) * 0.04); g.scale(z, z);
+    g.fillStyle = '#fffaf0'; g.shadowColor = 'rgba(0,0,0,.45)'; g.shadowBlur = 24; g.fillRect(-side / 2 - 12, -side / 2 - 12, side + 24, side + 52); g.shadowBlur = 0;
+    if (im && im.complete) g.drawImage(im, -side / 2, -side / 2, side, side);
+    g.restore();
+    const n1 = Math.floor(Math.max(0, p - 0.12) * 40), n2 = Math.floor(Math.max(0, p - 0.38) * 40), fs = Math.min(34, W * 0.045), tx = W * 0.56;
+    opText(g, S.cap.slice(0, n1), tx, H * 0.44, fs, '#fff', 1, 'left'); opText(g, S.sub.slice(0, n2), tx, H * 0.44 + fs * 1.5, fs, '#ffe27a', 1, 'left');
+  }
+  if (S.k === 'bg') { opText(g, S.cap, W / 2, H * 0.78, Math.min(34, W * 0.045), '#fff', p * 3 - 0.3); }
+  if (S.k === 'night') { opText(g, S.cap, W / 2, H * 0.58, Math.min(30, W * 0.042), '#fff', p * 3 - 0.3); opText(g, S.sub, W / 2, H * 0.58 + Math.min(44, W * 0.06), Math.min(30, W * 0.042), '#ffe27a', p * 3 - 1); }
+  g.restore();
+}
+function opFrame(now) {
+  if (!OP.on) return; const dt = Math.min(0.05, (now - OP.last) / 1000 || 0); OP.last = now; OP.t += dt;
+  const g = OP.g, W = OP.W, H = OP.H; g.fillStyle = '#140c24'; g.fillRect(0, 0, W, H);
+  let t0 = 0, i = 0; while (i < OP_SC.length - 1 && OP.t > t0 + OP_SC[i].d) { t0 += OP_SC[i].d; i++; }
+  const p = Math.min(1, (OP.t - t0) / OP_SC[i].d), XF = 0.7;
+  if (i > 0 && OP.t - t0 < XF) opScene(g, i - 1, 1, 1);
+  opScene(g, i, p, i > 0 ? Math.min(1, (OP.t - t0) / XF) : Math.min(1, OP.t / 0.8));
+  for (let k = 0; k < 18; k++) { const sx = ((k * 151 + OP.t * (20 + k * 3)) % (W + 40)) - 20, sy = H - ((k * 97 + OP.t * (30 + k * 2)) % H); g.fillStyle = `rgba(255,230,170,${0.25 + 0.2 * Math.sin(OP.t * 2 + k)})`; g.beginPath(); g.arc(sx, sy, 1.5 + (k % 3), 0, 7); g.fill(); } // 떠다니는 반짝이
+  const bar = H * 0.07 * Math.min(1, OP.t * 2); g.fillStyle = '#000'; g.fillRect(0, 0, W, bar); g.fillRect(0, H - bar, W, bar); // 영화 같은 위아래 띠
+  if (OP.t > OP_T - 0.8) { g.fillStyle = `rgba(20,12,36,${Math.min(1, (OP.t - (OP_T - 0.8)) / 0.8)})`; g.fillRect(0, 0, W, H); }
+  if (OP.t >= OP_T) return opEnd();
+  OP.raf = requestAnimationFrame(opFrame);
+}
+function opMusic() { // 오르골 느낌 멜로디 (효과음과 같은 AudioContext)
+  if (muted) return; try { AC = AC || new (window.AudioContext || window.webkitAudioContext)(); AC.resume(); } catch (e) { return; }
+  const mel = [72, 76, 79, 84, 83, 79, 76, 79, 77, 81, 84, 88, 86, 84, 81, 79, 76, 79, 84, 83, 81, 79, 77, 76, 74, 77, 81, 79, 76, 72, 74, 72], bass = [48, 53, 55, 48], t0 = AC.currentTime + 0.1, step = 0.32, master = AC.createGain(); master.gain.value = 0.9; master.connect(AC.destination); OP.music = master;
+  const note = (m, t, len, vol, type) => { const o = AC.createOscillator(), g = AC.createGain(); o.type = type; o.frequency.value = 440 * Math.pow(2, (m - 69) / 12); o.connect(g); g.connect(master); g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + 0.015); g.gain.exponentialRampToValueAtTime(0.0001, t + len); o.start(t); o.stop(t + len + 0.05); };
+  const total = Math.floor((OP_T - 1) / step);
+  for (let i = 0; i < total; i++) { const t = t0 + i * step; note(mel[i % mel.length], t, 1.2, 0.07, 'triangle'); note(mel[i % mel.length] + 12, t, 0.5, 0.015, 'sine'); if (i % 8 === 0) note(bass[(i / 8) % 4], t, step * 8, 0.05, 'sine'); }
+}
+function opStart() {
+  if (OP.on) return; OP.on = true; OP.t = 0; OP.last = performance.now(); $('op').hidden = false; $('op-tap').hidden = true; opSize(); opMusic();
+  OP.raf = requestAnimationFrame(opFrame);
+}
+function opEnd() {
+  OP.on = false; cancelAnimationFrame(OP.raf); localStorage.setItem('pa2_op', '1');
+  if (OP.music) { try { OP.music.gain.setTargetAtTime(0.0001, AC.currentTime, 0.15); setTimeout(() => { try { OP.music.disconnect(); } catch (e) {} }, 600); } catch (e) {} OP.music = null; }
+  $('op').hidden = true;
+  setTimeout(() => { try { PungRank.entryInvite('pungadventure', { host: wrap, onlyIf: () => !$('home').hidden && $('op').hidden }); } catch (e) {} }, 400);
+}
+function opOpen(autoTap) { // 첫 실행: '눌러서 시작' 카드 (소리를 켜려면 한 번 눌러야 해서)
+  OP.cv = $('op-cv'); OP.g = OP.cv.getContext('2d'); $('op').hidden = false; opSize();
+  if (autoTap) { $('op-tap').hidden = false; const g = OP.g; g.fillStyle = '#140c24'; g.fillRect(0, 0, OP.W, OP.H); opCover(g, IMG.bg_sunset, 0.5, 0.55, 1.1); g.fillStyle = 'rgba(20,12,36,.45)'; g.fillRect(0, 0, OP.W, OP.H); }
+  else opStart();
+}
+$('op-tap').addEventListener('click', opStart);
+$('op-skip').addEventListener('click', e => { e.stopPropagation(); opEnd(); });
+$('op-btn').addEventListener('click', () => opOpen(false));
+addEventListener('resize', () => { if (!$('op').hidden && OP.cv) opSize(); });
+if (!localStorage.getItem('pa2_op') && !/[?&]noop/.test(location.search)) { const go = () => opOpen(true); if (IMG.bg_sunset.complete) go(); else IMG.bg_sunset.addEventListener('load', go, { once: true }); }
+window.__G = G; window.__op = { opOpen, opEnd, OP }; window.__startBoss = startBoss; window.__shop = { addCoin, openShop, PERM_LV }; window.__objsPush = o => objs.push(o); window.__DECO = DECO; window.__PL = PL; window.__start = start;
 </script>
 </body></html>
