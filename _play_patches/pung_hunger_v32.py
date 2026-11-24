@@ -41,3 +41,4 @@ rep("""  text('풍년이의 모험', 16, 84, 22, 'left', '#ffffff', { out: '#4a2
     if (fk > 0.005) { rr(ctx, fx + 23.5, fy + 1.5, (fw - 3) * fk, fh - 3, 4.5); ctx.fillStyle = fk > 0.5 ? '#7fd84a' : fk > 0.25 ? '#ffd23f' : '#ff5a6a'; ctx.fill(); }
     text(low ? '배고파!' : '배부름', fx + fw + 28, fy + 6, 12, 'left', low ? '#ff9aa8' : '#e8ffe0'); }""")
 P.write_text(s, encoding='utf-8'); print('ok')
+# (v33) 처음 화면 '오픈소스 라이선스' 링크는 play/pungnyeon/index.html 에 직접 추가함: <a id="lic" href="../licenses.html" ...> (#go 버튼 다음)

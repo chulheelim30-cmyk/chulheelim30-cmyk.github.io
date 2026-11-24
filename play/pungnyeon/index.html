@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="ko"><head><!--PV--><meta http-equiv="Cache-Control" content="no-cache"><script>(function(){var V=32;if(!/github\.io$/.test(location.hostname))return;fetch('/play/version.json?t='+Date.now(),{cache:'no-store'}).then(function(r){return r.json()}).then(function(j){if(j&&j.v>V){var u=new URL(location.href);if(u.searchParams.get('v')!==String(j.v)){u.searchParams.set('v',j.v);location.replace(u.toString())}}}).catch(function(){})})()</script><!--/PV--><meta charset="utf-8">
+<!DOCTYPE html><html lang="ko"><head><!--PV--><meta http-equiv="Cache-Control" content="no-cache"><script>(function(){var V=33;if(!/github\.io$/.test(location.hostname))return;fetch('/play/version.json?t='+Date.now(),{cache:'no-store'}).then(function(r){return r.json()}).then(function(j){if(j&&j.v>V){var u=new URL(location.href);if(u.searchParams.get('v')!==String(j.v)){u.searchParams.set('v',j.v);location.replace(u.toString())}}}).catch(function(){})})()</script><!--/PV--><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <title>풍년이의 모험</title>
 <meta name="robots" content="noindex,nofollow">
@@ -79,7 +79,7 @@ body.playing .pad{display:flex}
  <div id="pr-hb-slot"></div>
  <div id="mis"></div>
  <button class="btn" id="go">달리기 시작</button>
-</div><div class="hrow"><button class="btn ghost" id="album-btn">추억 앨범</button><button class="btn ghost" id="diary-btn" style="display:none">그림일기</button><button class="btn ghost" id="shop-btn">🐟 간식 상점</button><button class="btn ghost" id="deco-btn">꾸미기</button><button class="btn ghost" id="op-btn">🎬 오프닝</button><button class="btn ghost" id="rank-btn">랭킹</button></div></div>
+</div><a id="lic" href="../licenses.html" style="position:absolute;right:max(14px,env(safe-area-inset-right));bottom:6px;font-size:11px;color:rgba(255,255,255,.6);text-decoration:none">오픈소스 라이선스</a><div class="hrow"><button class="btn ghost" id="album-btn">추억 앨범</button><button class="btn ghost" id="diary-btn" style="display:none">그림일기</button><button class="btn ghost" id="shop-btn">🐟 간식 상점</button><button class="btn ghost" id="deco-btn">꾸미기</button><button class="btn ghost" id="op-btn">🎬 오프닝</button><button class="btn ghost" id="rank-btn">랭킹</button></div></div>
 <div class="ov" id="over" hidden style="background:rgba(20,14,50,.45)"><div class="card">
  <img id="ov-cat" alt="" style="height:70px;float:left;margin:-6px 6px 0 -6px"><h2>풍년이가 낮잠 자러 갔어요</h2><div class="big" id="ov-score">0</div>
  <div>최고 기록 <b id="ov-best">0</b></div><div class="stats" id="ov-stats"></div>
