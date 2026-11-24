@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="ko"><head><!--PV--><meta http-equiv="Cache-Control" content="no-cache"><script>(function(){var V=31;if(!/github\.io$/.test(location.hostname))return;fetch('/play/version.json?t='+Date.now(),{cache:'no-store'}).then(function(r){return r.json()}).then(function(j){if(j&&j.v>V){var u=new URL(location.href);if(u.searchParams.get('v')!==String(j.v)){u.searchParams.set('v',j.v);location.replace(u.toString())}}}).catch(function(){})})()</script><!--/PV--><meta charset="utf-8">
+<!DOCTYPE html><html lang="ko"><head><!--PV--><meta http-equiv="Cache-Control" content="no-cache"><script>(function(){var V=32;if(!/github\.io$/.test(location.hostname))return;fetch('/play/version.json?t='+Date.now(),{cache:'no-store'}).then(function(r){return r.json()}).then(function(j){if(j&&j.v>V){var u=new URL(location.href);if(u.searchParams.get('v')!==String(j.v)){u.searchParams.set('v',j.v);location.replace(u.toString())}}}).catch(function(){})})()</script><!--/PV--><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <title>풍년이의 모험</title>
 <meta name="robots" content="noindex,nofollow">
@@ -790,7 +790,7 @@ const CH = ['집을 나서요', '별을 따라서', '다시, 호수공원'];
 const zoneI = () => bIdx() % ZONES.length;
 
 function reset(demo) {
-  Object.assign(G, { fevers: 0, bigs: 0, revived: 0, noRevive: false, tut: !demo && !localStorage.getItem('pa2_tut') ? 9 : 0, naps: 0, nap: 0, napWant: false, feverEat: 0, memT: false, consFx: 0, rest: 0, restK: 1, restEnd: 0, newPages: 0, yarn: 0, up: {}, boss: null, tok: Math.random(), cush: permL('cushion'), p0: progN(), braveDone: false, braveB: false, napSaid: false, wang: 0, wangOut: 0, combo: 0, nmT: 0, coinRun: 0, nextCard: 50, cards: 0, safe: 0, bossWin: 0, dist: 0, speed: 300, bonus: 0, snacks: 0, pieces: 0, stage: 1, hp: 3, gauge: 0, fever: 0, kills: 0, shake: 0, banner: 0, demo });
+  Object.assign(G, { fevers: 0, bigs: 0, revived: 0, noRevive: false, tut: !demo && !localStorage.getItem('pa2_tut') ? 9 : 0, naps: 0, nap: 0, napWant: false, feverEat: 0, memT: false, consFx: 0, rest: 0, restK: 1, restEnd: 0, newPages: 0, yarn: 0, up: {}, boss: null, tok: Math.random(), cush: permL('cushion'), food: 100, p0: progN(), braveDone: false, braveB: false, napSaid: false, wang: 0, wangOut: 0, combo: 0, nmT: 0, coinRun: 0, nextCard: 50, cards: 0, safe: 0, bossWin: 0, dist: 0, speed: 300, bonus: 0, snacks: 0, pieces: 0, stage: 1, hp: 3, gauge: 0, fever: 0, kills: 0, shake: 0, banner: 0, demo });
   Object.assign(PL, { y: GY, vy: 0, ground: true, jumps: 0, slide: false, hurt: 0, anim: 0, fire: 0, sq: 1 }); BUD.x = -26; BUD.y = GY - 118;
   segs = [{ x0: -600, n: 14, x1: -600 + 80 + 14 * 120, v: Array.from({ length: 14 }, (_, i) => i % 3) }]; genX = segs[0].x1;
   objs = []; buls = []; parts = []; pops = []; nextPiece = 900; gen();
@@ -822,7 +822,7 @@ function place(x, diff) {
   const pick = [['snack', 3], ['bin', 2.5], ['pot', 2], ['puddle', 2], ['branch', 2 + diff * 2], ['crow', 3], ['goose', 2 + diff * 2], ['bowl', 0.8], ['heart', G.hp < 3 ? 0.5 : 0]]; const z = zoneI(); if (z === 1) pick.push(['bike', 2.6]); if (z === 2) pick.push(['chimney', 2.4]); if (z === 3) pick.push(['bat', 2.8]); if (z === 4) pick.push(['tcone', 2.6]);
   let r = Math.random() * pick.reduce((s, p) => s + p[1], 0), k = 'snack'; for (const [n, w] of pick) { if ((r -= w) < 0) { k = n; break; } }
   switch (k) {
-    case 'snack': snackLine(x, 6, GY - 30 - (Math.random() < 0.3 ? 80 : 0)); return 260;
+    case 'snack': snackLine(x, 4, GY - 30 - (Math.random() < 0.3 ? 80 : 0)); return 260;
     case 'bin': case 'pot': case 'puddle': objs.push({ t: k, x: x + 80 }); snackArc(x + 10, 140, 130); return 290;
     case 'branch': objs.push({ t: 'branch', x: x + 80 }); snackLine(x + 10, 5, GY - 18); return 280;
     case 'crow': { const low = Math.random() < 0.6, y = low ? GY - 44 : GY - 140; objs.push({ t: 'crow', x: x + 380, y, by: y, hp: 1, ph: Math.random() * 6 }); snackLine(x, 3); return 280; }
@@ -936,6 +936,11 @@ function update(dt) {
   if (G.napWant && PL.ground && !G.demo) { G.napWant = false; G.nap = 1.8; G.napT0 = 1.8; G.naps++; localStorage.setItem('pa2_napT', +(localStorage.getItem('pa2_napT') || 0) + 1); G.banner = 2.2; G.bannerTxt = '배불러서 벌러덩…'; G.bannerSub = ''; slideHeld = false; }
   if (fv) { G.flash = Math.max(0, (G.flash || 0) - dt); if (Math.random() < dt * 16) objs.push({ t: 'snack', k: SNACKS[Math.floor(Math.random() * 5)], x: G.cam + LW * rnd(0.55, 1.1), y: rnd(GY - 230, GY - 40) }); }
   G.nmT = Math.max(0, (G.nmT || 0) - dt); if (G.nmT <= 0) G.combo = 0;
+  if (!G.demo && G.state === 'play' && !(G.fever > 0) && !(G.rest > 0) && !(G.boss && G.boss.hp <= 0)) { // 배부름이 조금씩 줄어요 (쿠키런 에너지처럼)
+    G.food = Math.max(0, (G.food == null ? 100 : G.food) - dt * FOOD_DRAIN);
+    if (G.food < 50 && !localStorage.getItem('pa2_tipfood')) { localStorage.setItem('pa2_tipfood', '1'); G.banner = 2.4; G.bannerTxt = '배고파져요!'; G.bannerSub = '참치캔·사료로 채워요'; }
+    if (G.food <= 0) starve();
+  }
   if (!G.demo) { stepX(dt); stepWang(dt); }
   G.banner = Math.max(0, G.banner - dt); G.shake = Math.max(0, G.shake - dt * 40);
   updFx(dt);
@@ -945,22 +950,28 @@ function updFx(dt) {
   parts = parts.filter(p => p.life > 0); if (parts.length > 280) parts.splice(0, parts.length - 280);
   pops.forEach(p => { p.life -= dt; p.y -= 46 * dt; }); pops = pops.filter(p => p.life > 0);
 }
+const FOOD_DRAIN = 100 / 75; // 가만히 달리면 약 75초에 바닥 (참치캔 놓치면 점점 배고파짐)
+function starve() { // 배고파서 털썩 → 이어 달리기(광고) 또는 끝
+  if (G.state !== 'play') return; G.hp = 0; G.shake = 3; vib(60); sfx('hurt'); pop(PX(), PL.y - 90, '배고파…', '#ffe3f0', 22);
+  if (!G.noRevive && (G.revived | 0) < REVIVE_MAX) { G.state = 'ask'; PL.vy = 0; if (PL.y > GY) PL.y = GY; setTimeout(showRevive, 800); return; }
+  G.state = 'over'; PL.vy = 0; if (PL.y > GY) PL.y = GY; const sc = score(); if (sc > G.best) { G.best = sc; localStorage.setItem('pa2_best', sc); } setTimeout(showOver, 1000);
+}
 function hurt() {
   if (PL.hurt > 0 || G.fever > 0 || G.demo || G.safe > 0) return;
   G.combo = 0; G.nmT = 0;
   if (wangHurt()) return;
   if (G.cush > 0) { G.cush--; PL.hurt = 1.2; vib(20); sfx('hit'); pop(PX(), PL.y - 96, '방석 방어!', '#ffe3a0', 18); burst(SX(), PL.y - 36, 14, 'puff', ['#fff', '#ffd8a8'], 170); return; }
-  G.hp--; PL.hurt = 1.4; G.shake = 3; vib(40); sfx('hurt'); pop(PX(), PL.y - 90, '앗!', '#ffe3f0', 20); burst(SX(), PL.y - 36, 12, 'puff', ['#fff'], 170);
+  G.hp--; G.food = Math.max(0, (G.food || 0) - 8); PL.hurt = 1.4; G.shake = 3; vib(40); sfx('hurt'); pop(PX(), PL.y - 90, '앗!', '#ffe3f0', 20); burst(SX(), PL.y - 36, 12, 'puff', ['#fff'], 170);
   if (G.hp <= 0 && !G.noRevive && (G.revived | 0) < REVIVE_MAX) { G.state = 'ask'; PL.vy = 0; if (PL.y > GY) PL.y = GY; setTimeout(showRevive, 800); return; }
   if (G.hp <= 0) { G.state = 'over'; PL.vy = 0; if (PL.y > GY) PL.y = GY; const sc = score(); if (sc > G.best) { G.best = sc; localStorage.setItem('pa2_best', sc); } setTimeout(showOver, 1000); }
 }
 function kill(o) {
   o.gone = true; G.kills++; const pts = ({ crow: 50, goose: 80, bat: 60 }[o.t] || 30) * (G.fever ? 2 : 1); G.bonus += pts;
   const y = o.t === 'crow' ? o.y : GY - 30;
-  burst(o.x, y, 16, 'spark', FX, 300); burst(o.x, y, 6, 'puff', ['#fff'], 120); pop(o.x, y - 24, '+' + pts, '#ffd27a', 22); sfx('kill'); vib(15); addGauge(14);
+  burst(o.x, y, 16, 'spark', FX, 300); burst(o.x, y, 6, 'puff', ['#fff'], 120); pop(o.x, y - 24, '+' + pts, '#ffd27a', 22); sfx('kill'); vib(15); addGauge(6);
 }
 function collect(o) {
-  if (o.t === 'snack') { const big = o.k === 'bowl' || o.k === 'sack'; G.snacks++; if (!G.demo) addSnackTotal(); const v = Math.round((big ? 300 : 10) * (G.fever ? 2 : 1) * (1 + upL('snk') * 0.5 + permL('snk') * 0.1)); if (!G.demo) addCoin(big ? 5 : 1); G.bonus += v; if (G.fever) G.feverEat++; addGauge(big ? 18 : 4); burst(o.x, o.y, big ? 20 : 3, 'spark', big ? ['#ffd27a', '#fff'] : ['#fff1c8'], big ? 300 : 90); if (big) { G.bigs++; pop(o.x, o.y - 24, o.k === 'sack' ? '참치캔 한 통! +300' : '사료 한 그릇! +300', '#ffd27a', 22); sfx('big'); } else if (Math.random() < 0.5) sfx('snack'); }
+  if (o.t === 'snack') { const big = o.k === 'bowl' || o.k === 'sack'; G.snacks++; if (!G.demo) addSnackTotal(); const v = Math.round((big ? 300 : 10) * (G.fever ? 2 : 1) * (1 + upL('snk') * 0.5 + permL('snk') * 0.1)); if (!G.demo) addCoin(big ? 5 : 1); G.bonus += v; if (G.fever) G.feverEat++; addGauge(big ? 8 : 1); if (big && !G.demo) { G.food = Math.min(100, (G.food || 0) + 20); pop(o.x, o.y - 50, '배부름 +20', '#9af07a', 18); } burst(o.x, o.y, big ? 20 : 3, 'spark', big ? ['#ffd27a', '#fff'] : ['#fff1c8'], big ? 300 : 90); if (big) { G.bigs++; pop(o.x, o.y - 24, o.k === 'sack' ? '참치캔! +300' : '사료! +300', '#ffd27a', 22); sfx('big'); } else if (Math.random() < 0.5) sfx('snack'); }
   else if (o.t === 'heart') { G.hp = Math.min(3, G.hp + 1); pop(o.x, o.y - 24, '하트 +1', '#ffd27a', 22); burst(o.x, o.y, 14, 'spark', ['#ffd27a', '#fff'], 220); sfx('big'); }
   else if (o.t === 'piece') {
     G.pieces++; G.bonus += 200; const phI = ALBUM ? unlockPhoto() : -1; sfx('big'); vib(30); burst(o.x, o.y, 30, 'spark', ['#ffe58a', '#fff', '#ffc93a'], 340);
@@ -1104,8 +1115,12 @@ function hud() {
   const gx = 64, gy = 52, gw = 110, gh = 9, k = G.fever > 0 ? Math.min(1, G.fever / FEVER_T) : G.gauge / 100;
   rr(ctx, gx, gy, gw, gh, 4.5); ctx.fillStyle = 'rgba(30,20,60,.5)'; ctx.fill(); ctx.strokeStyle = 'rgba(255,255,255,.7)'; ctx.lineWidth = 1.2; ctx.stroke();
   if (k > 0.01) { rr(ctx, gx + 1.5, gy + 1.5, (gw - 3) * k, gh - 3, 3); const gr = ctx.createLinearGradient(gx, 0, gx + gw, 0); if (G.fever > 0) { const o = (G.t * 1.5) % 1; ['#ff6b9a', '#ffb347', '#ffe27a', '#7fd84a', '#7fd6ff', '#b58cff'].forEach((c, i) => gr.addColorStop((i / 6 + o) % 1, c)); } else { gr.addColorStop(0, '#ff9ac0'); gr.addColorStop(1, '#ffd27a'); } ctx.fillStyle = gr; ctx.fill(); }
-  if (G.fever > 0) { const pu = 1 + Math.sin(G.t * 12) * 0.08; ctx.save(); ctx.translate(gx + gw + 40, gy + 5); ctx.scale(pu, pu); text(G.feverEat >= 15 ? '너무 배불러!' : G.memT ? '추억 타임' : 'FEVER ×2', 0, 0, 15, 'center', FX[Math.floor(G.t * 8) % 4]); ctx.restore(); } else text('배부름', gx + gw + 8, gy + 5, 12, 'left', '#ffe3f0');
-  text('풍년이의 모험', 16, 84, 22, 'left', '#ffffff', { out: '#4a2a14' }); text("PUNGNYEON'S ADVENTURE", 17, 104, 10, 'left', '#ffffff', { out: '#4a2a14' });
+  if (G.fever > 0) { const pu = 1 + Math.sin(G.t * 12) * 0.08; ctx.save(); ctx.translate(gx + gw + 40, gy + 5); ctx.scale(pu, pu); text(G.feverEat >= 15 ? '너무 배불러!' : G.memT ? '추억 타임' : 'FEVER ×2', 0, 0, 15, 'center', FX[Math.floor(G.t * 8) % 4]); ctx.restore(); } else text('피버', gx + gw + 8, gy + 5, 12, 'left', '#ffe3f0');
+  { const fx = 16, fy = 70, fw = 150, fh = 12, fk = Math.max(0, Math.min(1, (G.food == null ? 100 : G.food) / 100)), low = fk < 0.25, bl = low && Math.floor(G.t * 6) % 2; // 배부름 막대
+    put(ART.fish(), fx + 9, fy + 6, { s: 0.55 });
+    rr(ctx, fx + 22, fy, fw, fh, 6); ctx.fillStyle = 'rgba(30,20,60,.55)'; ctx.fill(); ctx.strokeStyle = bl ? '#ff6a7a' : 'rgba(255,255,255,.8)'; ctx.lineWidth = bl ? 2.2 : 1.2; ctx.stroke();
+    if (fk > 0.005) { rr(ctx, fx + 23.5, fy + 1.5, (fw - 3) * fk, fh - 3, 4.5); ctx.fillStyle = fk > 0.5 ? '#7fd84a' : fk > 0.25 ? '#ffd23f' : '#ff5a6a'; ctx.fill(); }
+    text(low ? '배고파!' : '배부름', fx + fw + 28, fy + 6, 12, 'left', low ? '#ff9aa8' : '#e8ffe0'); }
   // 오른쪽 위: 별 + 점수
   put(ART.piece(), LW - 170, 26, { s: 0.8 });
   text(`별: ${G.pieces}/6`, LW - 150, 27, 19, 'left', '#ffffff');
@@ -1226,7 +1241,7 @@ function reviveAd() {
 }
 function doRevive() {
   $('revive').hidden = true; document.body.classList.add('playing');
-  G.revived = (G.revived | 0) + 1; G.hp = 1; PL.hurt = 2.4; G.state = 'play'; PL.y = GY; PL.vy = 0; PL.ground = true;
+  G.revived = (G.revived | 0) + 1; G.hp = 1; G.food = Math.max(G.food || 0, 60); PL.hurt = 2.4; G.state = 'play'; PL.y = GY; PL.vy = 0; PL.ground = true;
   objs.forEach(o => { if (!['snack', 'piece', 'heart'].includes(o.t) && o.x - G.dist < 700) o.gone = true; });
   if (!onGround(PX() + 300)) segs.forEach(s => { if (s.x1 < PX() + 700 && s.x1 > PX() - 100) s.x1 = PX() + 800; });
   G.banner = 2; G.bannerTxt = '다시 힘내서 출발!'; G.bannerSub = '하트 +1 · 잠깐 무적'; sfx('big'); burst(SX(), PL.y - 40, 30, 'spark', FX, 300);
@@ -1492,7 +1507,7 @@ function yarnHit(o, b) {
   o.hp = (o.hp || 1) - 1; o.hit = 0.15; sfx('hit');
   if (o.hp > 0) return;
   o.gone = true; G.kills++; const pts = ({ crow: 50, goose: 80, cone: 20, bat: 60, bolt: 20 }[o.t] || 30) * (G.fever ? 2 : 1), y = tgtY(o); G.bonus += pts;
-  burst(o.x, y, 14, 'spark', FX, 260); burst(o.x, y, 5, 'puff', ['#fff'], 110); sfx('kill'); vib(12); addGauge(10);
+  burst(o.x, y, 14, 'spark', FX, 260); burst(o.x, y, 5, 'puff', ['#fff'], 110); sfx('kill'); vib(12); addGauge(4);
   pop(o.x, y - 28, (o.t === 'crow' || o.t === 'bat' ? '쿨쿨… ' : o.t === 'goose' ? '꽥! 도망~ ' : '') + '+' + pts, '#ffd27a', 20);
   if (o.t === 'crow') for (let i = 0; i < 3; i++) pops.push({ x: o.x + i * 9, y: y - 8 - i * 12, txt: 'z', col: '#e8e0ff', size: 13 + i * 4, life: 1.3 });
 }
@@ -1550,7 +1565,7 @@ function bossTouch(B) {
 }
 function stomp(B) {
   const dmg = 6; B.hp -= dmg; B.hit = 0.3; B.stomp = false; B.ph = 'retreat';
-  PL.vy = -980; PL.jumps = 1; PL.ground = false; PL.sq = 0.75; G.shake = 2.5; G.bonus += 200; addGauge(12);
+  PL.vy = -980; PL.jumps = 1; PL.ground = false; PL.sq = 0.75; G.shake = 2.5; G.bonus += 200; addGauge(10);
   pop(B.x, bossCY(B) - 50, '콩! +200', '#ffe27a', 26); burst(B.x, bossCY(B) - 30, 22, 'spark', FX, 320); burst(B.x, bossCY(B) - 30, 8, 'puff', ['#fff'], 160); sfx('kill'); vib([20, 20, 40]);
   if (B.hp <= 0) bossWin();
 }
@@ -1613,7 +1628,7 @@ function stepBoss(dt) {
 }
 function bossHit() { const B = G.boss; B.hp--; B.hit = 0.12; sfx('hit'); G.bonus += 10; if (B.hp <= 0) bossWin(); }
 function bossWin() {
-  const B = G.boss, D = BOSSES[B.kind], bon = 3000 * B.lv; B.out = 0; B.stomp = false; G.bonus += bon; G.bossWin++; if (G.braveB) { G.braveB = false; G.wang = 3; }
+  const B = G.boss, D = BOSSES[B.kind], bon = 3000 * B.lv; B.out = 0; B.stomp = false; G.bonus += bon; G.food = Math.min(100, (G.food || 0) + 40); G.bossWin++; if (G.braveB) { G.braveB = false; G.wang = 3; }
   let beat = []; try { beat = JSON.parse(localStorage.getItem('pa2_bk') || '[]'); } catch (e) {}
   const first = !beat.includes(B.kind); if (first) { beat.push(B.kind); localStorage.setItem('pa2_bk', JSON.stringify(beat)); }
   addCoin(30 * B.lv + (first ? 100 : 0));
@@ -1723,7 +1738,7 @@ function zoneFx() {
 }
 function nearMiss(o) {
   if (G.demo || G.fever > 0 || G.state !== 'play') return;
-  G.combo = (G.nmT > 0 ? (G.combo | 0) : 0) + 1; G.nmT = 3.5; const c = Math.min(10, G.combo), pts = 20 * c; G.bonus += pts; addGauge(3);
+  G.combo = (G.nmT > 0 ? (G.combo | 0) : 0) + 1; G.nmT = 3.5; const c = Math.min(10, G.combo), pts = 20 * c; G.bonus += pts; addGauge(2);
   pop(PX() + 10, PL.y - 100, c > 1 ? `아슬아슬 ×${c}! +${pts}` : `아슬아슬! +${pts}`, c >= 5 ? '#ffe27a' : '#8af0ff', 17 + Math.min(9, c));
   if (c >= 3) { sfx('snack'); burst(SX() + 10, PL.y - 50, 4 + c, 'spark', ['#8af0ff', '#fff'], 150); }
 }
@@ -1888,7 +1903,7 @@ function startRest(st, title) {
   G.banner = 2.8; G.bannerTxt = title || `다음 동네: ${ZONES[zoneI()].n}`; G.bannerSub = '잠깐 쉬어 가요';
 }
 function endRest() {
-  G.rest = 0; if (G.hp < 3) { G.hp++; pop(PX(), PL.y - 100, '하트 +1', '#ffd27a', 20); }
+  G.rest = 0; G.food = Math.min(100, (G.food || 0) + 15); if (G.hp < 3) { G.hp++; pop(PX(), PL.y - 100, '하트 +1', '#ffd27a', 20); }
   if (G.stage % BOSS_EVERY === 0 && !G.boss) startBoss(); else if (!G.restBoss) memTime(); else { G.banner = 2; G.bannerTxt = '다시 출발!'; G.bannerSub = `스테이지 ${G.stage}`; }
 }
 ART.sign = () => sprite('sign', 70, 66, 35, 66, g => { // 쉼터 나무 팻말
