@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="ko">
-<head><!--PV--><meta http-equiv="Cache-Control" content="no-cache"><script>(function(){var V=17;if(!/github\.io$/.test(location.hostname))return;fetch('/play/version.json?t='+Date.now(),{cache:'no-store'}).then(function(r){return r.json()}).then(function(j){if(j&&j.v>V){var u=new URL(location.href);if(u.searchParams.get('v')!==String(j.v)){u.searchParams.set('v',j.v);location.replace(u.toString())}}}).catch(function(){})})()</script><!--/PV-->
+<head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#fbf6ea">
@@ -1653,7 +1653,7 @@ JE.art.add('bub_cannon','data:image/webp;base64,UklGRrwcAABXRUJQVlA4WAoAAAAQAAAA
  * 풍년 게임 진행 키트 (JE.kit)  v1.0
  * - src.html 에 <!--KIT--> 자리가 있으면 build.py 가 엔진·디자인 뒤에 붙인다.
  * - 들어 있는 것
- *   1) 광고: 블록 블라스트식. 하트 없음, 보상형 이어하기 한 판 1번,
+ *   1) 광고: 블록 블라스트식. 하트 없음, 보상형 이어하기 한 판 5번까지(11-24 사용자, 예전 1번),
  *      전면광고는 '한 판 더'를 누를 때만 3판마다(2분 간격), 배너는 홈·결과에서만.
  *   2) 흐름: 홈 → 시작 → (실패 → 이어하기?) → 결과 → 한 판 더 / 랭킹 / 처음으로
  *   3) 연출: 큰 팝 글자, 색종이, 화면 번쩍
@@ -1663,6 +1663,9 @@ JE.art.add('bub_cannon','data:image/webp;base64,UklGRrwcAABXRUJQVlA4WAoAAAAQAAAA
   'use strict';
   const JE = window.JE, B = JE.brand, C = B.C;
   const K = {}; JE.kit = K;
+  // 11-24 사용자 '5번까지': 한 판에 광고 보고 이어하기 최대 5번. 남은 횟수를 이어하기 창에 표시
+  K.CONT_MAX = 5;
+  K.contLeft = used => `(이어하기 남은 기회 <b>${K.CONT_MAX - (used | 0)}</b>/${K.CONT_MAX}번)`;
   const rnd = (a, b) => a + Math.random() * (b - a);
   K.rnd = rnd;
 
@@ -1702,7 +1705,7 @@ JE.art.add('bub_cannon','data:image/webp;base64,UklGRrwcAABXRUJQVlA4WAoAAAAQAAAA
    *       score(), stats() -> [[라벨,값]], tip(), grade() -> {g,col}, resultTitle }
    * 게임은 F.state 를 보고 플레이 중인지 판단한다 ('play' 일 때만 진행) */
   K.flow = function (o) {
-    const F = { state: 'home', continued: false, o };
+    const F = { state: 'home', continued: 0, o }; // continued = 이번 판 이어하기 횟수 (최대 K.CONT_MAX)
     F.home = function () {
       F.state = 'home'; o.onHome && o.onHome();
       const btns = [{ label: '시작하기', onClick: () => F.start() }];
@@ -1714,7 +1717,7 @@ JE.art.add('bub_cannon','data:image/webp;base64,UklGRrwcAABXRUJQVlA4WAoAAAAQAAAA
     };
     K.meta.setup(o);
     F.start = function (arg) {
-      K.banner(false); K.ad.games++; F.continued = false; F.state = 'play';
+      K.banner(false); K.ad.games++; F.continued = 0; F.state = 'play';
       K.clearFx(); JE.sfx.ready(); o.onStart(arg);
     };
     F.again = async function () { if (K.interDue()) await K.showInter(); F.start(); };
@@ -1728,15 +1731,15 @@ JE.art.add('bub_cannon','data:image/webp;base64,UklGRrwcAABXRUJQVlA4WAoAAAAQAAAA
         { label: '그만하기', cls: 'ghost', onClick: () => F.over() },
       ]);
     };
-    /** 실패. delay 초 뒤에 이어하기 제안(한 판 1번) 또는 결과 */
+    /** 실패. delay 초 뒤에 이어하기 제안(한 판 5번까지) 또는 결과 */
     F.fail = function (title = '아쉬워요!', delay = 1.1) {
       if (F.state !== 'play') return;
       F.state = 'fail';
       JE.haptic('error'); JE.shake.add(8);
       setTimeout(() => {
-        if (!F.continued && o.onRevive) {
-          JE.ui.modal(`<h2>${title}</h2><div class="je-big">${Math.round(o.score()).toLocaleString()}</div><p>${o.continueDesc || '광고를 보면 이어서 할 수 있어요.'}<br>(한 판에 1번)</p>`, [
-            { label: '광고 보고 이어하기', cls: 'ad', onClick: async () => { if (await JE.ads.rewarded('continue')) { F.continued = true; F.state = 'play'; JE.sfx.coin(); o.onRevive(); } else F.over(); } },
+        if ((F.continued | 0) < K.CONT_MAX && o.onRevive) {
+          JE.ui.modal(`<h2>${title}</h2><div class="je-big">${Math.round(o.score()).toLocaleString()}</div><p>${o.continueDesc || '광고를 보면 이어서 할 수 있어요.'}<br>${K.contLeft(F.continued)}</p>`, [
+            { label: '광고 보고 이어하기', cls: 'ad', onClick: async () => { if (await JE.ads.rewarded('continue')) { F.continued = (F.continued | 0) + 1; F.state = 'play'; JE.sfx.coin(); o.onRevive(); } else F.over(); } },
             { label: '결과 보기', cls: 'ghost', onClick: () => F.over() },
           ]);
         } else F.over();

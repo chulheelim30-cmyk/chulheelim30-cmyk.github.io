@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="ko"><head><!--PV--><meta http-equiv="Cache-Control" content="no-cache"><script>(function(){var V=17;if(!/github\.io$/.test(location.hostname))return;fetch('/play/version.json?t='+Date.now(),{cache:'no-store'}).then(function(r){return r.json()}).then(function(j){if(j&&j.v>V){var u=new URL(location.href);if(u.searchParams.get('v')!==String(j.v)){u.searchParams.set('v',j.v);location.replace(u.toString())}}}).catch(function(){})})()</script><!--/PV--><meta charset="utf-8">
+<!DOCTYPE html><html lang="ko"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <title>풍년이의 모험</title>
 <meta name="robots" content="noindex,nofollow">
@@ -83,7 +83,7 @@ body.playing .pad{display:flex}
  <button class="btn" id="again">다시 달리기</button><button class="btn ghost" id="tohome">처음으로</button><button class="btn ghost" id="ov-rank" style="margin-left:6px">랭킹</button>
 </div></div>
 <div class="ov" id="revive" hidden style="background:rgba(20,14,50,.5)"><div class="card">
- <div id="rv-ask"><h2>풍년이가 조금 지쳤어요</h2><div class="sub">광고를 보면 하트 1개로 이어 달릴 수 있어요 (한 판에 한 번)</div>
+ <div id="rv-ask"><h2>풍년이가 조금 지쳤어요</h2><div class="sub">광고를 보면 하트 1개로 이어 달릴 수 있어요<br><b id="rv-left"></b></div>
  <button class="btn" id="rv-yes">▶ 광고 보고 이어 달리기</button><br><button class="btn ghost" id="rv-no" style="margin-top:12px">괜찮아요, 쉴게요</button></div>
  <div id="rv-ad" hidden><h2>광고 자리</h2><div class="sub">출시 버전에서는 여기에 짧은 광고가 나와요</div><div class="big" id="rv-n">3</div></div>
 </div></div>
@@ -650,7 +650,7 @@ const BUD = { x: 0, y: 0, flash: 0 }; // 별 친구 (반짝이)
 const CAT_W = 136; // 화면에 그리는 풍년이 폭
 
 function reset(demo) {
-  Object.assign(G, { fevers: 0, bigs: 0, revived: false, tut: !demo && !localStorage.getItem('pa2_tut') ? 9 : 0, naps: 0, nap: 0, napWant: false, feverEat: 0, memT: false, consFx: 0, rest: 0, restK: 1, restEnd: 0, newPages: 0, yarn: 0, up: {}, boss: null, tok: Math.random(), nextCard: 50, cards: 0, safe: 0, bossWin: 0, dist: 0, speed: 300, bonus: 0, snacks: 0, pieces: 0, stage: 1, hp: 3, gauge: 0, fever: 0, kills: 0, shake: 0, banner: 0, demo });
+  Object.assign(G, { fevers: 0, bigs: 0, revived: 0, tut: !demo && !localStorage.getItem('pa2_tut') ? 9 : 0, naps: 0, nap: 0, napWant: false, feverEat: 0, memT: false, consFx: 0, rest: 0, restK: 1, restEnd: 0, newPages: 0, yarn: 0, up: {}, boss: null, tok: Math.random(), nextCard: 50, cards: 0, safe: 0, bossWin: 0, dist: 0, speed: 300, bonus: 0, snacks: 0, pieces: 0, stage: 1, hp: 3, gauge: 0, fever: 0, kills: 0, shake: 0, banner: 0, demo });
   Object.assign(PL, { y: GY, vy: 0, ground: true, jumps: 0, slide: false, hurt: 0, anim: 0, fire: 0, sq: 1 }); BUD.x = -26; BUD.y = GY - 118;
   segs = [{ x0: -600, n: 14, x1: -600 + 80 + 14 * 120, v: Array.from({ length: 14 }, (_, i) => i % 3) }]; genX = segs[0].x1;
   objs = []; buls = []; parts = []; pops = []; nextPiece = 900; gen();
@@ -791,7 +791,7 @@ function updFx(dt) {
 function hurt() {
   if (PL.hurt > 0 || G.fever > 0 || G.demo || G.safe > 0) return;
   G.hp--; PL.hurt = 1.4; G.shake = 3; vib(40); sfx('hurt'); pop(PX(), PL.y - 90, '앗!', '#ffe3f0', 20); burst(SX(), PL.y - 36, 12, 'puff', ['#fff'], 170);
-  if (G.hp <= 0 && !G.revived) { G.state = 'ask'; PL.vy = 0; if (PL.y > GY) PL.y = GY; setTimeout(showRevive, 800); return; }
+  if (G.hp <= 0 && (G.revived | 0) < REVIVE_MAX) { G.state = 'ask'; PL.vy = 0; if (PL.y > GY) PL.y = GY; setTimeout(showRevive, 800); return; }
   if (G.hp <= 0) { G.state = 'over'; PL.vy = 0; if (PL.y > GY) PL.y = GY; const sc = score(); if (sc > G.best) { G.best = sc; localStorage.setItem('pa2_best', sc); } setTimeout(showOver, 1000); }
 }
 function kill(o) {
@@ -1044,21 +1044,22 @@ $('vw-prev').addEventListener('click', e => { e.stopPropagation(); openView(view
 $('vw-next').addEventListener('click', e => { e.stopPropagation(); openView(viewI + 1); });
 $('vw-close').addEventListener('click', () => { $('viewer').hidden = true; });
 
-// 하트 0 → 광고 보고 이어 달리기 (한 판에 한 번)
-function showRevive() { if (G.state !== 'ask') return; $('rv-ask').hidden = false; $('rv-ad').hidden = true; $('revive').hidden = false; document.body.classList.remove('playing'); }
+// 하트 0 → 광고 보고 이어 달리기 (11-24 사용자: 한 판에 5번까지, 남은 횟수 표시)
+const REVIVE_MAX = 5;
+function showRevive() { if (G.state !== 'ask') return; $('rv-left').textContent = `남은 기회 ${REVIVE_MAX - (G.revived | 0)}/${REVIVE_MAX}번`; $('rv-ask').hidden = false; $('rv-ad').hidden = true; $('revive').hidden = false; document.body.classList.remove('playing'); }
 function reviveAd() {
   $('rv-ask').hidden = true; $('rv-ad').hidden = false; let n = 3; $('rv-n').textContent = n;
   const iv = setInterval(() => { n--; $('rv-n').textContent = n; if (n <= 0) { clearInterval(iv); doRevive(); } }, 1000);
 }
 function doRevive() {
   $('revive').hidden = true; document.body.classList.add('playing');
-  G.revived = true; G.hp = 1; PL.hurt = 2.4; G.state = 'play'; PL.y = GY; PL.vy = 0; PL.ground = true;
+  G.revived = (G.revived | 0) + 1; G.hp = 1; PL.hurt = 2.4; G.state = 'play'; PL.y = GY; PL.vy = 0; PL.ground = true;
   objs.forEach(o => { if (!['snack', 'piece', 'heart'].includes(o.t) && o.x - G.dist < 700) o.gone = true; });
   if (!onGround(PX() + 300)) segs.forEach(s => { if (s.x1 < PX() + 700 && s.x1 > PX() - 100) s.x1 = PX() + 800; });
   G.banner = 2; G.bannerTxt = '다시 힘내서 출발!'; G.bannerSub = '하트 +1 · 잠깐 무적'; sfx('big'); burst(SX(), PL.y - 40, 30, 'spark', FX, 300);
 }
 function declineRevive() {
-  $('revive').hidden = true; G.revived = true; G.state = 'over';
+  $('revive').hidden = true; G.revived = 99; G.state = 'over';
   const sc = score(); if (sc > G.best) { G.best = sc; localStorage.setItem('pa2_best', sc); } showOver();
 }
 
