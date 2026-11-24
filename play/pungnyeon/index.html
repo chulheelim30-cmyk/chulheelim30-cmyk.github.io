@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="ko"><head><!--PV--><meta http-equiv="Cache-Control" content="no-cache"><script>(function(){var V=28;if(!/github\.io$/.test(location.hostname))return;fetch('/play/version.json?t='+Date.now(),{cache:'no-store'}).then(function(r){return r.json()}).then(function(j){if(j&&j.v>V){var u=new URL(location.href);if(u.searchParams.get('v')!==String(j.v)){u.searchParams.set('v',j.v);location.replace(u.toString())}}}).catch(function(){})})()</script><!--/PV--><meta charset="utf-8">
+<!DOCTYPE html><html lang="ko"><head><!--PV--><meta http-equiv="Cache-Control" content="no-cache"><script>(function(){var V=29;if(!/github\.io$/.test(location.hostname))return;fetch('/play/version.json?t='+Date.now(),{cache:'no-store'}).then(function(r){return r.json()}).then(function(j){if(j&&j.v>V){var u=new URL(location.href);if(u.searchParams.get('v')!==String(j.v)){u.searchParams.set('v',j.v);location.replace(u.toString())}}}).catch(function(){})})()</script><!--/PV--><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <title>풍년이의 모험</title>
 <meta name="robots" content="noindex,nofollow">
@@ -1062,8 +1062,8 @@ function tile(kind, v, x) { const e = groundTile(kind, v); ctx.drawImage(e.cv, M
 function drawCat() {
   let f;
   if (G.nap > 0) f = G.nap > 1.9 ? 'c_eat' : 'c_sleep'; else if (G.state === 'over') f = 'c_sleep'; else if (G.state === 'ask') f = 'c_doze'; else if (PL.hurt > 1.0) f = 'c_daze'; else if (PL.slide) f = 'g_slide';
-  else if (!PL.ground) f = PL.jumps >= 2 && PL.vy < 300 ? 'g_roll' : PL.vy < 120 ? 'g_jump' : 'g_leap';
-  else if (G.fever > 0 && G.state === 'play') f = 'g_boost'; else f = IMG.g_r0 && IMG.g_r0.complete ? 'g_r' + (Math.floor(PL.anim * 1.5) % 8) : 'r' + (Math.floor(PL.anim * 1.6) % 13);
+  else if (!PL.ground) f = PL.jumps >= 2 && PL.vy < -250 ? 'g_roll' : PL.vy < 420 ? 'g_boost' : 'g_leap'; // POSE_V29 점프 = 슈퍼맨 대시
+  else f = IMG.g_r0 && IMG.g_r0.complete ? 'g_r' + (Math.floor(PL.anim * (G.fever > 0 ? 2.2 : 1.5)) % 8) : 'r' + (Math.floor(PL.anim * 1.6) % 13);
   if (f.startsWith('c_') && !(IMG[f] && IMG[f].complete && IMG[f].naturalWidth)) f = f === 'c_daze' ? 'hurt' : 'slide';
   if (f.startsWith('g_') && !(IMG[f] && IMG[f].complete && IMG[f].naturalWidth)) f = f === 'g_slide' ? 'slide' : f === 'g_boost' ? 'r' + (Math.floor(PL.anim * 1.6) % 13) : 'jump';
   if (PL.hurt > 0 && PL.hurt <= 1.0 && G.state === 'play' && Math.floor(G.t * 14) % 2) return;
@@ -2037,10 +2037,10 @@ function getWang(o) { G.wang = WANG_T; G.wangOut = 0; G.banner = 1.9; G.bannerTx
 function wangHurt() { if (!(G.wang > 0) || (G.boss && !G.braveB)) return false; if (G.braveB) { G.wang = 99; PL.hurt = 1.2; vib(25); sfx('hit'); pop(PX() - 90, PL.y - 120, '왕년이가 막아 줬어요!', '#ffffff', 18); burst(SX() - 90, GY - 50, 14, 'puff', ['#fff'], 200); return true; } G.wang = 0; G.wangOut = 1.4; PL.hurt = 1.2; vib(25); sfx('hit'); pop(PX() - 90, PL.y - 120, '으악! 왕년이가 막음', '#ffffff', 18); burst(SX() - 90, GY - 50, 18, 'puff', ['#fff'], 200); return true; }
 function stepWang(dt) { if (G.wang > 0 && !(G.boss && G.boss.hp > 0)) { G.wang -= dt; if (G.wang <= 0) { G.wang = 0; G.wangOut = 0.01; pop(PX() - 90, GY - 140, '나… 먼저 갈게…', '#e8e0ff', 15); } } if (G.wangOut > 0) G.wangOut += dt; if (G.wangOut > 2.2) G.wangOut = 0; }
 function drawWang() {
-  if (G.nap > 0) { // 꿀잠: 동생이 달려와 톡톡
-    const e = (G.napT0 || 1.8) - G.nap, arrive = Math.min(1, e / 0.6), x = SX() - 250 + arrive * 175, key = arrive < 1 ? 'w_run' + (Math.floor(G.t * 10) % 2) : 'w_wake', h = arrive < 1 ? 78 : 66;
-    if (arrive >= 1 && !G.napSaid) { G.napSaid = true; pop(PX() + 30, GY - 125, '형, 일어나…', '#ffffff', 16); }
-    const im = IMG[key]; if (im && im.complete && im.naturalWidth) { const w = im.naturalWidth * h / im.naturalHeight; ctx.drawImage(im, x - w / 2, GY + 4 - h - (arrive >= 1 ? Math.abs(Math.sin(G.t * 9)) * 3 : 0), w, h); }
+  if (G.nap > 0) { // 꿀잠: 동생이 앞쪽에서 달려와 톡톡 (JUMP 버튼·풍년이에 안 가리게 오른쪽에서, 왼쪽을 보고)
+    const e = (G.napT0 || 1.8) - G.nap, arrive = Math.min(1, e / 0.6), x = SX() + 330 - arrive * 200, key = arrive < 1 ? 'w_run' + (Math.floor(G.t * 10) % 2) : 'w_wake', h = arrive < 1 ? 78 : 66;
+    if (arrive >= 1 && !G.napSaid) { G.napSaid = true; pop(PX() + 130, GY - 110, '형, 일어나…', '#ffffff', 16); }
+    const im = IMG[key]; if (im && im.complete && im.naturalWidth) { const w = im.naturalWidth * h / im.naturalHeight; ctx.save(); ctx.translate(x, GY + 4 - (arrive >= 1 ? Math.abs(Math.sin(G.t * 9)) * 3 : 0)); ctx.scale(-1, 1); ctx.drawImage(im, -w / 2, -h, w, h); ctx.restore(); }
     return;
   }
   G.napSaid = false;
