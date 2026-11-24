@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""풍년이의 모험 v25: 이야기(송도→호수공원, N번째 만남 엔딩) + 왕년이(겁쟁이 형) + 투쟁 머리띠
+"""풍년이의 모험 v25: 이야기(집 창가→호수공원, N번째 만남 엔딩) + 왕년이(겁쟁이 형) + 투쟁 머리띠
 순서: pung_fun_v23.py → pung_opening_v23.py → 이 파일. 왕년이 그림은 pung_wang_spr.json"""
 import sys, pathlib, json
 D = pathlib.Path(__file__).resolve().parent

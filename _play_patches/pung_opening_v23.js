@@ -1,7 +1,7 @@
 /* 11-24 오프닝: 그림책처럼 넘어가는 20초 컷신 (처음 한 번 자동, 처음 화면 '오프닝'으로 다시 보기) */
 const OP = { on: false, t: 0, cv: null, g: null, W: 0, H: 0, raf: 0, music: null, last: 0 };
 const OP_SC = [ // [길이(초), 그림, 자막]
-  { d: 3.6, k: 'bg', img: 'bg_sunset', cap: '어느 가을 저녁, 일산호수공원', sub: '' },
+  { d: 3.6, k: 'bg', img: 'bg_sunset', cap: '어느 가을 저녁, 호수공원', sub: '' },
   { d: 4.0, k: 'pic', img: 'dp0', cap: '작은 회색 고양이가', sub: '우리 가족을 골랐어요' },
   { d: 3.8, k: 'pic', img: 'dp4', cap: '소파 한가운데는', sub: '언제나 풍년이 자리' },
   { d: 3.8, k: 'pic', img: 'dp3', cap: '밥 달라고 열 번 부르면', sub: '열 번 다 들어줬죠' },
