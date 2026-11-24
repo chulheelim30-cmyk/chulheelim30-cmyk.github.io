@@ -346,7 +346,7 @@ const BUD = { x: 0, y: 0, flash: 0 }; // 별 친구 (반짝이)
 const CAT_W = 136; // 화면에 그리는 풍년이 폭
 
 function reset(demo) {
-  Object.assign(G, { fevers: 0, bigs: 0, revived: false, tut: !demo && !localStorage.getItem('pa2_tut') ? 9 : 0, naps: 0, nap: 0, napWant: false, feverEat: 0, memT: false, consFx: 0, newPages: 0, yarn: 0, up: {}, boss: null, tok: Math.random(), nextCard: 50, cards: 0, safe: 0, bossWin: 0, dist: 0, speed: 300, bonus: 0, snacks: 0, pieces: 0, stage: 1, hp: 3, gauge: 0, fever: 0, kills: 0, shake: 0, banner: 0, demo });
+  Object.assign(G, { fevers: 0, bigs: 0, revived: false, tut: !demo && !localStorage.getItem('pa2_tut') ? 9 : 0, naps: 0, nap: 0, napWant: false, feverEat: 0, memT: false, consFx: 0, rest: 0, restK: 1, restEnd: 0, newPages: 0, yarn: 0, up: {}, boss: null, tok: Math.random(), nextCard: 50, cards: 0, safe: 0, bossWin: 0, dist: 0, speed: 300, bonus: 0, snacks: 0, pieces: 0, stage: 1, hp: 3, gauge: 0, fever: 0, kills: 0, shake: 0, banner: 0, demo });
   Object.assign(PL, { y: GY, vy: 0, ground: true, jumps: 0, slide: false, hurt: 0, anim: 0, fire: 0, sq: 1 }); BUD.x = -26; BUD.y = GY - 118;
   segs = [{ x0: -600, n: 14, x1: -600 + 80 + 14 * 120, v: Array.from({ length: 14 }, (_, i) => i % 3) }]; genX = segs[0].x1;
   objs = []; buls = []; parts = []; pops = []; nextPiece = 900; gen();
@@ -441,7 +441,9 @@ function update(dt) {
     updFx(dt); G.banner = Math.max(0, G.banner - dt); return;
   }
   const fv = G.fever > 0;
-  G.speed = Math.min(600, 300 + G.dist * 0.02) * (fv ? 1.25 : 1);
+  G.restK = (G.restK == null ? 1 : G.restK) + ((G.rest > 0 ? 0.6 : 1) - (G.restK == null ? 1 : G.restK)) * Math.min(1, dt * 2);
+  G.speed = Math.min(600, 300 + G.dist * 0.02) * (fv ? 1.25 : 1) * G.restK;
+  if (G.rest > 0) { G.rest -= dt; if (Math.random() < dt * 3) parts.push({ x: G.cam + rnd(0, LW), y: rnd(GY - 220, GY - 60), vx: rnd(-20, 20), vy: -14, life: 1.6, max: 1.6, kind: 'spark', col: '#fff3b0', size: 0.45, rot: 0, vr: 1, g: 0 }); if (G.rest <= 0) endRest(); }
   G.dist += G.speed * dt; G.cam = G.dist - SX(); gen();
   PL.slide = slideHeld && PL.ground && G.state === 'play';
   const prevY = PL.y; PL.vy += 2500 * dt; PL.y += PL.vy * dt;
@@ -496,10 +498,9 @@ function collect(o) {
   else if (o.t === 'piece') {
     G.pieces++; G.bonus += 200; const phI = ALBUM ? unlockPhoto() : -1; sfx('big'); vib(30); burst(o.x, o.y, 30, 'spark', ['#ffe58a', '#fff', '#ffc93a'], 340);
     const line = ALBUM ? PHOTOS[phI].txt : memPiece();
-    if (G.pieces >= 6) { G.bonus += 1000; const st = G.stage; G.pieces = 0; G.stage++; memComplete(st); G.bannerSub += ` · 보너스 +1000`; }
+    if (G.pieces >= 6) { G.bonus += 1000; const st = G.stage; G.pieces = 0; G.stage++; memComplete(st); G.bannerSub = '보너스 +1000 · ' + G.bannerSub; }
     else { G.banner = 2.2; G.bannerTxt = `기억 조각 ${G.pieces}/6`; G.bannerSub = consOf(G.stage).n + ' 별자리에 별 하나가 켜졌어요'; }
     if (ALBUM) showPolar(phI);
-    if (G.stage % 10 === 0 && !G.boss) startBoss();
   }
   else if (o.t === 'yarn') getYarn(o);
   if (o.t === 'snack' && !G.demo && G.snacks >= G.nextCard) { G.cards = (G.cards || 0) + 1; G.nextCard += 50 + G.cards * 60; setTimeout(showPick, 350); }
@@ -539,6 +540,7 @@ function draw() {
       case 'piece': ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = `rgba(255,220,120,${0.25 + 0.15 * Math.sin(G.t * 5)})`; ctx.beginPath(); ctx.arc(x, o.y, 34, 0, 7); ctx.fill(); ctx.restore(); put(ART.piece(), x, o.y + Math.sin(G.t * 4) * 5, { rot: Math.sin(G.t * 2) * 0.2, s: 1.15 }); if (Math.random() < 0.3) parts.push({ x: o.x + rnd(-18, 18), y: o.y + rnd(-18, 18), vx: 0, vy: -24, life: 0.7, max: 0.7, kind: 'spark', col: '#ffe58a', size: 0.5, rot: 0, vr: 2, g: 0 }); break;
       case 'heart': put(ART.redheart(), x, o.y + Math.sin(G.t * 4) * 4, { s: 1.1 }); break;
       case 'yarn': ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = `rgba(255,170,220,${0.3 + 0.15 * Math.sin(G.t * 6)})`; ctx.beginPath(); ctx.arc(x, o.y, 32, 0, 7); ctx.fill(); ctx.restore(); put(ART.yarn(), x, o.y + Math.sin(G.t * 4) * 5, { rot: G.t * 2, s: 1.2 }); break;
+      case 'sign': put(ART.sign(), x, GY + 4); break;
       case 'cone': put(ART.cone(), x + j, o.y, { rot: o.landed ? 0 : G.t * 8 }); break;
       case 'bin': put(ART.bin(), x, GY + 4); break;
       case 'pot': put(ART.pot(), x, GY + 4); break;
@@ -1025,7 +1027,7 @@ function bossWin() {
   sfx('big'); feverJingle(); vib([40, 40, 80]); burst(B.x, B.y, 60, 'conf', FX, 520); burst(B.x, B.y, 30, 'spark', FX, 380);
   objs.forEach(o => { if (o.t === 'cone') o.gone = true; }); buls = [];
   for (let i = 0; i < 36; i++) objs.push({ t: 'snack', k: i % 9 === 4 ? 'sack' : SNACKS[i % 5], x: PX() + 260 + i * 30, y: GY - 36 - Math.abs(Math.sin(i * 0.45)) * 140 });
-  G.stage++; G.pieces = 0; nextPiece = PX() + 1500; localStorage.setItem('pa2_boss', +(localStorage.getItem('pa2_boss') || 0) + 1);
+  G.stage++; G.pieces = 0; setTimeout(() => { if (G.state === 'play' && !G.demo) startRest(G.stage - 1, ''); }, 3200); localStorage.setItem('pa2_boss', +(localStorage.getItem('pa2_boss') || 0) + 1);
 }
 function drawBoss() {
   const B = G.boss; if (!B) return; const x = B.x - G.cam + (B.hit ? rnd(-3, 3) : 0), y = B.y, fl = Math.floor(G.t * (B.hp > 0 ? 6 : 10)) % 2;
@@ -1094,7 +1096,9 @@ function drawCons(c, n, cx, cy, w, h, a, glowK) {
   ctx.restore();
 }
 function consHud() {
-  if (G.boss || G.state === 'home' || G.demo) return;
+  if (G.state === 'home' || G.demo) return;
+  if (G.rest > 0) { const c = consOf(G.restSt), a = Math.max(0, Math.min(1, G.rest, (0.4 - G.banner) * 2.5)); if (a <= 0) return; drawCons(c, 6, LW / 2, 118, 150, 90, a, 0.4 + 0.2 * Math.sin(G.t * 3)); text(c.n + ' 별자리', LW / 2, 180, 16, 'center', `rgba(255,240,200,${a})`); return; }
+  if (G.boss) return;
   const c = consOf(G.stage), k = Math.max(0, G.consFx || 0), cx = Math.round(LW * 0.6), w = 84 + k * 18, h = 50 + k * 10;
   drawCons(c, G.pieces || (k > 0 ? 6 : 0), cx, 44, w, h, 0.95, k);
   text(c.n + ' 별자리', cx, 84 + k * 5, 12, 'center', 'rgba(255,240,200,.9)');
@@ -1126,9 +1130,33 @@ function memPiece() { // 조각 하나 = 별 하나 + 일기 한 쪽
 }
 function memComplete(st) { // 별자리 완성 → 추억 타임
   const ci = (st - 1) % CONS.length, L = JSON.parse(localStorage.getItem('pa2_cons') || '[]'); L.push(ci); localStorage.setItem('pa2_cons', JSON.stringify(L.slice(-60)));
-  G.consFx = 1.6; G.memT = true; if (G.fever > 0) G.fever = Math.max(G.fever, 10); else { startFever(); G.fever = 10 + upL('fever') * 2; }
-  G.bannerTxt = `${CONS[ci].n} 별자리 완성!`; G.bannerSub = '추억 타임 · 무적 · 점수 2배 · 간식 비'; G.banner = 2.6;
+  G.consFx = 1.6; startRest(st, `${CONS[ci].n} 별자리 완성!`);
 }
+function memTime() { G.memT = true; if (G.fever > 0) G.fever = Math.max(G.fever, 10); else { startFever(); G.fever = 10 + upL('fever') * 2; } G.bannerTxt = '다시 출발! 추억 타임'; G.bannerSub = '무적 · 점수 2배 · 간식 비'; G.banner = 2.4; }
+/* 스테이지 사이 쉼터: 6초 동안 천천히, 장애물·구덩이 없이 간식만 */
+const REST_T = 6;
+function startRest(st, title) {
+  G.rest = REST_T; G.restSt = st; G.restBoss = !title;
+  const end = PX() + 300 * 0.6 * REST_T + LW * 1.2; G.restEnd = end;
+  objs.forEach(o => { if (o.x > PX() - 40 && o.x < end && !['snack', 'heart', 'yarn'].includes(o.t)) o.gone = true; });
+  segs = segs.filter(sg => sg.x0 <= G.cam + LW || sg.x1 < PX());
+  const last = segs.reduce((a, sg) => sg.x1 > a.x1 ? sg : a, segs[0]);
+  if (last.x1 < PX() + 60) { segs.push({ x0: PX() - 40, x1: 0, n: 0, v: [] }); }
+  const sg = segs.reduce((a, b) => b.x1 > a.x1 ? b : a, segs[0]); sg.n = Math.ceil((end - sg.x0 - 80) / 120); sg.x1 = sg.x0 + 80 + sg.n * 120; sg.v = Array.from({ length: sg.n }, (_, i) => sg.v[i] != null ? sg.v[i] : Math.floor(Math.random() * 3));
+  genX = sg.x1; G.restEnd = sg.x1; nextPiece = sg.x1 + 900;
+  for (let x = PX() + 420; x < sg.x1 - 200; x += 380) { if (Math.random() < 0.5) snackArc(x, 160, 70); else snackLine(x, 5, GY - 30); }
+  objs.push({ t: 'sign', x: PX() + LW * 0.75 });
+  G.banner = 2.8; G.bannerTxt = title || '큰까마귀와 화해했어요'; G.bannerSub = `잠깐 쉬어 가요 · 다음은 ${THEMES[(G.stage - 1) % THEMES.length].name} 풍경`;
+}
+function endRest() {
+  G.rest = 0; if (G.hp < 3) { G.hp++; pop(PX(), PL.y - 100, '푹 쉬었어요 · 하트 +1', '#ffd27a', 20); }
+  if (G.stage % 10 === 0 && !G.boss) startBoss(); else if (!G.restBoss) memTime(); else { G.banner = 2; G.bannerTxt = '다시 출발!'; G.bannerSub = `스테이지 ${G.stage}`; }
+}
+ART.sign = () => sprite('sign', 70, 66, 35, 66, g => { // 쉼터 나무 팻말
+  g.fillStyle = '#7a4a24'; g.fillRect(31, 26, 8, 40); rr(g, 2, 4, 66, 28, 7); g.fillStyle = lg(g, 4, 32, ['#e8b878', '#c88a4a']); g.fill(); stroke(g, 2, '#5a3214');
+  g.fillStyle = '#5a3214'; g.font = '17px Jua, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('쉼터', 35, 19);
+  g.fillStyle = '#7fc86a'; g.beginPath(); g.ellipse(22, 64, 12, 4, 0, 0, 7); g.ellipse(48, 64, 12, 4, 0, 0, 7); g.fill();
+});
 let diaryI = 0;
 function openDiary() { const n = diaryN(); if (!n) { diaryI = -1; } else diaryI = Math.min(diaryI < 0 ? 0 : diaryI, n - 1); if (diaryI < 0) diaryI = n - 1; showDiary(); $('diary').hidden = false; }
 function showDiary() {
