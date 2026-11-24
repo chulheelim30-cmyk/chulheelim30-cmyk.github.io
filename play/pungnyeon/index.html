@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="ko"><head><!--PV--><meta http-equiv="Cache-Control" content="no-cache"><script>(function(){var V=34;if(!/github\.io$/.test(location.hostname))return;fetch('/play/version.json?t='+Date.now(),{cache:'no-store'}).then(function(r){return r.json()}).then(function(j){if(j&&j.v>V){var u=new URL(location.href);if(u.searchParams.get('v')!==String(j.v)){u.searchParams.set('v',j.v);location.replace(u.toString())}}}).catch(function(){})})()</script><!--/PV--><meta charset="utf-8">
+<!DOCTYPE html><html lang="ko"><head><!--PV--><meta http-equiv="Cache-Control" content="no-cache"><script>(function(){var V=35;if(!/github\.io$/.test(location.hostname))return;fetch('/play/version.json?t='+Date.now(),{cache:'no-store'}).then(function(r){return r.json()}).then(function(j){if(j&&j.v>V){var u=new URL(location.href);if(u.searchParams.get('v')!==String(j.v)){u.searchParams.set('v',j.v);location.replace(u.toString())}}}).catch(function(){})})()</script><!--/PV--><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <title>풍년이의 모험</title>
 <meta name="robots" content="noindex,nofollow">
@@ -86,7 +86,7 @@ body.playing .pad{display:flex}
  <button class="btn" id="again">다시 달리기</button><button class="btn ghost" id="tohome">처음으로</button><button class="btn ghost" id="ov-rank" style="margin-left:6px">랭킹</button>
 </div></div>
 <div class="ov" id="revive" hidden style="background:rgba(20,14,50,.5)"><div class="card">
- <div id="rv-ask"><h2>풍년이가 조금 지쳤어요</h2><div class="sub">광고를 보면 하트 1개로 이어 달릴 수 있어요<br><b id="rv-left"></b></div>
+ <div id="rv-ask"><h2>풍년이가 조금 지쳤어요</h2><div class="sub">광고를 보면 배부름을 채우고 이어 달릴 수 있어요<br><b id="rv-left"></b></div>
  <button class="btn" id="rv-yes">▶ 광고 보고 이어 달리기</button><br><button class="btn ghost" id="rv-no" style="margin-top:12px">괜찮아요, 쉴게요</button></div>
  <div id="rv-ad" hidden><h2>광고 자리</h2><div class="sub">출시 버전에서는 여기에 짧은 광고가 나와요</div><div class="big" id="rv-n">3</div></div>
 </div></div>
@@ -820,7 +820,7 @@ function place(x, diff) {
   if (G.yarn <= 0 && Math.random() < 0.07 + (G.stage >= 9 ? 0.04 : 0)) { objs.push({ t: 'yarn', x: x + 90, y: GY - 120 }); snackLine(x, 4, GY - 30); return 240; }
   if (!(G.wang > 0) && !(G.wangOut > 0) && G.stage >= 2 && Math.random() < 0.05) { objs.push({ t: 'wbox', x: x + 90, y: GY - 70 }); snackLine(x, 4, GY - 30); return 240; }
   if (x > nextPiece) { nextPiece = x + 1100 + Math.random() * 500; const hi = Math.random() < 0.5; objs.push({ t: 'piece', x: x + 90, y: hi ? GY - 190 : GY - 40 }); if (hi) snackArc(x, 180, 160); return 260; }
-  const pick = [['snack', 3], ['bin', 2.5], ['pot', 2], ['puddle', 2], ['branch', 2 + diff * 2], ['crow', 3], ['goose', 2 + diff * 2], ['bowl', 0.8], ['heart', G.hp < 3 ? 0.5 : 0]]; const z = zoneI(); if (z === 1) pick.push(['bike', 2.6]); if (z === 2) pick.push(['chimney', 2.4]); if (z === 3) pick.push(['bat', 2.8]); if (z === 4) pick.push(['tcone', 2.6]);
+  const pick = [['snack', 3], ['bin', 2.5], ['pot', 2], ['puddle', 2], ['branch', 2 + diff * 2], ['crow', 3], ['goose', 2 + diff * 2], ['bowl', 0.8], ['heart', G.food < 60 ? 0.7 : 0]]; const z = zoneI(); if (z === 1) pick.push(['bike', 2.6]); if (z === 2) pick.push(['chimney', 2.4]); if (z === 3) pick.push(['bat', 2.8]); if (z === 4) pick.push(['tcone', 2.6]);
   let r = Math.random() * pick.reduce((s, p) => s + p[1], 0), k = 'snack'; for (const [n, w] of pick) { if ((r -= w) < 0) { k = n; break; } }
   switch (k) {
     case 'snack': snackLine(x, 4, GY - 30 - (Math.random() < 0.3 ? 80 : 0)); return 260;
@@ -894,7 +894,7 @@ function update(dt) {
   if (G.nap > 0) { // 배불러서 잠깐 꿀잠
     G.nap -= dt; PL.y = GY; PL.vy = 0; PL.ground = true;
     if (Math.random() < dt * 2.2) pops.push({ x: PX() + 30 + rnd(-6, 6), y: PL.y - 60, txt: 'Z', col: '#e8e0ff', size: 16 + Math.random() * 10, life: 1.4 });
-    if (G.nap <= 0) { G.nap = 0; G.hp = Math.min(3, G.hp + 1); G.banner = 1.4; G.bannerTxt = '다시 출발!'; G.bannerSub = '하트 +1'; sfx('big'); burst(SX(), PL.y - 40, 16, 'spark', FX, 220); }
+    if (G.nap <= 0) { G.nap = 0; G.food = Math.min(100, (G.food || 0) + 10); G.banner = 1.4; G.bannerTxt = '다시 출발!'; G.bannerSub = '배부름 +10'; sfx('big'); burst(SX(), PL.y - 40, 16, 'spark', FX, 220); }
     updFx(dt); G.banner = Math.max(0, G.banner - dt); return;
   }
   const fv = G.fever > 0;
@@ -962,7 +962,8 @@ function hurt() {
   G.combo = 0; G.nmT = 0;
   if (wangHurt()) return;
   if (G.cush > 0) { G.cush--; PL.hurt = 1.2; vib(20); sfx('hit'); pop(PX(), PL.y - 96, '방석 방어!', '#ffe3a0', 18); burst(SX(), PL.y - 36, 14, 'puff', ['#fff', '#ffd8a8'], 170); return; }
-  G.hp--; G.food = Math.max(0, (G.food || 0) - 8); PL.hurt = 1.4; G.shake = 3; vib(40); sfx('hurt'); pop(PX(), PL.y - 90, '앗!', '#ffe3f0', 20); burst(SX(), PL.y - 36, 12, 'puff', ['#fff'], 170);
+  G.food = Math.max(0, (G.food || 0) - 20); PL.hurt = 1.4; // NOHEART_V35: 하트 대신 배부름 -20 G.shake = 3; vib(40); sfx('hurt'); pop(PX(), PL.y - 90, '앗!', '#ffe3f0', 20); burst(SX(), PL.y - 36, 12, 'puff', ['#fff'], 170);
+  if (G.food <= 0) { PL.hurt = 0; G.state = 'play'; starve(); return; }
   if (G.hp <= 0 && !G.noRevive && (G.revived | 0) < REVIVE_MAX) { G.state = 'ask'; PL.vy = 0; if (PL.y > GY) PL.y = GY; setTimeout(showRevive, 800); return; }
   if (G.hp <= 0) { G.state = 'over'; PL.vy = 0; if (PL.y > GY) PL.y = GY; const sc = score(); if (sc > G.best) { G.best = sc; localStorage.setItem('pa2_best', sc); } setTimeout(showOver, 1000); }
 }
@@ -973,7 +974,7 @@ function kill(o) {
 }
 function collect(o) {
   if (o.t === 'snack') { const big = o.k === 'bowl' || o.k === 'sack'; G.snacks++; if (!G.demo) addSnackTotal(); const v = Math.round((big ? 300 : 10) * (G.fever ? 2 : 1) * (1 + upL('snk') * 0.5 + permL('snk') * 0.1)); if (!G.demo) addCoin(big ? 5 : 1); G.bonus += v; if (G.fever) G.feverEat++; addGauge(big ? 8 : 1); if (big && !G.demo) { G.food = Math.min(100, (G.food || 0) + 20); pop(o.x, o.y - 50, '배부름 +20', '#9af07a', 18); } burst(o.x, o.y, big ? 20 : 3, 'spark', big ? ['#ffd27a', '#fff'] : ['#fff1c8'], big ? 300 : 90); if (big) { G.bigs++; pop(o.x, o.y - 24, o.k === 'sack' ? '참치캔! +300' : '사료! +300', '#ffd27a', 22); sfx('big'); } else if (Math.random() < 0.5) sfx('snack'); }
-  else if (o.t === 'heart') { G.hp = Math.min(3, G.hp + 1); pop(o.x, o.y - 24, '하트 +1', '#ffd27a', 22); burst(o.x, o.y, 14, 'spark', ['#ffd27a', '#fff'], 220); sfx('big'); }
+  else if (o.t === 'heart') { G.food = Math.min(100, (G.food || 0) + 25); pop(o.x, o.y - 24, '배부름 +25', '#9af07a', 22); burst(o.x, o.y, 14, 'spark', ['#ffd27a', '#fff'], 220); sfx('big'); }
   else if (o.t === 'piece') {
     G.pieces++; G.bonus += 200; const phI = ALBUM ? unlockPhoto() : -1; sfx('big'); vib(30); burst(o.x, o.y, 30, 'spark', ['#ffe58a', '#fff', '#ffc93a'], 340);
     const line = ALBUM ? PHOTOS[phI].txt : memPiece();
@@ -1111,17 +1112,16 @@ function text(str, x, y, size, align = 'center', col = '#fff', o = {}) {
 function hud() {
   // 왼쪽 위: 풍년이 얼굴 + 하트
   const fi = IMG.face; ctx.save(); ctx.beginPath(); ctx.arc(34, 32, 23, 0, 7); ctx.fillStyle = 'rgba(40,30,80,.55)'; ctx.fill(); ctx.lineWidth = 2.5; ctx.strokeStyle = 'rgba(255,255,255,.85)'; ctx.stroke(); ctx.clip(); if (fi.complete) ctx.drawImage(fi, 8, 7, 54, 50); ctx.restore();
-  for (let i = 0; i < 3; i++) put(ART.heart(i >= G.hp), 76 + i * 34, 30, i < G.hp && G.hp === 1 ? { s: 1 + Math.sin(G.t * 10) * 0.1 } : null);
   // 게이지
-  const gx = 64, gy = 52, gw = 110, gh = 9, k = G.fever > 0 ? Math.min(1, G.fever / FEVER_T) : G.gauge / 100;
+  const gx = 64, gy = 44, gw = 110, gh = 9, k = G.fever > 0 ? Math.min(1, G.fever / FEVER_T) : G.gauge / 100;
   rr(ctx, gx, gy, gw, gh, 4.5); ctx.fillStyle = 'rgba(30,20,60,.5)'; ctx.fill(); ctx.strokeStyle = 'rgba(255,255,255,.7)'; ctx.lineWidth = 1.2; ctx.stroke();
   if (k > 0.01) { rr(ctx, gx + 1.5, gy + 1.5, (gw - 3) * k, gh - 3, 3); const gr = ctx.createLinearGradient(gx, 0, gx + gw, 0); if (G.fever > 0) { const o = (G.t * 1.5) % 1; ['#ff6b9a', '#ffb347', '#ffe27a', '#7fd84a', '#7fd6ff', '#b58cff'].forEach((c, i) => gr.addColorStop((i / 6 + o) % 1, c)); } else { gr.addColorStop(0, '#ff9ac0'); gr.addColorStop(1, '#ffd27a'); } ctx.fillStyle = gr; ctx.fill(); }
   if (G.fever > 0) { const pu = 1 + Math.sin(G.t * 12) * 0.08; ctx.save(); ctx.translate(gx + gw + 40, gy + 5); ctx.scale(pu, pu); text(G.feverEat >= 15 ? '너무 배불러!' : G.memT ? '추억 타임' : 'FEVER ×2', 0, 0, 15, 'center', FX[Math.floor(G.t * 8) % 4]); ctx.restore(); } else text('피버', gx + gw + 8, gy + 5, 12, 'left', '#ffe3f0');
-  { const fx = 16, fy = 70, fw = 150, fh = 12, fk = Math.max(0, Math.min(1, (G.food == null ? 100 : G.food) / 100)), low = fk < 0.25, bl = low && Math.floor(G.t * 6) % 2; // 배부름 막대
-    put(ART.fish(), fx + 9, fy + 6, { s: 0.55 });
+  { const fx = 44, fy = 18, fw = 150, fh = 16, fk = Math.max(0, Math.min(1, (G.food == null ? 100 : G.food) / 100)), low = fk < 0.25, bl = low && Math.floor(G.t * 6) % 2; // 배부름 막대
+    
     rr(ctx, fx + 22, fy, fw, fh, 6); ctx.fillStyle = 'rgba(30,20,60,.55)'; ctx.fill(); ctx.strokeStyle = bl ? '#ff6a7a' : 'rgba(255,255,255,.8)'; ctx.lineWidth = bl ? 2.2 : 1.2; ctx.stroke();
     if (fk > 0.005) { rr(ctx, fx + 23.5, fy + 1.5, (fw - 3) * fk, fh - 3, 4.5); ctx.fillStyle = fk > 0.5 ? '#7fd84a' : fk > 0.25 ? '#ffd23f' : '#ff5a6a'; ctx.fill(); }
-    text(low ? '배고파!' : '배부름', fx + fw + 28, fy + 6, 12, 'left', low ? '#ff9aa8' : '#e8ffe0'); }
+    text(low ? '배고파!' : '배부름', fx + fw + 28, fy + 8, 13, 'left', low ? '#ff9aa8' : '#e8ffe0'); }
   // 오른쪽 위: 별 + 점수
   put(ART.piece(), LW - 170, 26, { s: 0.8 });
   text(`별: ${G.pieces}/6`, LW - 150, 27, 19, 'left', '#ffffff');
@@ -1245,7 +1245,7 @@ function doRevive() {
   G.revived = (G.revived | 0) + 1; G.hp = 1; G.food = Math.max(G.food || 0, 60); PL.hurt = 2.4; G.state = 'play'; PL.y = GY; PL.vy = 0; PL.ground = true;
   objs.forEach(o => { if (!['snack', 'piece', 'heart'].includes(o.t) && o.x - G.dist < 700) o.gone = true; });
   if (!onGround(PX() + 300)) segs.forEach(s => { if (s.x1 < PX() + 700 && s.x1 > PX() - 100) s.x1 = PX() + 800; });
-  G.banner = 2; G.bannerTxt = '다시 힘내서 출발!'; G.bannerSub = '하트 +1 · 잠깐 무적'; sfx('big'); burst(SX(), PL.y - 40, 30, 'spark', FX, 300);
+  G.banner = 2; G.bannerTxt = '다시 힘내서 출발!'; G.bannerSub = '배부름 충전 · 잠깐 무적'; sfx('big'); burst(SX(), PL.y - 40, 30, 'spark', FX, 300);
 }
 function declineRevive() {
   $('revive').hidden = true; G.noRevive = true; G.state = 'over';
@@ -1809,20 +1809,20 @@ const CARDS = [
   { k: 'gauge', i: '🍚', n: '배부름 쑥쑥', d: '배부름 게이지가 30% 빨리 차요', max: 3 },
   { k: 'snk', i: '🐟', n: '간식 맛집', d: '간식 점수 +50%', max: 3 },
   { k: 'fever', i: '🌈', n: '피버 길게', d: '피버 타임이 2초 길어져요', max: 3 },
-  { k: 'heart', i: '❤️', n: '하트 채우기', d: '하트 1개를 바로 채워요', once: 1 },
+  { k: 'heart', i: '🍖', n: '배부름 채우기', d: '배부름 +40', once: 1 },
   { k: 'now', i: '✨', n: '털실공 지금!', d: '털실공 친구가 바로 와요', once: 1 },
 ];
 function showPick(tok) {
   tok = tok || G.tok; if (G.demo || tok !== G.tok || G.state === 'over' || G.state === 'home') return;
   if (G.state !== 'play' || G.nap > 0 || !PL.ground || G.banner > 1.6) { setTimeout(() => showPick(tok), 500); return; }
-  const av = CARDS.filter(c => c.once ? (c.k === 'heart' ? G.hp < 3 : G.yarn <= 0) : upL(c.k) < c.max);
+  const av = CARDS.filter(c => c.once ? (c.k === 'heart' ? G.food < 80 : G.yarn <= 0) : upL(c.k) < c.max);
   for (let i = av.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [av[i], av[j]] = [av[j], av[i]]; }
   $('pick-grid').innerHTML = av.slice(0, 3).map(c => `<button class="pc" data-k="${c.k}"><i>${c.i}</i><b>${c.n}</b><span>${c.d}</span>${c.once ? '' : `<em>Lv.${upL(c.k)} → ${upL(c.k) + 1}</em>`}</button>`).join('');
   G.state = 'pick'; slideHeld = false; $('pick').hidden = false; document.body.classList.remove('playing'); sfx('big');
 }
 $('pick-grid').addEventListener('click', e => {
   const b = e.target.closest('.pc'); if (!b || G.state !== 'pick') return; const k = b.dataset.k;
-  if (k === 'heart') G.hp = Math.min(3, G.hp + 1); else if (k === 'now') getYarn({ x: PX(), y: PL.y - 60 }); else G.up[k] = upL(k) + 1;
+  if (k === 'heart') G.food = Math.min(100, (G.food || 0) + 40); else if (k === 'now') getYarn({ x: PX(), y: PL.y - 60 }); else G.up[k] = upL(k) + 1;
   $('pick').hidden = true; document.body.classList.add('playing'); G.state = 'play'; G.safe = 1.2;
   burst(SX() + G.cam, PL.y - 40, 26, 'spark', FX, 300); pop(PX(), PL.y - 100, CARDS.find(c => c.k === k).n + '!', '#ffd27a', 20);
 });
@@ -1904,7 +1904,7 @@ function startRest(st, title) {
   G.banner = 2.8; G.bannerTxt = title || `다음 동네: ${ZONES[zoneI()].n}`; G.bannerSub = '잠깐 쉬어 가요';
 }
 function endRest() {
-  G.rest = 0; G.food = Math.min(100, (G.food || 0) + 15); if (G.hp < 3) { G.hp++; pop(PX(), PL.y - 100, '하트 +1', '#ffd27a', 20); }
+  G.rest = 0; G.food = Math.min(100, (G.food || 0) + 15); pop(PX(), PL.y - 100, '배부름 +15', '#9af07a', 20);
   if (G.stage % BOSS_EVERY === 0 && !G.boss) startBoss(); else if (!G.restBoss) memTime(); else { G.banner = 2; G.bannerTxt = '다시 출발!'; G.bannerSub = `스테이지 ${G.stage}`; }
 }
 ART.sign = () => sprite('sign', 70, 66, 35, 66, g => { // 쉼터 나무 팻말
