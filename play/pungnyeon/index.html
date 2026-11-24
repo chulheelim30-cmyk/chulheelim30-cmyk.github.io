@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="ko"><head><!--PV--><meta http-equiv="Cache-Control" content="no-cache"><script>(function(){var V=26;if(!/github\.io$/.test(location.hostname))return;fetch('/play/version.json?t='+Date.now(),{cache:'no-store'}).then(function(r){return r.json()}).then(function(j){if(j&&j.v>V){var u=new URL(location.href);if(u.searchParams.get('v')!==String(j.v)){u.searchParams.set('v',j.v);location.replace(u.toString())}}}).catch(function(){})})()</script><!--/PV--><meta charset="utf-8">
+<!DOCTYPE html><html lang="ko"><head><!--PV--><meta http-equiv="Cache-Control" content="no-cache"><script>(function(){var V=27;if(!/github\.io$/.test(location.hostname))return;fetch('/play/version.json?t='+Date.now(),{cache:'no-store'}).then(function(r){return r.json()}).then(function(j){if(j&&j.v>V){var u=new URL(location.href);if(u.searchParams.get('v')!==String(j.v)){u.searchParams.set('v',j.v);location.replace(u.toString())}}}).catch(function(){})})()</script><!--/PV--><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <title>풍년이의 모험</title>
 <meta name="robots" content="noindex,nofollow">
@@ -79,7 +79,7 @@ body.playing .pad{display:flex}
  <div id="pr-hb-slot"></div>
  <div id="mis"></div>
  <button class="btn" id="go">달리기 시작</button>
-</div><div class="hrow"><button class="btn ghost" id="album-btn">추억 앨범</button><button class="btn ghost" id="diary-btn">그림일기</button><button class="btn ghost" id="shop-btn">🐟 간식 상점</button><button class="btn ghost" id="deco-btn">꾸미기</button><button class="btn ghost" id="op-btn">🎬 오프닝</button><button class="btn ghost" id="rank-btn">랭킹</button></div></div>
+</div><div class="hrow"><button class="btn ghost" id="album-btn">추억 앨범</button><button class="btn ghost" id="diary-btn" style="display:none">그림일기</button><button class="btn ghost" id="shop-btn">🐟 간식 상점</button><button class="btn ghost" id="deco-btn">꾸미기</button><button class="btn ghost" id="op-btn">🎬 오프닝</button><button class="btn ghost" id="rank-btn">랭킹</button></div></div>
 <div class="ov" id="over" hidden style="background:rgba(20,14,50,.45)"><div class="card">
  <img id="ov-cat" alt="" style="height:70px;float:left;margin:-6px 6px 0 -6px"><h2>풍년이가 낮잠 자러 갔어요</h2><div class="big" id="ov-score">0</div>
  <div>최고 기록 <b id="ov-best">0</b></div><div class="stats" id="ov-stats"></div>
@@ -1836,11 +1836,12 @@ const DIARY = [
 const diaryN = () => +(localStorage.getItem('pa2_diary') || 0);
 const DP = [0,8,4,3,4,8,1,0,8,4,7,0,2,5,3,3,2,7,7,7,8,3,8,6,3,6,4,6,3,4,5,1,6,8,0,7,2,5,2,3,8,6,7,8,3,5,8,7,2,0,0,8,6,1]; // 일기 쪽마다 Gemini 그림일기 9칸 중 어느 그림인지
 const pageImg = i => ((SPR['dp' + DP[i]] || SPR[DIARY[i][0]] || SPR.c_wave).src);
+const NO_DIARY = true; // 11-24 대표: 그림 반복이 많아 그림일기는 뺌 (100종 만들면 다시 켜기)
 function memPiece() { // 조각 하나 = 별 하나 + 일기 한 쪽
   let n = diaryN(), i; if (n < DIARY.length) { i = n; localStorage.setItem('pa2_diary', n + 1); } else i = Math.floor(Math.random() * DIARY.length);
   G.newPages = (G.newPages || 0) + (n < DIARY.length ? 1 : 0);
-  const el = $('polar'); el.classList.add('diary'); el.querySelector('img').src = pageImg(i); el.querySelector('span').innerHTML = `<b>풍년이 일기 ${i + 1}쪽</b>${DIARY[i][1]}`;
-  el.classList.remove('show'); void el.offsetWidth; el.classList.add('show'); clearTimeout(polT); polT = setTimeout(() => el.classList.remove('show'), 4200);
+  if (!NO_DIARY) { const el = $('polar'); el.classList.add('diary'); el.querySelector('img').src = pageImg(i); el.querySelector('span').innerHTML = `<b>풍년이 일기 ${i + 1}쪽</b>${DIARY[i][1]}`;
+  el.classList.remove('show'); void el.offsetWidth; el.classList.add('show'); clearTimeout(polT); polT = setTimeout(() => el.classList.remove('show'), 4200); }
   return DIARY[i][1];
 }
 function memComplete(st) { // 별자리 완성 → 추억 타임
