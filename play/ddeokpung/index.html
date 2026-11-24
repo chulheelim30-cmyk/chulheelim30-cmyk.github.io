@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="ko">
-<head><!--PV--><meta http-equiv="Cache-Control" content="no-cache"><script>(function(){var V=20;if(!/github\.io$/.test(location.hostname))return;fetch('/play/version.json?t='+Date.now(),{cache:'no-store'}).then(function(r){return r.json()}).then(function(j){if(j&&j.v>V){var u=new URL(location.href);if(u.searchParams.get('v')!==String(j.v)){u.searchParams.set('v',j.v);location.replace(u.toString())}}}).catch(function(){})})()</script><!--/PV-->
+<head><!--PV--><meta http-equiv="Cache-Control" content="no-cache"><script>(function(){var V=21;if(!/github\.io$/.test(location.hostname))return;fetch('/play/version.json?t='+Date.now(),{cache:'no-store'}).then(function(r){return r.json()}).then(function(j){if(j&&j.v>V){var u=new URL(location.href);if(u.searchParams.get('v')!==String(j.v)){u.searchParams.set('v',j.v);location.replace(u.toString())}}}).catch(function(){})})()</script><!--/PV-->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#fbf6ea">
@@ -1464,6 +1464,12 @@ JE.art.add('tteok_wild','data:image/webp;base64,UklGRsQUAABXRUJQVlA4WAoAAAAQAAAA
   };
   global.PungRank = PR;
 
+  // 결과 화면 버튼(11-24 대표): 등록 전까지 매 판 점수 아래에 표시. 누르면 홈 버튼과 같은 참여 화면(.pr-homecta)
+  PR.resultCTA = function (score) {
+    if (me()) return ''; try { ensureCSS(); } catch (e) {}
+    return `<button class="pr-homecta pr-rescta" type="button">🏆 <b>닉네임 등록</b>하고 이 점수 랭킹에 올리기</button>`;
+  };
+
   // 입장 알림(11-24 대표): 닉네임 없으면 게임 홈 화면에서 하루 1번 등록 권유 카드. 판 중이면 띄우지 않음
   const kstDay = () => new Date(Date.now() + 9 * 36e5).toISOString().slice(0, 10);
   PR.entryInvite = function (game, opts = {}) {
@@ -1527,6 +1533,7 @@ JE.art.add('tteok_wild','data:image/webp;base64,UklGRsQUAABXRUJQVlA4WAoAAAAQAAAA
   .pr-short .pr-pungi{width:48px}.pr-short .pr-inv-h{font-size:20px}.pr-short .pr-inv-p{font-size:14px;margin:0 0 3px}
   .pr-homecta{display:block;width:100%;margin:10px 0 0;font:700 18px var(--pr-font,inherit);color:#2b2b2b;border:2.5px dashed #2b2b2b;border-radius:14px;background:#fff3c4;padding:8px 6px;cursor:pointer;animation:prWig 2.4s ease-in-out infinite}
   .pr-homecta b{color:#e08a00}
+  .pr-rescta{margin:12px 0 2px;font-size:16px;white-space:nowrap}
   @keyframes prWig{0%,86%,100%{transform:rotate(0)}90%{transform:rotate(-1.5deg)}95%{transform:rotate(1.5deg)}}
   .pr-short{padding:8px 12px!important}
   .pr-short .pr-card{width:min(560px,100%);padding:10px 14px 8px}
@@ -1712,6 +1719,11 @@ JE.art.add('tteok_wild','data:image/webp;base64,UklGRsQUAABXRUJQVlA4WAoAAAAQAAAA
     if (JE.brand && JE.brand.homeHTML) {
       const baseHome = JE.brand.homeHTML;
       JE.brand.homeHTML = function (o) { return baseHome.call(this, o) + PR.homeCTA(); };
+    }
+    // 결과 화면에 참여 버튼 (등록 전까지)
+    if (JE.brand && JE.brand.resultHTML) {
+      const baseRes = JE.brand.resultHTML;
+      JE.brand.resultHTML = function (o) { return baseRes.call(this, o) + PR.resultCTA(o && o.score); };
     }
     const baseLB = JE.ui.leaderboard.bind(JE.ui);
     JE.ui.leaderboard = function (mode = 'main', title) { return mode === 'main' ? PR.open(JE.gameId) : baseLB(mode, title); };
