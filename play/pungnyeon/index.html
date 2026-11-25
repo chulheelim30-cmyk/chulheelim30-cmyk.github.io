@@ -810,7 +810,8 @@ const ZONES = [
 /* 11-24 v26 진행도: 이야기 속 보스 순번(0~14)은 판이 끝나도 저장 */
 const TOT = 50; // 10장 × 보스 5명
 const CHQ = Math.max(0, Math.min(10, +(new URLSearchParams(location.search).get('ch')) || 0)); // ?ch=7 미리보기
-const progN = () => CHQ ? (CHQ - 1) * 5 : (+(localStorage.getItem('pa2_prog') || 0)) % TOT;
+const BQ = Math.max(0, Math.min(5, +(new URLSearchParams(location.search).get('boss')) || 0)); // ?ch=6&boss=5 → 그 장 5번째 보스로 바로
+const progN = () => CHQ ? (CHQ - 1) * 5 + (BQ ? BQ - 1 : 0) : (+(localStorage.getItem('pa2_prog') || 0)) % TOT;
 const bIdx = () => (G.p0 | 0) + (G.bossWin | 0);
 const CH = ['집을 나서요', '고소한 시장 골목', '지붕 위 바람', '반딧불 산책길', '강 건너 절반', '비 오는 날', '노랑 잎 숲길', '바람이 보낸 편지', '눈 오는 밤', '다시, 호수공원'];
 const prD = () => Math.min(1, ((((bIdx() % TOT) + TOT) % TOT)) / 45); // HARD_V52: 50단계 진행도 0→1 (단계가 오를수록 어려워짐)
@@ -1240,7 +1241,7 @@ function banner() {
 let last = performance.now();
 function frame(now) { const raw = (now - last) / 1000, dt = Math.max(0, Math.min(1 / 30, raw)); last = now; perf(raw); update(dt); if (G.state === 'play') { missionTick(); if (G.tut > 0) { G.tut -= dt; if (G.tut <= 0) localStorage.setItem('pa2_tut', '1'); } } draw(); requestAnimationFrame(frame); }
 const $ = id => document.getElementById(id);
-function start() { try { PungRank.start(); } catch (e) {} $('home').hidden = true; $('over').hidden = true; reset(false); G.state = 'play'; { const P = G.p0 | 0, c = Math.floor(P / 5); G.banner = 2.4; G.bannerTxt = `${c + 1}장 · ${CH[c]}`; G.bannerSub = `보스 ${P % 5}/5`; } if (permL('dash')) { G.dashT = 3; G.bannerTxt = '출발 대시!'; G.bannerSub = '3초 무적'; G.banner = 1.6; } document.body.classList.add('playing'); try { AC = AC || new (window.AudioContext || window.webkitAudioContext)(); AC.resume(); } catch (e) {} }
+function start() { if (CHQ && BQ) setTimeout(() => { if (G.state === 'play' && !G.boss) startBoss(); }, 1800); try { PungRank.start(); } catch (e) {} $('home').hidden = true; $('over').hidden = true; reset(false); G.state = 'play'; { const P = G.p0 | 0, c = Math.floor(P / 5); G.banner = 2.4; G.bannerTxt = `${c + 1}장 · ${CH[c]}`; G.bannerSub = `보스 ${P % 5}/5`; } if (permL('dash')) { G.dashT = 3; G.bannerTxt = '출발 대시!'; G.bannerSub = '3초 무적'; G.banner = 1.6; } document.body.classList.add('playing'); try { AC = AC || new (window.AudioContext || window.webkitAudioContext)(); AC.resume(); } catch (e) {} }
 function showOver() { localStorage.setItem('pa2_coin', COIN); try { PungRank.submit('pungadventure', score()); PungRank.maybeInvite('pungadventure', score(), { host: wrap }); } catch (e) {} localStorage.setItem('pa2_distT', +(localStorage.getItem('pa2_distT') || 0) + Math.floor(G.dist / 10)); $('ov-score').textContent = score().toLocaleString(); $('ov-best').textContent = G.best.toLocaleString(); $('ov-stats').innerHTML = `<span>달린 거리 <b>${Math.floor(G.dist / 10)}m</b></span><span>간식 <b>${G.snacks}</b></span><span>별 <b>${(G.stage - 1) * 6 + G.pieces}</b></span><span>꿀잠 <b>${G.naps}번</b></span><span>상점 간식 <b>+${G.coinRun | 0}</b></span>`; $('over').hidden = false; document.body.classList.remove('playing'); }
 function goHome() { $('polar').classList.remove('show'); renderMis(); $('over').hidden = true; $('home').hidden = false; reset(true); G.state = 'home'; }
 // 11-24 닉네임 랭킹 (PungRank)
