@@ -2010,10 +2010,10 @@ function zoneFx() {
   const se = seaOf(), zf = Z.fx || (zoneI() === 3 ? 'firefly' : '');
   const fx = se === 3 ? 'snow' : se === 2 ? (zf === 'rain' ? 'rain' : 'leaf') : se === 0 ? (zf === 'rain' ? 'rain' : 'petal') : (zoneI() === 3 ? 'firefly' : 'rain'); // 여름 = 장마
   if (se === 3 && !LOW) { ctx.fillStyle = 'rgba(225,238,255,.10)'; ctx.fillRect(0, 0, LW, LH); }
-  if (se === 1 && fx === 'rain' && zoneI() !== 5 && !LOW) { ctx.fillStyle = 'rgba(60,90,140,.13)'; ctx.fillRect(0, 0, LW, LH); }
+  if (se === 1 && fx === 'rain' && zoneI() !== 5 && !LOW) { ctx.fillStyle = 'rgba(55,80,130,.2)'; ctx.fillRect(0, 0, LW, LH); }
   if (fx === 'snow') { ctx.fillStyle = 'rgba(255,255,255,.85)'; ctx.beginPath(); for (let i = 0; i < 44; i++) { const a = (i * 0.618) % 1, b = (i * 0.383) % 1, sp = 30 + (i % 5) * 9, x = ((a * (LW + 40) - G.t * (18 + (i % 3) * 10) + Math.sin(G.t * 1.3 + i) * 10) % (LW + 40) + LW + 40) % (LW + 40) - 20, y = ((b * (GY + 30) + G.t * sp) % (GY + 30)) - 10, r = 1.4 + (i % 3) * 0.8; ctx.moveTo(x + r, y); ctx.arc(x, y, r, 0, 7); } ctx.fill(); }
   if (fx === 'petal' && Math.random() < 0.22) parts.push({ x: G.cam + rnd(LW * 0.2, LW * 1.2), y: -10, vx: rnd(-80, -30), vy: rnd(18, 40), life: 4.5, max: 4.5, kind: 'conf', col: Math.random() < 0.7 ? '#ffc4dc' : '#fff0f6', size: 0.7, rot: rnd(0, 6), vr: rnd(-3, 3), g: 8 });
-  if (fx === 'rain') { ctx.strokeStyle = 'rgba(210,225,255,.45)'; ctx.lineWidth = 1.2; const r0 = rng(Math.floor(G.t * 24)); ctx.beginPath(); for (let i = 0; i < 46; i++) { const x = r0() * LW, y = r0() * (GY + 20); ctx.moveTo(x, y); ctx.lineTo(x - 5, y + 16); } ctx.stroke(); }
+  if (fx === 'rain') { const hv = se === 1; /* RAIN_V73: 여름 장마는 굵고 많이 */ ctx.strokeStyle = hv ? 'rgba(215,230,255,.6)' : 'rgba(210,225,255,.45)'; ctx.lineWidth = hv ? 1.5 : 1.2; const r0 = rng(Math.floor(G.t * 24)); ctx.beginPath(); for (let i = 0, N = hv ? (LOW ? 70 : 130) : 46; i < N; i++) { const x = r0() * LW, y = r0() * (GY + 20), L = hv ? 20 + r0() * 12 : 16; ctx.moveTo(x, y); ctx.lineTo(x - L * 0.32, y + L); } ctx.stroke(); if (hv && !LOW) { ctx.fillStyle = 'rgba(220,235,255,.5)'; for (let i = 0; i < 10; i++) { const x = r0() * LW; ctx.fillRect(x - 4, GY - 2, 8, 2); } } }
   if (fx === 'leaf' && Math.random() < 0.3) parts.push({ x: G.cam + rnd(LW * 0.2, LW * 1.2), y: -10, vx: rnd(-90, -30), vy: rnd(20, 50), life: 4, max: 4, kind: 'conf', col: Math.random() < 0.7 ? '#ffc83a' : '#e8602a', size: 0.9, rot: rnd(0, 6), vr: rnd(-4, 4), g: 12 });
   if (fx === 'wind') { ctx.strokeStyle = 'rgba(255,255,255,.28)'; ctx.lineWidth = 1.6; for (let i = 0; i < 6; i++) { const y = 60 + i * 37, x = ((i * 173 - G.t * 420) % (LW + 220) + LW + 220) % (LW + 220) - 110; ctx.beginPath(); ctx.moveTo(x, y); ctx.quadraticCurveTo(x + 40, y - 8, x + 90, y); ctx.stroke(); } }
   if (fx === 'firefly' && Math.random() < 0.25) parts.push({ x: G.cam + rnd(0, LW * 1.2), y: rnd(GY - 200, GY - 20), vx: rnd(-30, 10), vy: rnd(-15, 15), life: 1.6, max: 1.6, kind: 'spark', col: '#d8ff8a', size: 0.32, rot: 0, vr: 1, g: 0 });
@@ -2250,6 +2250,7 @@ function opScenes() {
 }
 function endScenes(m) {
   return [
+    { d: 3.6, k: 'card', bg: 'bg_bridge', chars: [['c_yay', 0.38, 0.36], ['w_jump', 0.62, 0.36]], cap: '마지막 다리를 건너요', sub: '"형, 저기 불빛 보여!"' }, // BINGEND_V73
     { d: 3.2, k: 'arrive', img: 'bg_sunset', cap: '호수공원이 보여요!', sub: '' },
     { d: 3.8, k: 'pic', img: 'e_meet', cap: '벤치 앞에서 누가 불렀어요', sub: '"풍년아! 왕년아!"' },
     { d: 5.0, k: 'love', cap: `${ordOf(m)} 여행 완주`, sub: '오늘도 같이 달려서 행복했어요' },
@@ -2402,13 +2403,13 @@ function seasonScenes(e) { // SEASON_V71: 10·20·30·40단계 = 봄 → 여름 
   const S = {
     1: [{ d: 3.6, k: 'card', bg: 'bg_spring', chars: [['c_yay', 0.36, 0.36], ['w_sit', 0.64, 0.42]], cap: '벚꽃잎이 흩날리는 봄길', sub: '"형… 혼자 있으면 무섭단 말이야"' },
         { d: 3.4, k: 'card', bg: 'bg_spring', chars: [['c_love', 0.38, 0.36], ['w_nuzzle', 0.64, 0.36]], cap: '꽃잎 하나가 왕년이 코에 톡', sub: '"에취!" 둘이 같이 웃었어요' },
-        { d: 3.4, k: 'card', bg: 'bg_market', chars: [['c_eat', 0.42, 0.36]], cap: '생선 냄새에 풍년이 발이 멈췄어요', sub: '' },
-        { d: 3.6, k: 'card', bg: 'bg_market', chars: [['c_daze', 0.4, 0.34], ['w_run0', 0.64, 0.26]], cap: '"형! 우리 호수공원 가야 돼!"', sub: '왕년이가 꼬리를 물고 끌어요' },
+        { d: 3.4, k: 'card', bg: 'bg_roof', chars: [['c_wave', 0.34, 0.34], ['w_scare', 0.64, 0.36]], cap: '봄바람 부는 지붕 끝, 왕년이가 얼어붙었어요', sub: '' },
+        { d: 3.6, k: 'card', bg: 'bg_roof', chars: [['c_yay', 0.38, 0.36], ['w_jump', 0.64, 0.38]], cap: '"내 꼬리 잡아. 같이 뛰자!"', sub: '빨래 사이로 폴짝!' },
         { d: 3.8, k: 'chapter', bg: 'bg_rain', cap: '레벨 2 · 여름', sub: '10단계 클리어 · 봄이 지나고 장마가 와요' }],
     2: [{ d: 3.4, k: 'card', bg: 'bg_rain', chars: [['c_daze', 0.36, 0.34], ['w_box', 0.64, 0.24]], cap: '주룩주룩 장맛비에 왕년이가 상자 밑으로', sub: '' },
         { d: 3.6, k: 'card', bg: 'bg_rain', chars: [['c_yay', 0.38, 0.36], ['w_sit', 0.64, 0.42]], cap: '"우산이야. 이것도 든든하지?"', sub: '풍년이가 큰 잎사귀를 쓰고 왔어요' },
-        { d: 3.4, k: 'card', bg: 'bg_night', chars: [['c_love', 0.4, 0.36], ['w_sit', 0.64, 0.4]], cap: '비 그친 여름밤, 반딧불이 별자리가 돼요', sub: '' },
-        { d: 3.6, k: 'card', bg: 'bg_night', chars: [['c_sleep', 0.4, 0.26], ['w_nuzzle', 0.64, 0.36]], cap: '배부른 풍년이가 벌러덩', sub: '왕년이가 코를 콕' },
+        { d: 3.4, k: 'card', bg: 'bg_bridge', chars: [['c_love', 0.4, 0.36], ['w_sit', 0.64, 0.4]], cap: '비 그친 여름밤, 다리 위로 반딧불', sub: '' },
+        { d: 3.6, k: 'card', bg: 'bg_bridge', chars: [['c_sleep', 0.4, 0.26], ['w_nuzzle', 0.64, 0.36]], cap: '배부른 풍년이가 벌러덩', sub: '왕년이가 코를 콕' },
         { d: 3.8, k: 'chapter', bg: 'bg_ginkgo', cap: '레벨 3 · 가을', sub: '20단계 클리어 · 은행잎이 노랗게 물들었어요' }],
     3: [{ d: 3.4, k: 'card', bg: 'bg_ginkgo', chars: [['g_roll', 0.38, 0.3], ['w_jump', 0.62, 0.36]], cap: '노랑 은행잎 더미에 둘이 풍덩!', sub: '' },
         { d: 3.6, k: 'card', bg: 'bg_ginkgo', chars: [['c_yay', 0.38, 0.36], ['w_nuzzle', 0.64, 0.36]], cap: '왕년이가 깔깔 웃어요', sub: '"형, 이거 또 하자!"' },
