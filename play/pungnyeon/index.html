@@ -917,7 +917,11 @@ function hitbox(o) {
 /* ---------- 효과·소리 ---------- */
 const FX = ['#ffd27a', '#ff9ac0', '#b58cff', '#7fd6ff', '#ffffff'];
 function burst(x, y, n, kind, cols, spd = 260) { for (let i = 0; i < n; i++) { const a = Math.random() * Math.PI * 2, v = spd * (0.35 + Math.random() * 0.8); parts.push({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 60, life: 0.5 + Math.random() * 0.5, max: 1, kind, col: cols[i % cols.length], size: 0.6 + Math.random() * 0.8, rot: Math.random() * 6, vr: rnd(-8, 8), g: kind === 'puff' ? -30 : 600 }); } }
-function pop(x, y, txt, col, size = 20) { pops.push({ x, y, txt, col, size, life: 1 }); }
+function pop(x, y, txt, col, size = 20) { /* NOOVER_V78: 글자끼리·큰 알림과 안 겹치게 위로 비켜 줌 */
+  const bad = yy => (G.banner > 0 && yy > LH * 0.36 - 58 && yy < LH * 0.36 + 58) || pops.some(p => Math.abs(p.x - x) < 150 && Math.abs(p.y - yy) < size + 6);
+  let y2 = y; for (let k = 0; k < 8 && bad(y2); k++) y2 -= size + 8;
+  if (y2 < 96 || bad(y2)) { y2 = Math.max(y, G.banner > 0 ? LH * 0.36 + 62 : y); for (let k = 0; k < 8 && bad(y2); k++) y2 += size + 8; }
+  pops.push({ x, y: Math.min(GY - 10, Math.max(96, y2)), txt, col, size, life: 1 }); }
 let AC = null, muted = false;
 function sfx(k) {
   if (muted) return; try { AC = AC || new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { return; }
@@ -1017,7 +1021,7 @@ function update(dt) {
 function updFx(dt) {
   parts.forEach(p => { p.x += p.vx * dt; p.y += p.vy * dt; p.vy += p.g * dt; p.vx *= 0.98; p.rot += p.vr * dt; p.life -= dt; });
   parts = parts.filter(p => p.life > 0); if (parts.length > 280) parts.splice(0, parts.length - 280);
-  pops.forEach(p => { p.life -= dt; p.y -= 46 * dt; }); pops = pops.filter(p => p.life > 0);
+  pops.forEach(p => { p.life -= dt; p.y -= 46 * dt; }); pops = pops.filter(p => p.life > 0); if (G.comboT > 0) G.comboT -= dt;
 }
 const FOOD_DRAIN = 100 / 62; // 가만히 달리면 약 75초에 바닥 (참치캔 놓치면 점점 배고파짐)
 function starve() { // 배고파서 털썩 → 이어 달리기(광고) 또는 끝
@@ -1146,6 +1150,7 @@ function draw() {
   if (G.fever > 0) feverFx();
   ctx.restore();
   if (G.banner > 0) banner();
+  if (G.comboT > 0 && G.state === 'play') { ctx.save(); ctx.globalAlpha = Math.min(1, G.comboT * 2.5); const z = 1 + Math.max(0, G.comboT - 1.4) * 1.5; ctx.translate(LW - 16, G.boss ? 82 : 106); ctx.scale(z, z); text(G.comboTxt || '', 0, 0, 19, 'right', G.comboCol || '#ffd27a'); ctx.restore(); }
   if (G.state !== 'home') { hud(); consHud(); } else homeCons();
   G.consFx = Math.max(0, (G.consFx || 0) - G.dt);
   if (G.tut > 0 && G.state === 'play') tutHint();
@@ -2027,7 +2032,7 @@ function zoneFx() {
 function snackCombo(o) {
   const c = G.sc | 0; if (G.demo || c < 10 || c % 10 || G.fever > 0) return;
   const pts = c * 10; G.bonus += pts;
-  pop(o.x, o.y - 40, '간식 콤보 ' + c + '! +' + pts, c >= 30 ? '#ff9ad0' : '#ffd27a', 20 + Math.min(8, c / 10));
+  G.comboTxt = '간식 콤보 ' + c + '! +' + pts; G.comboCol = c >= 30 ? '#ff9ad0' : '#ffd27a'; G.comboT = 1.6; // 콤보는 화면 오른쪽 위 고정 자리에
   sfx('big'); vib(20); burst(o.x, o.y, 10 + Math.min(20, c / 2), 'spark', ['#ffd27a', '#fff', '#ff9ad0'], 220);
 }
 function feverWarr() {
@@ -2045,7 +2050,7 @@ function nearMiss(o) {
   if (c >= 3) { sfx('snack'); burst(SX() + 10, PL.y - 50, 4 + c, 'spark', ['#8af0ff', '#fff'], 150); }
 }
 function hudX() {
-  if ((G.sc | 0) >= 5 && !(G.fever > 0)) { const k = G.sc, big = k >= 30; text('간식 콤보 ' + k + (big ? ' 🔥' : ''), LW / 2, 126, big ? 22 : 18, 'center', big ? '#ff9ad0' : '#ffd27a', { grad: big }); }
+  if ((G.sc | 0) >= 5 && !(G.fever > 0) && !(G.comboT > 0)) { const k = G.sc, big = k >= 30; text('간식 콤보 ' + k + (big ? ' 🔥' : ''), LW - 16, G.boss ? 82 : 106, big ? 20 : 17, 'right', big ? '#ff9ad0' : '#ffd27a', { grad: big }); } /* NOOVER_V78: 가운데 큰 알림과 안 겹치게 오른쪽 위로 */
   if (!G.boss) { const m = BOSS_EVERY - ((G.stage - 1) % BOSS_EVERY) - 1; const P = bIdx() % TOT; text(`레벨 ${Math.floor(P / 10) + 1} · ${SEA_N[seaOf()]} · 보스 ${P % 10}/10${m > 0 ? '' : ' · 곧 보스!'}`, LW - 16, 80, 16, 'right', '#ffe3f0'); }
   else if (G.boss.hp > 0) {
     const B = G.boss, D = bossD(B), w = 220, x = LW / 2 - w / 2, y = 70; text(D.n + (B.lv > 1 ? ` Lv.${B.lv}` : ''), LW / 2, y - 2, 15, 'center', '#fff');
