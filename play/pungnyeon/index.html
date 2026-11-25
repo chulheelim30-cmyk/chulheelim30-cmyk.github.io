@@ -2308,7 +2308,7 @@ function opScene(g, i, p, alpha) {
       const x = -W * 0.2 + (W * 0.7) * Math.min(1, ease(Math.min(1, p * 1.6))), gy = H * 0.88, bob = Math.abs(Math.sin(OP.t * 12)) * 6;
       opImg(g, 'w_run' + (Math.floor(OP.t * 8) % 2), x - H * 0.36, gy - bob, H * 0.22); opImg(g, 'g_r' + (Math.floor(OP.t * 12) % 8), x, gy - bob, H * 0.3);
       const k = Math.max(0, (p - 0.28) / 0.3), s = 1 + (1 - Math.min(1, k)) * 0.4;
-      if (k > 0) { g.save(); g.translate(W / 2, H * 0.27); g.scale(s, s); opText(g, '풍년이의 모험', 0, 0, Math.min(64, W * 0.09), '#ffe27a', k); g.restore(); opText(g, `— ${ordOf(meetN() + 1)} 여행 · ${Math.floor(progN() / 5) + 1}장 —`, W / 2, H * 0.27 + Math.min(48, W * 0.068), Math.min(20, W * 0.032), '#fff', k); }
+      if (k > 0) { g.save(); g.translate(W / 2, H * 0.27); g.scale(s, s); opText(g, '풍년이의 모험', 0, 0, Math.min(64, W * 0.09), '#ffe27a', k); g.restore(); opText(g, `— ${ordOf(meetN() + 1)} 여행 · 레벨 ${Math.floor(progN() / 10) + 1} · ${progN() + 1}단계 —`, W / 2, H * 0.27 + Math.min(48, W * 0.068), Math.min(20, W * 0.032), '#fff', k); }
       opText(g, opLine(meetN()), W / 2, H * 0.47, Math.min(24, W * 0.04), '#fff', (p - 0.55) * 4);
     }
   } else if (S.k === 'card') {
@@ -2438,7 +2438,7 @@ function storyChapter(ch) {
 }
 function storyEnding() { // 보스 4종을 다 친구로 만들면: 호수공원 도착 → 만남 횟수 +1 → 계속 달리기
   const m = meetN() + 1; localStorage.setItem('pa2_meet', m); G.state = 'story'; slideHeld = false;
-  opOpen(false, endScenes(m), 'end', () => { G.state = 'play'; PL.hurt = 1.5; startRest(G.stage - 1, ''); G.banner = 2.8; G.bannerTxt = `${ordOf(m)} 여행 완주!`; G.bannerSub = '다시 1장부터!'; });
+  opOpen(false, endScenes(m), 'end', () => { G.state = 'play'; PL.hurt = 1.5; startRest(G.stage - 1, ''); G.banner = 2.8; G.bannerTxt = `${ordOf(m)} 여행 완주!`; G.bannerSub = '다시 레벨 1 · 봄부터!'; });
 }
 /* ---------- 왕년이: 덩치 큰 겁쟁이 동생 (상자 아이템) ---------- */
 const WANG_T = 10;
@@ -2468,7 +2468,7 @@ ART.wbox = () => imgArt('w_box', 52, 40, 0.5, 0.5) || ART.yarn();
 $('op-tap').addEventListener('click', opStart);
 $('op-skip').addEventListener('click', e => { e.stopPropagation(); opEnd(); });
 $('op-btn').addEventListener('click', () => opOpen(false));
-{ const m = meetN(), P = progN(), d = document.querySelector('.home .desc'), t = []; if (P || m) t.push(`${Math.floor(P / 5) + 1}장 ${P % 5}/5`); if (m) t.push(`호수공원 여행 ${m}번 완주`); if (t.length && d) d.textContent += ' · ' + t.join(' · '); }
+{ const m = meetN(), P = progN(), d = document.querySelector('.home .desc'), t = []; if (P || m) t.push(`레벨 ${Math.floor(P / 10) + 1} · ${P + 1}단계`); if (m) t.push(`호수공원 여행 ${m}번 완주`); if (t.length && d) d.textContent += ' · ' + t.join(' · '); }
 addEventListener('resize', () => { if (!$('op').hidden && OP.cv) setTimeout(opSize, 60); });
 if (!localStorage.getItem('pa2_op') && !/[?&]noop/.test(location.search)) { const go = () => opOpen(true); if (IMG.bg_sunset.complete) go(); else IMG.bg_sunset.addEventListener('load', go, { once: true }); }
 window.__G = G; window.__op = { opOpen, opEnd, OP }; window.__startBoss = startBoss; window.__shop = { addCoin, openShop, PERM_LV }; window.__objsPush = o => objs.push(o); window.__DECO = DECO; window.__PL = PL; window.__start = start;
