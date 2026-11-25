@@ -81,7 +81,8 @@ body.playing .pad{display:flex}
  <div class="desc">간식 냠냠 · 배부르면 피버 · 너무 먹으면 벌러덩 꿀잠</div>
  <div id="pr-hb-slot"></div>
  <div id="mis"></div>
- <button class="btn" id="go">달리기 시작</button>
+ <button class="btn" id="go">모험 시작</button>
+ <button class="btn ghost" id="restart" hidden style="display:block;margin:6px auto 0;font-size:13px;padding:6px 14px">처음부터 (1단계)</button>
 </div><a id="lic" href="../licenses.html" style="position:absolute;right:max(14px,env(safe-area-inset-right));bottom:6px;font-size:11px;color:rgba(255,255,255,.6);text-decoration:none">오픈소스 라이선스</a><div class="hrow"><button class="btn ghost" id="album-btn">추억 앨범</button><button class="btn ghost" id="diary-btn" style="display:none">그림일기</button><button class="btn ghost" id="shop-btn">🐟 간식 상점</button><button class="btn ghost" id="deco-btn">꾸미기</button><button class="btn ghost" id="op-btn">🎬 오프닝</button><button class="btn ghost" id="rank-btn">랭킹</button></div></div>
 <div class="ov" id="over" hidden style="background:rgba(20,14,50,.45)"><div class="card">
  <img id="ov-cat" alt="" style="height:70px;float:left;margin:-6px 6px 0 -6px"><h2>풍년이가 낮잠 자러 갔어요</h2><div class="big" id="ov-score">0</div>
@@ -1262,7 +1263,7 @@ document.getElementById('fsbtn').addEventListener('click', e => { e.stopPropagat
   if (FS.on()) { FS.off(); localStorage.setItem('pa2_fs', '0'); } else { FS.go(); localStorage.setItem('pa2_fs', '1'); } });
 function start() { if (localStorage.getItem('pa2_fs') === '1' && FS.can() && !FS.on()) FS.go(); if ((CHQ || SQ) && BQ) setTimeout(() => { if (G.state === 'play' && !G.boss) startBoss(); }, 1800); try { PungRank.start(); } catch (e) {} $('home').hidden = true; $('over').hidden = true; reset(false); G.state = 'play'; { const P = G.p0 | 0, c = Math.floor(P / 5); G.banner = 2.4; G.bannerTxt = `${P + 1}단계 · ${zName(P % 10, [0, 1, 2, 3, 0][Math.floor(P / 10) % 5])}`; G.bannerSub = `레벨 ${Math.floor(P / 10) + 1} · ${(NEWF[bossAt(P)] || BOSSES[bossAt(P)]).n}`; } if (permL('dash')) { G.dashT = 3; G.bannerTxt = '출발 대시!'; G.bannerSub = '3초 무적'; G.banner = 1.6; } document.body.classList.add('playing'); try { AC = AC || new (window.AudioContext || window.webkitAudioContext)(); AC.resume(); } catch (e) {} }
 function showOver() { localStorage.setItem('pa2_coin', COIN); try { PungRank.submit('pungadventure', score()); PungRank.maybeInvite('pungadventure', score(), { host: wrap }); } catch (e) {} localStorage.setItem('pa2_distT', +(localStorage.getItem('pa2_distT') || 0) + Math.floor(G.dist / 10)); $('ov-score').textContent = score().toLocaleString(); $('ov-best').textContent = G.best.toLocaleString(); $('ov-stats').innerHTML = `<span>달린 거리 <b>${Math.floor(G.dist / 10)}m</b></span><span>간식 <b>${G.snacks}</b></span><span>별 <b>${(G.stage - 1) * 6 + G.pieces}</b></span><span>꿀잠 <b>${G.naps}번</b></span><span>상점 간식 <b>+${G.coinRun | 0}</b></span>`; $('over').hidden = false; document.body.classList.remove('playing'); }
-function goHome() { $('polar').classList.remove('show'); renderMis(); $('over').hidden = true; $('home').hidden = false; reset(true); G.state = 'home'; }
+function goHome() { $('polar').classList.remove('show'); renderMis(); $('over').hidden = true; $('home').hidden = false; reset(true); G.state = 'home'; try { window.__restartShow && __restartShow(); } catch (e) {} }
 // 11-24 닉네임 랭킹 (PungRank)
 ['rank-btn', 'ov-rank'].forEach(id => { const el = $(id); if (el) el.addEventListener('click', () => { try { PungRank.open('pungadventure', { host: wrap, join: true }).then(() => { if (PungRank.me()) { const rb = $('rank-btn'); rb.textContent = '랭킹'; rb.style.cssText = ''; const ob = $('ov-rank'); ob.textContent = '랭킹'; ob.style.cssText = 'margin-left:6px'; } }); } catch (e) {} }); });
 try { if (!PungRank.me()) { const rb = $('rank-btn'); rb.textContent = '🏆 랭킹 참여'; rb.style.cssText = 'background:#fff3c4;border:2px dashed #c26a10;color:#7a3a00'; } } catch (e) {}
@@ -1270,7 +1271,11 @@ try { if (!PungRank.me()) { const ob = $('ov-rank'); ob.textContent = '🏆 닉�
 try { PungRank.legacy('pungadventure', +localStorage.getItem('pa2_best') || 0); setTimeout(() => PungRank.flush(), 1500); } catch (e) {}
 try { const s = $('pr-hb-slot'); if (s) s.innerHTML = PungRank.homeBoardHTML('pungadventure', true); } catch (e) {}
 try { PungRank.entryInvite('pungadventure', { host: wrap, onlyIf: () => !$('home').hidden && $('op').hidden, done: () => { if (PungRank.me()) { const rb = $('rank-btn'); rb.textContent = '랭킹'; rb.style.cssText = ''; const ob = $('ov-rank'); ob.textContent = '랭킹'; ob.style.cssText = 'margin-left:6px'; } } }); } catch (e) {}
-$('go').addEventListener('click', start); $('again').addEventListener('click', start); $('tohome').addEventListener('click', goHome);
+$('go').addEventListener('click', start);
+/* RESTART_V75: 처음부터 — 두 번 눌러야 1단계로 (완주 횟수·친구·간식은 그대로) */
+{ const rb = $('restart'); let armed = 0; const show = () => { rb.hidden = !((+(localStorage.getItem('pa2_prog') || 0)) % TOT); }; show();
+  rb.addEventListener('click', () => { if (!armed) { armed = 1; rb.textContent = '한 번 더 누르면 1단계부터 시작해요'; setTimeout(() => { armed = 0; rb.textContent = '처음부터 (1단계)'; }, 3000); return; }
+    localStorage.setItem('pa2_prog', 0); armed = 0; rb.textContent = '처음부터 (1단계)'; show(); const d = $('home-prog'); if (d) d.textContent = d.textContent.replace(/레벨 \d+ · \d+단계/, '레벨 1 · 1단계'); try { G.p0 = 0; } catch (e) {} }); window.__restartShow = show; } $('again').addEventListener('click', start); $('tohome').addEventListener('click', goHome);
 $('snd').addEventListener('pointerdown', e => { e.stopPropagation(); muted = !muted; $('snd').textContent = muted ? '🔇' : '🔊'; });
 addEventListener('resize', resize); addEventListener('orientationchange', () => setTimeout(resize, 200));
 resize(); reset(true);
@@ -2468,7 +2473,7 @@ ART.wbox = () => imgArt('w_box', 52, 40, 0.5, 0.5) || ART.yarn();
 $('op-tap').addEventListener('click', opStart);
 $('op-skip').addEventListener('click', e => { e.stopPropagation(); opEnd(); });
 $('op-btn').addEventListener('click', () => opOpen(false));
-{ const m = meetN(), P = progN(), d = document.querySelector('.home .desc'), t = []; if (P || m) t.push(`레벨 ${Math.floor(P / 10) + 1} · ${P + 1}단계`); if (m) t.push(`호수공원 여행 ${m}번 완주`); if (t.length && d) d.textContent += ' · ' + t.join(' · '); }
+{ const m = meetN(), P = progN(), d = document.querySelector('.home .desc'), t = []; if (P || m) t.push(`레벨 ${Math.floor(P / 10) + 1} · ${P + 1}단계`); if (m) t.push(`호수공원 여행 ${m}번 완주`); if (t.length && d) { const e = document.createElement('div'); e.id = 'home-prog'; e.style.cssText = 'white-space:nowrap;margin:-8px 0 8px;font:700 14px/1.5 "Noto Sans KR",sans-serif;color:#ffe27a;text-shadow:0 1px 3px #2a1850'; e.textContent = t.join(' · '); const L = document.querySelectorAll('.home .desc'); L[L.length - 1].after(e); } }
 addEventListener('resize', () => { if (!$('op').hidden && OP.cv) setTimeout(opSize, 60); });
 if (!localStorage.getItem('pa2_op') && !/[?&]noop/.test(location.search)) { const go = () => opOpen(true); if (IMG.bg_sunset.complete) go(); else IMG.bg_sunset.addEventListener('load', go, { once: true }); }
 window.__G = G; window.__op = { opOpen, opEnd, OP }; window.__startBoss = startBoss; window.__shop = { addCoin, openShop, PERM_LV }; window.__objsPush = o => objs.push(o); window.__DECO = DECO; window.__PL = PL; window.__start = start;
