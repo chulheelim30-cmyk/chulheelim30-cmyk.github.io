@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="ko"><head><!--PV--><meta http-equiv="Cache-Control" content="no-cache"><script>(function(){var V=48;if(!/github\.io$/.test(location.hostname))return;fetch('/play/version.json?t='+Date.now(),{cache:'no-store'}).then(function(r){return r.json()}).then(function(j){if(j&&j.v>V){var u=new URL(location.href);if(u.searchParams.get('v')!==String(j.v)){u.searchParams.set('v',j.v);location.replace(u.toString())}}}).catch(function(){})})()</script><!--/PV--><meta charset="utf-8">
+<!DOCTYPE html><html lang="ko"><head><!--PV--><meta http-equiv="Cache-Control" content="no-cache"><script>(function(){var V=49;if(!/github\.io$/.test(location.hostname))return;fetch('/play/version.json?t='+Date.now(),{cache:'no-store'}).then(function(r){return r.json()}).then(function(j){if(j&&j.v>V){var u=new URL(location.href);if(u.searchParams.get('v')!==String(j.v)){u.searchParams.set('v',j.v);location.replace(u.toString())}}}).catch(function(){})})()</script><!--/PV--><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <title>풍년이의 모험</title>
 <meta name="robots" content="noindex,nofollow">
@@ -792,12 +792,23 @@ const ZONES = [
   { n: '지붕 위', tint: 'rgba(100,130,255,.16)', bg: 'roof' },
   { n: '밤 산책길', tint: 'rgba(16,8,50,.38)' },
   { n: '강 다리', tint: 'rgba(90,150,210,.14)', bg: 'bridge' },
+  { n: '빗물 골목', tint: 'rgba(60,90,140,.26)', base: 2, fx: 'rain' }, // 50STAGE_V49: 6~10장 동네 (그림 오기 전엔 색·효과로)
+  { n: '은행잎 숲길', tint: 'rgba(255,190,40,.18)', base: 0, fx: 'leaf' },
+  { n: '바람 부는 언덕', tint: 'rgba(255,200,140,.14)', base: 0, fx: 'wind' },
+  { n: '눈 오는 놀이터', bg: 'snow' },
+  { n: '별자리 길', tint: 'rgba(16,8,50,.40)', base: 1, fx: 'firefly' },
 ];
 /* 11-24 v26 진행도: 이야기 속 보스 순번(0~14)은 판이 끝나도 저장 */
-const progN = () => (+(localStorage.getItem('pa2_prog') || 0)) % 15;
+const TOT = 50; // 10장 × 보스 5명
+const progN = () => (+(localStorage.getItem('pa2_prog') || 0)) % TOT;
 const bIdx = () => (G.p0 | 0) + (G.bossWin | 0);
-const CH = ['집을 나서요', '별을 따라서', '다시, 호수공원'];
-const zoneI = () => bIdx() % ZONES.length;
+const CH = ['집을 나서요', '고소한 시장 골목', '지붕 위 바람', '반딧불 산책길', '강 건너 절반', '비 오는 날', '노랑 잎 숲길', '바람이 보낸 편지', '눈 오는 밤', '다시, 호수공원'];
+const chOf = i => Math.floor((((i % TOT) + TOT) % TOT) / 5);
+const zoneI = () => chOf(bIdx()); // 장마다 동네 하나
+// 장 표지: 있는 그림(ch1 봄 발자국·ch2 반딧불·ch3 눈 오는 밤)은 1·4·9장, 나머지는 새 그림(cv2…cv10)이 오면 그걸, 없으면 배경 그림
+const COVER = ['ch1', 'cv2', 'cv3', 'ch2', 'cv5', 'cv6', 'cv7', 'cv8', 'ch3', 'cv10'], COVER0 = ['ch1', 'bg_market', 'bg_roof', 'ch2', 'bg_bridge', 'bg_night', 'bg_sunset', 'bg_sunset', 'ch3', 'bg_night'];
+const imOk = k => IMG[k] && IMG[k].complete && IMG[k].naturalWidth;
+const coverK = c => imOk(COVER[c]) ? COVER[c] : COVER0[c];
 
 function reset(demo) {
   Object.assign(G, { fevers: 0, bigs: 0, revived: 0, noRevive: false, tut: !demo && !localStorage.getItem('pa2_tut') ? 9 : 0, naps: 0, nap: 0, napWant: false, feverEat: 0, memT: false, consFx: 0, rest: 0, restK: 1, restEnd: 0, newPages: 0, yarn: 0, up: {}, boss: null, tok: Math.random(), cush: permL('cushion'), food: 100, p0: progN(), braveDone: false, braveB: false, napSaid: false, wang: 0, wangOut: 0, combo: 0, nmT: 0, coinRun: 0, nextCard: 50, cards: 0, safe: 0, bossWin: 0, dist: 0, speed: 300, bonus: 0, snacks: 0, pieces: 0, stage: 1, hp: 3, gauge: 0, fever: 0, kills: 0, shake: 0, banner: 0, demo });
@@ -814,7 +825,7 @@ function gen() {
     // 11-24: 장애물 난이도 8000(약 20초)→45000(약 1분 40초)에 걸쳐 오름. 보스 뒤엔 장애물 비율만 조금 더(diffO)
     const diff = Math.min(1, G.dist / 45000), diffO = diff + Math.min(0.6, (G.bossWin || 0) * 0.15);
     let gap = 0;
-    const roof = zoneI() === 2 || zoneI() === 4; if (!G.demo && !(G.boss && G.boss.kind !== 'crow') && Math.random() < 0.45 + diff * 0.2 + (roof ? 0.15 : 0)) { gap = Math.round(110 + (roof ? 30 : 0) + Math.random() * (40 + diff * 70)); snackArc(genX - 30, gap + 60, 120); }
+    const roof = zoneI() === 2 || zoneI() === 4 || zoneI() === 7; if (!G.demo && !(G.boss && G.boss.kind !== 'crow') && Math.random() < 0.45 + diff * 0.2 + (roof ? 0.15 : 0)) { gap = Math.round(110 + (roof ? 30 : 0) + Math.random() * (40 + diff * 70)); snackArc(genX - 30, gap + 60, 120); }
     const n = 3 + Math.floor(Math.random() * 5), x0 = genX + gap, x1 = x0 + 80 + n * 120;
     segs.push({ x0, x1, n, v: Array.from({ length: n }, () => Math.floor(Math.random() * 3)) });
     let x = x0 + 160; while (x < x1 - 220) { x += place(x, diffO); }
@@ -1521,7 +1532,7 @@ const SEASON = ['sunset', 'night', 'spring', 'snow', 'market', 'roof', 'bridge']
 const SB = { cur: 0, prev: 0, mix: 1 };
 function seasonBg() {
   const zb = G.state !== 'home' && !G.demo && ZONES[zoneI()].bg, zw = zb && bgLayer(zb) ? SEASON.indexOf(zb) : -1;
-  const want = G.state === 'home' ? 0 : zw >= 0 ? zw : (G.stage - 1) % 4;
+  const zbase = G.state !== 'home' && !G.demo ? ZONES[zoneI()].base : undefined, want = G.state === 'home' ? 0 : zw >= 0 ? zw : zbase != null ? zbase : (G.stage - 1) % 4;
   if (want !== SB.cur) { SB.prev = SB.cur; SB.cur = want; SB.mix = 0; }
   SB.mix = Math.min(1, SB.mix + G.dt * 0.6); TH.cur = SB.cur; TH.mix = SB.mix;
   const A = bgLayer(SEASON[SB.cur]) || bgLayer('sunset'), P = bgLayer(SEASON[SB.prev]);
@@ -1599,23 +1610,43 @@ const BOSSES = {
 };
 BOSSES.raccoon = { n: '너굴 대장', sub: '물결 점프 · 머리 끼면 콩!', story: '꺼내 주고 친구!', win: '너굴 대장이랑 친구!', hp: 24, col: ['#e8dcd4', '#6e625c'] };
 const BOSS_ORDER = ['crow', 'goose', 'robot', 'owl', 'raccoon'];
+const CH_FRIEND = ['crow', 'goose', 'robot', 'owl', 'raccoon', 'frog', 'squirrel', 'hedgehog', 'snowman', 'rabbit']; // 장 마지막 친구
+// 새 친구: 처음엔 기존 친구 공격 방식(base)을 그대로 쓰고, 그림(b_frog·b_frog2 …)이 오기 전엔 기존 그림에 색만 바꿔 보여 줌
+const NEWF = {
+  frog: { base: 'goose', n: '개굴 선장', sub: '돌진! 점프해서 머리 콩!', line: '"어디든 데려다 주지, 개굴!"', hp: 24, col: ['#b8f08a', '#3a9a3a'], filt: 'sepia(1) saturate(3) hue-rotate(50deg)' },
+  squirrel: { base: 'crow', n: '도토리 쌍둥이', sub: '털실공으로 도토리 막기!', line: '"하나는 너희 거! 하나는 우리 거!"', hp: 24, col: ['#ffd09a', '#b86a2a'], filt: 'sepia(1) saturate(2.4) brightness(1.5)' },
+  hedgehog: { base: 'robot', n: '따끔이 우체부', sub: '낮은 공 점프 · 높은 공 슬라이드', line: '"이 편지, 너희 거였구나!"', hp: 22, col: ['#e8c89a', '#8a5a3a'], filt: 'sepia(.9) saturate(1.6) hue-rotate(-20deg)' },
+  snowman: { base: 'owl', n: '눈뭉치 아저씨', sub: '빨간 줄 보고 피하기', line: '"봄이 오면 나는 녹지만, 너희는 닿을 거야"', hp: 22, col: ['#ffffff', '#8ab8e8'], filt: 'grayscale(1) brightness(1.7)' },
+  rabbit: { base: 'robot', n: '달토끼 등불지기', sub: '등불 빛: 낮으면 점프 · 높으면 슬라이드', line: '"등불을 따라가면 호수공원이야"', hp: 22, col: ['#fff3b0', '#d8a83a'], filt: 'grayscale(1) brightness(1.6) sepia(.25)' },
+};
+const bossD = B => (B && B.nk && NEWF[B.nk]) || BOSSES[B.kind];
+function bossAt(idx) { // 장마다 5명: 앞 4명은 만난 친구들 중 돌아가며, 5번째가 그 장의 친구
+  const i = ((idx % TOT) + TOT) % TOT, c = Math.floor(i / 5), s = i % 5, f = CH_FRIEND[c];
+  if (s === 4) return f;
+  if (c >= 5) return CH_FRIEND[c - 2 - s]; // 6~10장: 최근에 친구가 된 순서로 다시 만남
+  const pool = BOSS_ORDER.filter(k => k !== f);
+  return pool[(s + c * 2) % pool.length];
+}
+let BREMAP = null; // 새 친구 그림이 생기면 기존 그림 키를 바꿔 끼움
 const NM = { bin: 1, pot: 1, branch: 1, crow: 1, goose: 1, cone: 1, bike: 1, chimney: 1, bat: 1, bolt: 1, tcone: 1, wave: 1 };
 const HOME_X = { crow: 0.74, goose: 0.8, robot: 0.76, owl: 0.8, raccoon: 0.78 };
 const homeY = B => B.kind === 'goose' || B.kind === 'raccoon' ? GY : B.kind === 'robot' ? GY - 168 + Math.sin(B.t * 2) * 14 : B.kind === 'owl' ? GY - 226 + Math.sin(B.t * 1.8) * 10 : GY - 196 + Math.sin(B.t * 1.6) * 28;
 const bossCY = B => B.kind === 'raccoon' ? B.y - 50 : B.kind === 'goose' ? B.y - 60 : B.kind === 'robot' ? B.y - 36 : B.y;
 function braveScenes() {
   return [
-    { d: 3.4, k: 'card', bg: 'bg_night', chars: [['c_daze', 0.36, 0.34], ['w_pole', 0.64, 0.36]], cap: '마지막 친구 앞에서 다리가 덜덜…', sub: '' },
-    { d: 3.8, k: 'card', bg: 'bg_sunset', chars: [['c_wave', 0.34, 0.34], ['w_sit', 0.62, 0.42]], cap: '"이번엔… 내가 형 지켜 줄게."', sub: '처음으로 앞에 선 왕년이' },
+    { d: 3.4, k: 'card', bg: coverK(9), chars: [['c_love', 0.38, 0.34], ['w_sit', 0.62, 0.4]], cap: '별자리 열 개가 한꺼번에 켜져요', sub: '' },
+    { d: 3.2, k: 'card', bg: 'bg_night', chars: [['c_daze', 0.36, 0.34], ['w_pole', 0.64, 0.36]], cap: '마지막 친구 앞에서 다리가 덜덜…', sub: '' },
+    picOr('s_brave', { d: 3.8, k: 'card', bg: 'bg_sunset', chars: [['c_wave', 0.34, 0.34], ['w_sit', 0.62, 0.42]], cap: '"이번엔… 내가 형 지켜 줄게."', sub: '처음으로 앞에 선 왕년이' }),
+    { d: 3.4, k: 'card', bg: coverK(9), chars: [friendC('rabbit', 0.66, 0.36), ['c_wave', 0.34, 0.34]], cap: '달토끼 등불지기', sub: NEWF.rabbit.line },
   ];
 }
 function startBoss() {
-  if (bIdx() % 15 === 14 && !G.braveDone && !G.demo) { G.braveDone = true; G.state = 'story'; slideHeld = false; opOpen(false, braveScenes(), 'chap', () => { G.state = 'play'; G.braveB = true; G.wang = 99; G.wangOut = 0; startBoss0(); G.bannerSub = '왕년이가 같이 막아 줘요'; }); return; }
+  if (bIdx() % TOT === TOT - 1 && !G.braveDone && !G.demo) { G.braveDone = true; G.state = 'story'; slideHeld = false; opOpen(false, braveScenes(), 'chap', () => { G.state = 'play'; G.braveB = true; G.wang = 99; G.wangOut = 0; startBoss0(); G.bannerSub = '왕년이가 같이 막아 줘요'; }); return; }
   startBoss0();
 }
 function startBoss0() {
-  const idx = bIdx(), kind = BOSS_ORDER[idx % 5], D = BOSSES[kind], lv = 1 + Math.floor((idx % 15) / 5) + Math.min(2, meetN()), hp = D.hp + (lv - 1) * 6;
-  G.boss = { kind, sx: LW + 200, x: G.cam + LW + 200, y: GY - 200, hp, max: hp, in: 0, t: 0, cd: 1.8, hit: 0, lv, out: 0, throw: 0, ph: 'idle', pt: 0, n: 0, stomp: false };
+  const idx = bIdx(), fk = bossAt(idx), nf = NEWF[fk], kind = nf ? nf.base : fk, D = nf || BOSSES[kind], lv = Math.min(5, 1 + Math.floor(chOf(idx) / 2) + Math.min(2, meetN())), hp = D.hp + (lv - 1) * 6; // 2장마다 한 단계
+  G.boss = { kind, nk: nf ? fk : null, sx: LW + 200, x: G.cam + LW + 200, y: GY - 200, hp, max: hp, in: 0, t: 0, cd: 1.8, hit: 0, lv, out: 0, throw: 0, ph: 'idle', pt: 0, n: 0, stomp: false };
   G.boss.y = homeY(G.boss);
   G.banner = 2.8; G.bannerTxt = D.n + ' 등장!'; G.bannerSub = D.sub;
   sfx('fever'); vib([30, 30, 60]); objs.forEach(o => { if (['piece', 'crow', 'goose', 'bat', 'bike', 'chimney'].includes(o.t)) o.gone = true; });
@@ -1653,6 +1684,7 @@ function stepBoss(dt) {
   if (B.hp <= 0) { B.out += dt; B.sx = Math.max(B.sx, hx) + B.out * B.out * 30; B.y += (GY - 200 - B.out * 50 - B.y) * Math.min(1, dt * 3); B.x = G.cam + B.sx; if (Math.random() < dt * 5) pops.push({ x: B.x + rnd(-30, 30), y: B.y - 30, txt: '♥', col: '#ff9ac0', size: 18 + Math.random() * 10, life: 1.2 }); if (B.out > 3.2) G.boss = null; return; }
   if (B.in < 1) { B.in = Math.min(1, B.in + dt * 0.7); B.sx = hx + (1 - B.in) * 300; B.y = homeY(B); B.x = G.cam + B.sx; return; }
   if (G.nap > 0) { B.x = G.cam + B.sx; return; }
+  if (G.state === 'play') { B.hp -= B.max / 50 * dt; B.tired = (B.tired || 0) + dt; if (B.tired > 9) { B.tired = 0; pop(G.cam + B.sx, bossCY(B) - 80, '헥헥, 지쳐 간다…', '#e8e0ff', 16); } if (B.hp <= 0) { bossWin(); return; } } // ENDURE_V49
   const hard = B.lv >= 2 || B.hp < B.max * 0.4;
   if (B.kind === 'crow') {
     B.sx = hx; B.y = homeY(B); B.cd -= dt;
@@ -1706,23 +1738,25 @@ function stepBoss(dt) {
 }
 function bossHit() { const B = G.boss; B.hp--; B.hit = 0.12; sfx('hit'); G.bonus += 10; if (B.hp <= 0) bossWin(); }
 function bossWin() {
-  const B = G.boss, D = BOSSES[B.kind], bon = 3000 * B.lv; B.out = 0; B.stomp = false; G.bonus += bon; G.food = Math.min(100, (G.food || 0) + 40); G.bossWin++; if (G.braveB) { G.braveB = false; G.wang = 3; }
+  const B = G.boss, D = bossD(B), bon = 3000 * B.lv; B.out = 0; B.stomp = false; G.bonus += bon; G.food = Math.min(100, (G.food || 0) + 40); G.bossWin++; if (G.braveB) { G.braveB = false; G.wang = 3; }
   let beat = []; try { beat = JSON.parse(localStorage.getItem('pa2_bk') || '[]'); } catch (e) {}
   const first = !beat.includes(B.kind); if (first) { beat.push(B.kind); localStorage.setItem('pa2_bk', JSON.stringify(beat)); }
   const allFive = first && beat.length === 5; // GIFT5_V45: 다섯 보스 모두 처음 이긴 그 순간 한 번
   addCoin(30 * B.lv + (allFive ? 100 : 0));
-  const chW = Math.floor((((bIdx() - 1) % 15) + 15) % 15 / 5); // WINLINE_V38
+  const cW = chOf(bIdx() - 1), chW = Math.min(2, Math.floor(cW / 4)); // WINLINE_V38 (10장: 1~4장·5~8장·9~10장)
   G.banner = 3; G.bannerTxt = ['친구가 됐어요!', '우정이 깊어졌어요!', '고마워, 친구야!'][chW]; G.bannerSub = `${D.n} · +${bon}` + (allFive ? ' · 보스 5종 완료! 간식 100개' : '');
-  const BOSS_LINES = {crow: ['츄르 나눠 먹고 친구!', '"또 나눠 줄 거지?"', '"하늘에서 길 봐 줄게!"'], goose: ['"수고 많으세요~"', '"통행증 확인 완료!"', '꽥! 경례로 배웅'], robot: ['길 알려 주고 친구!', '"또 길 잃었어요…"', '"지름길 안내 시작!"'], owl: ['별자리 길이 열렸어요', '"왕년이 놀래켜서 미안~"', '"이제 다 왔다"'], raccoon: ['꺼내 주고 친구!', '"츄르 또 있어?"', '"다리 건너가!"']}; pop(B.x, bossCY(B) - 90, (BOSS_LINES[B.kind] || [D.story])[Math.floor((((bIdx() - 1) % 15) + 15) % 15 / 5)] || D.story, '#fff3c8', 17); sfx('big'); feverJingle(); vib([40, 40, 80]); burst(B.x, bossCY(B), 60, 'conf', FX, 520); burst(B.x, bossCY(B), 30, 'spark', FX, 380);
+  const BOSS_LINES = {crow: ['츄르 나눠 먹고 친구!', '"또 나눠 줄 거지?"', '"하늘에서 길 봐 줄게!"'], goose: ['"수고 많으세요~"', '"통행증 확인 완료!"', '꽥! 경례로 배웅'], robot: ['길 알려 주고 친구!', '"또 길 잃었어요…"', '"지름길 안내 시작!"'], owl: ['별자리 길이 열렸어요', '"왕년이 놀래켜서 미안~"', '"이제 다 왔다"'], raccoon: ['꺼내 주고 친구!', '"츄르 또 있어?"', '"다리 건너가!"']}; pop(B.x, bossCY(B) - 90, B.nk ? D.line : (BOSS_LINES[B.kind] || [D.story])[chW] || D.story, '#fff3c8', 17); sfx('big'); feverJingle(); vib([40, 40, 80]); burst(B.x, bossCY(B), 60, 'conf', FX, 520); burst(B.x, bossCY(B), 30, 'spark', FX, 380);
   objs.forEach(o => { if (o.t === 'cone' || o.t === 'bolt' || o.t === 'wave') o.gone = true; }); buls = [];
   for (let i = 0; i < 36; i++) objs.push({ t: 'snack', k: i % 9 === 4 ? 'sack' : SNACKS[i % 5], x: PX() + 260 + i * 30, y: GY - 36 - Math.abs(Math.sin(i * 0.45)) * 140 });
-  G.stage++; G.pieces = 0; const P = bIdx() % 15; localStorage.setItem('pa2_prog', P); const ch = P % 5 === 0 ? (P === 0 ? 3 : P / 5) : 0; setTimeout(() => { if (G.state !== 'play' || G.demo) return; if (ch === 3) storyEnding(); else if (ch) storyChapter(ch); else startRest(G.stage - 1, ''); }, ch ? 2400 : 3200); localStorage.setItem('pa2_boss', +(localStorage.getItem('pa2_boss') || 0) + 1);
+  G.stage++; G.pieces = 0; const P = bIdx() % TOT; localStorage.setItem('pa2_prog', P); const ch = P % 5 === 0 ? (P === 0 ? 10 : P / 5) : 0; setTimeout(() => { if (G.state !== 'play' || G.demo) return; if (ch === 10) storyEnding(); else if (ch) storyChapter(ch); else startRest(G.stage - 1, ''); }, ch ? 2400 : 3200); localStorage.setItem('pa2_boss', +(localStorage.getItem('pa2_boss') || 0) + 1);
 }
 function drawBoss() {
   const B = G.boss; if (!B) return; const x = B.x - G.cam + (B.hit ? rnd(-3, 3) : 0), y = B.y, fl = Math.floor(G.t * (B.hp > 0 ? 6 : 10)) % 2, cy = bossCY(B);
   ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = rg(ctx, x, cy, 10, 110, [B.hp > 0 ? 'rgba(120,80,200,.24)' : 'rgba(255,170,220,.4)', 'rgba(0,0,0,0)']); ctx.fillRect(x - 120, cy - 120, 240, 240); ctx.restore();
   const a = B.hit > 0 ? 0.65 : 1;
-  const okImg = drawBossImg(x, y, B, a);
+  let okImg; const NB = { crow: 'b_crow', goose: 'b_goose', robot: 'b_robot', owl: 'b_owl', raccoon: 'b_rac' };
+  if (B.nk) { const own = imOk('b_' + B.nk); BREMAP = own ? { [NB[B.kind]]: 'b_' + B.nk, [NB[B.kind] + '2']: imOk('b_' + B.nk + '2') ? 'b_' + B.nk + '2' : 'b_' + B.nk } : null; ctx.save(); if (!own) ctx.filter = NEWF[B.nk].filt; okImg = drawBossImg(x, y, B, a); ctx.restore(); BREMAP = null; }
+  else okImg = drawBossImg(x, y, B, a);
   if (okImg) {} else if (B.kind === 'crow') {
     if (B.hp > 0) put(ART.sack(), x + 6, y + 70, { rot: Math.sin(G.t * 3) * 0.25, s: 1.1 });
     const e = imgArt('o_crow', 176, 140, 0.5, 0.5, true, fl ? 0.9 : 0) || ART.crow(fl);
@@ -1737,7 +1771,7 @@ function drawBoss() {
   }
   if (B.ph === 'retreat' || (B.kind === 'robot' && (B.ph === 'fall' || B.ph === 'roll'))) for (let i = 0; i < 3; i++) { const q = G.t * 6 + i * 2.09; put(ART.star(), x + Math.cos(q) * 30, cy - 52 + Math.sin(q) * 7, { s: 0.6, rot: q }); }
 }
-function bimg(key, x, y, h, o = {}) { const im = IMG[key]; if (!im || !im.complete || !im.naturalWidth) return false; const w = im.naturalWidth * h / im.naturalHeight; ctx.save(); ctx.translate(x, y); if (o.rot) ctx.rotate(o.rot); if (o.a != null) ctx.globalAlpha = o.a; ctx.drawImage(im, -w / 2, o.bottom ? -h : -h / 2, w, h); ctx.restore(); return true; }
+function bimg(key, x, y, h, o = {}) { if (BREMAP && BREMAP[key]) key = BREMAP[key]; const im = IMG[key]; if (!im || !im.complete || !im.naturalWidth) return false; const w = im.naturalWidth * h / im.naturalHeight; ctx.save(); ctx.translate(x, y); if (o.rot) ctx.rotate(o.rot); if (o.a != null) ctx.globalAlpha = o.a; ctx.drawImage(im, -w / 2, o.bottom ? -h : -h / 2, w, h); ctx.restore(); return true; }
 function drawBossImg(x, y, B, a) { // 11-24 제미나이 보스 그림 (윗줄 평소 · 아랫줄 약해진 모습). 그림이 없으면 예전 코드 그림
   const k = B.kind, ph = B.ph, low = B.hp > 0 && B.hp < B.max * 0.3;
   const shadow = (w) => { ctx.fillStyle = 'rgba(30,20,50,.28)'; ctx.beginPath(); ctx.ellipse(x, GY + 3, w, 8, 0, 0, 7); ctx.fill(); };
@@ -1814,7 +1848,11 @@ function bossTop() { // 어둠·경고 (화면 위 레이어)
 function zoneFx() {
   if (G.state === 'home' || G.demo) return; const Z = ZONES[zoneI()];
   if (Z.tint && !(Z.bg && bgLayer(Z.bg))) { ctx.fillStyle = Z.tint; ctx.fillRect(0, 0, LW, LH); }
-  if (zoneI() === 3 && Math.random() < 0.25) parts.push({ x: G.cam + rnd(0, LW * 1.2), y: rnd(GY - 200, GY - 20), vx: rnd(-30, 10), vy: rnd(-15, 15), life: 1.6, max: 1.6, kind: 'spark', col: '#d8ff8a', size: 0.32, rot: 0, vr: 1, g: 0 });
+  const fx = Z.fx || (zoneI() === 3 ? 'firefly' : '');
+  if (fx === 'rain') { ctx.strokeStyle = 'rgba(210,225,255,.45)'; ctx.lineWidth = 1.2; const r0 = rng(Math.floor(G.t * 24)); ctx.beginPath(); for (let i = 0; i < 46; i++) { const x = r0() * LW, y = r0() * (GY + 20); ctx.moveTo(x, y); ctx.lineTo(x - 5, y + 16); } ctx.stroke(); }
+  if (fx === 'leaf' && Math.random() < 0.3) parts.push({ x: G.cam + rnd(LW * 0.2, LW * 1.2), y: -10, vx: rnd(-90, -30), vy: rnd(20, 50), life: 4, max: 4, kind: 'conf', col: Math.random() < 0.7 ? '#ffc83a' : '#e8602a', size: 0.9, rot: rnd(0, 6), vr: rnd(-4, 4), g: 12 });
+  if (fx === 'wind') { ctx.strokeStyle = 'rgba(255,255,255,.28)'; ctx.lineWidth = 1.6; for (let i = 0; i < 6; i++) { const y = 60 + i * 37, x = ((i * 173 - G.t * 420) % (LW + 220) + LW + 220) % (LW + 220) - 110; ctx.beginPath(); ctx.moveTo(x, y); ctx.quadraticCurveTo(x + 40, y - 8, x + 90, y); ctx.stroke(); } }
+  if (fx === 'firefly' && Math.random() < 0.25) parts.push({ x: G.cam + rnd(0, LW * 1.2), y: rnd(GY - 200, GY - 20), vx: rnd(-30, 10), vy: rnd(-15, 15), life: 1.6, max: 1.6, kind: 'spark', col: '#d8ff8a', size: 0.32, rot: 0, vr: 1, g: 0 });
 }
 function nearMiss(o) {
   if (G.demo || G.fever > 0 || G.state !== 'play') return;
@@ -1823,9 +1861,9 @@ function nearMiss(o) {
   if (c >= 3) { sfx('snack'); burst(SX() + 10, PL.y - 50, 4 + c, 'spark', ['#8af0ff', '#fff'], 150); }
 }
 function hudX() {
-  if (!G.boss) { const m = BOSS_EVERY - ((G.stage - 1) % BOSS_EVERY) - 1; const P = bIdx() % 15; text(`${Math.floor(P / 5) + 1}장 · 보스 ${P % 5}/5${m > 0 ? '' : ' · 곧 보스!'}`, LW - 16, 78, 14, 'right', '#ffe3f0'); }
+  if (!G.boss) { const m = BOSS_EVERY - ((G.stage - 1) % BOSS_EVERY) - 1; const P = bIdx() % TOT; text(`${Math.floor(P / 5) + 1}장 · 보스 ${P % 5}/5${m > 0 ? '' : ' · 곧 보스!'}`, LW - 16, 78, 14, 'right', '#ffe3f0'); }
   else if (G.boss.hp > 0) {
-    const B = G.boss, D = BOSSES[B.kind], w = 220, x = LW / 2 - w / 2, y = 70; text(D.n + (B.lv > 1 ? ` Lv.${B.lv}` : ''), LW / 2, y - 2, 15, 'center', '#fff');
+    const B = G.boss, D = bossD(B), w = 220, x = LW / 2 - w / 2, y = 70; text(D.n + (B.lv > 1 ? ` Lv.${B.lv}` : ''), LW / 2, y - 2, 15, 'center', '#fff');
     rr(ctx, x, y + 8, w, 11, 5.5); ctx.fillStyle = 'rgba(30,20,60,.55)'; ctx.fill(); ctx.strokeStyle = 'rgba(255,255,255,.8)'; ctx.lineWidth = 1.3; ctx.stroke();
     rr(ctx, x + 1.5, y + 9.5, (w - 3) * Math.max(0, B.hp) / B.max, 8, 4); ctx.fillStyle = lg(ctx, y + 9, y + 18, D.col); ctx.fill();
   }
@@ -2072,7 +2110,7 @@ function opScene(g, i, p, alpha) {
     opImg(g, 'g_r' + fi, W * 0.5, gy - bob, H * 0.3);
     if (p > 0.3 && p < 0.7) opText(g, '(왕년이도 몰래 따라왔어요)', W * 0.25, gy - H * 0.27, fs * 0.6, '#e8e0ff', Math.min(1, (p - 0.3) * 6, (0.7 - p) * 6));
   } else if (S.k === 'arrive' || S.k === 'title') {
-    const chI = IMG['ch' + (Math.floor(progN() / 5) + 1)], useCh = S.k === 'title' && chI && chI.complete && chI.naturalWidth;
+    const chI = IMG[coverK(Math.floor(progN() / 5))], useCh = S.k === 'title' && chI && chI.complete && chI.naturalWidth;
     opCover(g, useCh ? chI : IMG.bg_sunset, S.k === 'title' ? 0.5 - p * 0.15 : 0.35 + p * 0.25, useCh ? 0.5 : 0.6, S.k === 'title' ? 1.25 : 1.12 + p * 0.1);
     if (S.k === 'arrive') { const x = W * (0.1 + 0.32 * ease(Math.min(1, p * 1.4))); opImg(g, p < 0.7 ? 'g_r' + (Math.floor(OP.t * 10) % 8) : 'c_wave', x, H * 0.9, H * (p < 0.7 ? 0.28 : 0.34)); }
     else {
@@ -2085,7 +2123,7 @@ function opScene(g, i, p, alpha) {
     }
   } else if (S.k === 'card') {
     opCover(g, IMG[S.bg], 0.4 + p * 0.2, 0.6, 1.15 + p * 0.05); g.fillStyle = 'rgba(20,10,40,.15)'; g.fillRect(0, 0, W, H);
-    (S.chars || []).forEach(([k, cx, hh, fl], j) => opImg(g, k, W * cx, H * 0.9 - Math.abs(Math.sin(OP.t * 3 + j)) * 3, H * hh, fl));
+    (S.chars || []).forEach(([k, cx, hh, fl, ft], j) => { g.save(); if (ft) g.filter = ft; opImg(g, k, W * cx, H * 0.9 - Math.abs(Math.sin(OP.t * 3 + j)) * 3, H * hh, fl); g.restore(); });
   } else if (S.k === 'chapter') {
     g.fillStyle = '#1a1030'; g.fillRect(0, 0, W, H); if (S.bg && IMG[S.bg] && IMG[S.bg].complete) { opCover(g, IMG[S.bg], 0.5, 0.5, 1.08 + p * 0.06); g.fillStyle = 'rgba(20,10,40,.38)'; g.fillRect(0, 0, W, H); } opText(g, S.cap, W / 2, H * 0.42, Math.min(52, W * 0.075), '#ffe27a', p * 3); opText(g, S.sub, W / 2, H * 0.42 + Math.min(56, W * 0.08), fs * 0.8, '#fff', p * 3 - 1);
   } else if (S.k === 'love') { // 엔딩: 가족 품의 풍년이 + 상자째 따라온 왕년이
@@ -2137,16 +2175,40 @@ function opOpen(autoTap, sc, kind, done) { // 첫 실행: '눌러서 시작' 카
   if (autoTap) { $('op-tap').hidden = false; const g = OP.g; g.fillStyle = '#140c24'; g.fillRect(0, 0, OP.W, OP.H); opCover(g, IMG.bg_sunset, 0.5, 0.55, 1.1); g.fillStyle = 'rgba(20,12,36,.45)'; g.fillRect(0, 0, OP.W, OP.H); }
   else opStart();
 }
-function chapterScenes(ch) {
-  return ch === 1 ? [
-    { d: 3.6, k: 'card', bg: 'bg_snow', chars: [['c_daze', 0.38, 0.36], ['w_pole', 0.66, 0.36]], cap: '뒤에서 누가 따라오는데…?', sub: '…왕년이?!' },
-    { d: 3.8, k: 'card', bg: 'bg_spring', chars: [['c_yay', 0.36, 0.36], ['w_sit', 0.64, 0.42]], cap: '"형… 혼자 있으면 무섭단 말이야"', sub: '둘이 같이 가기로 했어요' },
-    { d: 3.6, k: 'chapter', bg: 'ch2', cap: '2장 · 별을 따라서', sub: '1장 끝!' },
-  ] : [
-    { d: 3.8, k: 'card', bg: 'bg_night', chars: [['b_goose', 0.12, 0.26, true], ['b_rac', 0.26, 0.24, true], ['c_wave', 0.46, 0.36], ['w_run0', 0.7, 0.24], ['b_robot', 0.88, 0.2]], cap: '친구가 된 보스들이 모였어요', sub: '"호수공원은 저쪽이야!"' },
-    { d: 3.6, k: 'card', bg: 'bg_night', chars: [['c_doze', 0.4, 0.34], ['w_sleep', 0.66, 0.24]], cap: '오늘 밤은 여기서 한숨 자고', sub: '내일은 꼭 도착할 거예요' },
-    { d: 3.6, k: 'chapter', bg: 'ch3', cap: '3장 · 다시, 호수공원', sub: '보스 다섯만 더!' },
-  ];
+function fImg(nk) { const nf = NEWF[nk]; if (!nf) return [{ crow: 'b_crow', goose: 'b_goose', robot: 'b_robot', owl: 'b_owl', raccoon: 'b_rac' }[nk], null]; if (imOk('b_' + nk)) return ['b_' + nk, null]; return [{ crow: 'b_crow', goose: 'b_goose', robot: 'b_robot', owl: 'b_owl' }[nf.base], nf.filt]; }
+const friendC = (nk, cx, hh) => { const [k, f] = fImg(nk); return [k, cx, hh, true, f]; };
+const picOr = (img, card) => imOk(img) ? { d: card.d, k: 'pic', img, big: true, cap: card.cap, sub: card.sub } : card;
+function chapterScenes(ch) { // CHSCENE_V49: ch장이 끝날 때 장면 2~3장 → 다음 장 표지
+  const N = ch + 1, cover = { d: 3.6, k: 'chapter', bg: coverK(ch), cap: `${N}장 · ${CH[ch]}`, sub: `${ch}장 끝!` + (ch === 5 ? ' · 이제 절반!' : '') };
+  const C = {
+    1: [{ d: 3.6, k: 'card', bg: 'bg_snow', chars: [['c_daze', 0.38, 0.36], ['w_pole', 0.66, 0.36]], cap: '뒤에서 누가 따라오는데…?', sub: '…왕년이?!' },
+        { d: 3.8, k: 'card', bg: 'bg_spring', chars: [['c_yay', 0.36, 0.36], ['w_sit', 0.64, 0.42]], cap: '"형… 혼자 있으면 무섭단 말이야"', sub: '둘이 같이 가기로 했어요' }],
+    2: [{ d: 3.4, k: 'card', bg: 'bg_market', chars: [['c_eat', 0.42, 0.36]], cap: '생선 냄새에 풍년이 발이 멈췄어요', sub: '' },
+        { d: 3.6, k: 'card', bg: 'bg_market', chars: [['c_daze', 0.4, 0.34], ['w_run0', 0.64, 0.26]], cap: '"형! 우리 호수공원 가야 돼!"', sub: '왕년이가 꼬리를 물고 끌어요' },
+        { d: 3.4, k: 'card', bg: 'bg_market', chars: [friendC('goose', 0.62, 0.42), ['c_wave', 0.32, 0.34]], cap: '꽥장군이 경례!', sub: '"통행증 발급 완료!"' }],
+    3: [{ d: 3.4, k: 'card', bg: 'bg_roof', chars: [['c_wave', 0.34, 0.34], ['w_scare', 0.64, 0.36]], cap: '지붕 끝에서 왕년이가 얼어붙었어요', sub: '' },
+        { d: 3.6, k: 'card', bg: 'bg_roof', chars: [['c_yay', 0.38, 0.36], ['w_jump', 0.64, 0.38]], cap: '"내 꼬리 잡아. 같이 뛰자!"', sub: '' },
+        { d: 3.4, k: 'card', bg: 'bg_roof', chars: [friendC('robot', 0.64, 0.3), ['c_wave', 0.34, 0.34]], cap: '빙글이 로봇', sub: '"지름길 안내 시작!"' }],
+    4: [{ d: 3.4, k: 'card', bg: 'bg_night', chars: [['c_love', 0.4, 0.36], ['w_sit', 0.64, 0.4]], cap: '반딧불이 하나둘 별자리가 돼요', sub: '' },
+        { d: 3.6, k: 'card', bg: 'bg_night', chars: [['c_sleep', 0.4, 0.26], ['w_nuzzle', 0.64, 0.36]], cap: '배부른 풍년이가 벌러덩', sub: '왕년이가 코를 콕' },
+        { d: 3.4, k: 'card', bg: 'bg_night', chars: [friendC('owl', 0.64, 0.34), ['c_wave', 0.34, 0.34]], cap: '부엉 할매', sub: '"왕년이 놀래켜서 미안~"' }],
+    5: [picOr('s_bridge', { d: 3.8, k: 'card', bg: 'bg_bridge', chars: [friendC('crow', 0.1, 0.22), friendC('goose', 0.24, 0.26), ['c_wave', 0.42, 0.32], ['w_sit', 0.58, 0.38], friendC('robot', 0.74, 0.2), friendC('raccoon', 0.9, 0.26)], cap: '다리 위 노을, 친구 다섯이 모두 모였어요', sub: '' }),
+        { d: 3.6, k: 'card', bg: 'bg_bridge', chars: [['c_yay', 0.38, 0.36], ['w_sit', 0.62, 0.42]], cap: '"형, 우리 절반이나 왔어!"', sub: '왕년이가 처음으로 가슴을 펴요' },
+        { d: 3.4, k: 'card', bg: 'bg_bridge', chars: [friendC('raccoon', 0.64, 0.38), ['c_wave', 0.34, 0.34]], cap: '너굴 대장', sub: '"츄르 또 있어? 없으면… 다리 건너가!"' }],
+    6: [{ d: 3.4, k: 'card', bg: 'bg_night', chars: [['c_daze', 0.36, 0.34], ['w_box', 0.64, 0.24]], cap: '주루룩 빗소리에 왕년이가 상자 밑에 숨었어요', sub: '' },
+        { d: 3.6, k: 'card', bg: 'bg_spring', chars: [['c_yay', 0.38, 0.36], ['w_sit', 0.64, 0.42]], cap: '"우산이야. 이것도 든든하지?"', sub: '풍년이가 큰 잎사귀를 쓰고 왔어요' },
+        { d: 3.4, k: 'card', bg: 'bg_spring', chars: [friendC('frog', 0.64, 0.4), ['c_wave', 0.34, 0.34]], cap: '개굴 선장', sub: NEWF.frog.line }],
+    7: [{ d: 3.4, k: 'card', bg: 'bg_sunset', chars: [['g_roll', 0.38, 0.3], ['w_jump', 0.62, 0.36]], cap: '노랑 낙엽 더미에 둘이 풍덩!', sub: '' },
+        { d: 3.6, k: 'card', bg: 'bg_sunset', chars: [['c_yay', 0.38, 0.36], ['w_nuzzle', 0.64, 0.36]], cap: '왕년이가 깔깔 웃어요', sub: '"형, 이거 또 하자!"' },
+        { d: 3.4, k: 'card', bg: 'bg_sunset', chars: [friendC('squirrel', 0.64, 0.36), ['c_wave', 0.34, 0.34]], cap: '도토리 쌍둥이', sub: NEWF.squirrel.line }],
+    8: [picOr('s_letter', { d: 3.8, k: 'card', bg: 'bg_sunset', chars: [friendC('hedgehog', 0.66, 0.28), ['c_love', 0.36, 0.36]], cap: '따끔이 우체부가 올리브색 편지를 건네요', sub: '' }),
+        { d: 3.8, k: 'card', bg: 'bg_sunset', chars: [['c_love', 0.38, 0.36], ['w_sit', 0.62, 0.42]], cap: '편지에는 발자국 두 개와 하트만', sub: '"우리를 기다리는 것 같아"' },
+        { d: 3.4, k: 'card', bg: 'bg_sunset', chars: [['w_groom', 0.6, 0.4], ['c_wave', 0.34, 0.34]], cap: '"뒤돌아보지 말고 가자, 형."', sub: '' }],
+    9: [{ d: 3.4, k: 'card', bg: 'bg_snow', chars: [['c_daze', 0.42, 0.36]], cap: '첫눈, 풍년이가 오들오들 떨어요', sub: '' },
+        { d: 3.8, k: 'card', bg: 'bg_snow', chars: [['c_doze', 0.4, 0.32], ['w_nuzzle', 0.62, 0.38]], cap: '왕년이가 긴 털로 형을 감싸 줘요', sub: '"내 털 따뜻하지?"' },
+        { d: 3.6, k: 'card', bg: 'bg_snow', chars: [friendC('snowman', 0.64, 0.38), ['c_wave', 0.34, 0.34]], cap: '눈뭉치 아저씨', sub: NEWF.snowman.line }],
+  };
+  return (C[ch] || []).concat([cover]);
 }
 function storyChapter(ch) {
   G.state = 'story'; slideHeld = false;
