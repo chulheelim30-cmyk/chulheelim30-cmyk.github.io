@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="ko"><head><!--PV--><meta http-equiv="Cache-Control" content="no-cache"><script>(function(){var V=44;if(!/github\.io$/.test(location.hostname))return;fetch('/play/version.json?t='+Date.now(),{cache:'no-store'}).then(function(r){return r.json()}).then(function(j){if(j&&j.v>V){var u=new URL(location.href);if(u.searchParams.get('v')!==String(j.v)){u.searchParams.set('v',j.v);location.replace(u.toString())}}}).catch(function(){})})()</script><!--/PV--><meta charset="utf-8">
+<!DOCTYPE html><html lang="ko"><head><!--PV--><meta http-equiv="Cache-Control" content="no-cache"><script>(function(){var V=45;if(!/github\.io$/.test(location.hostname))return;fetch('/play/version.json?t='+Date.now(),{cache:'no-store'}).then(function(r){return r.json()}).then(function(j){if(j&&j.v>V){var u=new URL(location.href);if(u.searchParams.get('v')!==String(j.v)){u.searchParams.set('v',j.v);location.replace(u.toString())}}}).catch(function(){})})()</script><!--/PV--><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <title>풍년이의 모험</title>
 <meta name="robots" content="noindex,nofollow">
@@ -115,7 +115,7 @@ body.playing .pad{display:flex}
 <div id="op" hidden><canvas id="op-cv"></canvas><button id="op-tap" hidden><b>풍년이의 모험</b><span>화면을 눌러 시작 ▶</span></button><button id="op-skip">건너뛰기 ▶▶</button></div>
 <div class="ov" id="shop" hidden style="background:rgba(20,14,50,.6)"><div class="card alb">
  <h2>🐟 간식 상점 <small id="shop-n"></small></h2>
- <div class="sub" style="margin:2px 0 6px">달리며 모은 간식으로 풍년이를 영구 강화해요 · 보스를 처음 이기면 간식 100개 선물</div>
+ <div class="sub" style="margin:2px 0 6px">달리며 모은 간식으로 풍년이를 영구 강화해요 · 보스 5종을 모두 이기면 간식 500개 선물</div>
  <div id="shop-grid"></div>
  <button class="btn ghost" id="shop-close">닫기</button>
 </div></div>
@@ -1695,9 +1695,10 @@ function bossWin() {
   const B = G.boss, D = BOSSES[B.kind], bon = 3000 * B.lv; B.out = 0; B.stomp = false; G.bonus += bon; G.food = Math.min(100, (G.food || 0) + 40); G.bossWin++; if (G.braveB) { G.braveB = false; G.wang = 3; }
   let beat = []; try { beat = JSON.parse(localStorage.getItem('pa2_bk') || '[]'); } catch (e) {}
   const first = !beat.includes(B.kind); if (first) { beat.push(B.kind); localStorage.setItem('pa2_bk', JSON.stringify(beat)); }
-  addCoin(30 * B.lv + (first ? 100 : 0));
+  const allFive = first && beat.length === 5; // GIFT5_V45: 다섯 보스 모두 처음 이긴 그 순간 한 번
+  addCoin(30 * B.lv + (allFive ? 500 : 0));
   const chW = Math.floor((((bIdx() - 1) % 15) + 15) % 15 / 5); // WINLINE_V38
-  G.banner = 3; G.bannerTxt = ['친구가 됐어요!', '우정이 깊어졌어요!', '고마워, 친구야!'][chW]; G.bannerSub = `${D.n} · +${bon}` + (first ? ' · 첫 승리 간식 100개' : '');
+  G.banner = 3; G.bannerTxt = ['친구가 됐어요!', '우정이 깊어졌어요!', '고마워, 친구야!'][chW]; G.bannerSub = `${D.n} · +${bon}` + (allFive ? ' · 보스 5종 완료! 간식 500개' : '');
   const BOSS_LINES = {crow: ['츄르 나눠 먹고 친구!', '"또 나눠 줄 거지?"', '"하늘에서 길 봐 줄게!"'], goose: ['"수고 많으세요~"', '"통행증 확인 완료!"', '꽥! 경례로 배웅'], robot: ['길 알려 주고 친구!', '"또 길 잃었어요…"', '"지름길 안내 시작!"'], owl: ['별자리 길이 열렸어요', '"왕년이 놀래켜서 미안~"', '"이제 다 왔다"'], raccoon: ['꺼내 주고 친구!', '"츄르 또 있어?"', '"다리 건너가!"']}; pop(B.x, bossCY(B) - 90, (BOSS_LINES[B.kind] || [D.story])[Math.floor((((bIdx() - 1) % 15) + 15) % 15 / 5)] || D.story, '#fff3c8', 17); sfx('big'); feverJingle(); vib([40, 40, 80]); burst(B.x, bossCY(B), 60, 'conf', FX, 520); burst(B.x, bossCY(B), 30, 'spark', FX, 380);
   objs.forEach(o => { if (o.t === 'cone' || o.t === 'bolt' || o.t === 'wave') o.gone = true; }); buls = [];
   for (let i = 0; i < 36; i++) objs.push({ t: 'snack', k: i % 9 === 4 ? 'sack' : SNACKS[i % 5], x: PX() + 260 + i * 30, y: GY - 36 - Math.abs(Math.sin(i * 0.45)) * 140 });
