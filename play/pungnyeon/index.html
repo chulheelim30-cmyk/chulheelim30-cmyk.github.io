@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="ko"><head><!--PV--><meta http-equiv="Cache-Control" content="no-cache"><script>(function(){var V=50;if(!/github\.io$/.test(location.hostname))return;fetch('/play/version.json?t='+Date.now(),{cache:'no-store'}).then(function(r){return r.json()}).then(function(j){if(j&&j.v>V){var u=new URL(location.href);if(u.searchParams.get('v')!==String(j.v)){u.searchParams.set('v',j.v);location.replace(u.toString())}}}).catch(function(){})})()</script><!--/PV--><meta charset="utf-8">
+<!DOCTYPE html><html lang="ko"><head><!--PV--><meta http-equiv="Cache-Control" content="no-cache"><script>(function(){var V=51;if(!/github\.io$/.test(location.hostname))return;fetch('/play/version.json?t='+Date.now(),{cache:'no-store'}).then(function(r){return r.json()}).then(function(j){if(j&&j.v>V){var u=new URL(location.href);if(u.searchParams.get('v')!==String(j.v)){u.searchParams.set('v',j.v);location.replace(u.toString())}}}).catch(function(){})})()</script><!--/PV--><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <title>풍년이의 모험</title>
 <meta name="robots" content="noindex,nofollow">
@@ -1011,7 +1011,7 @@ function addGauge(v) { if (G.fever > 0 || G.demo) return; G.gauge = Math.min(100
 function startFever() { G.fevers++; G.feverEat = 0; G.fever = FEVER_T + upL('fever') * 2 + permL('fever'); G.banner = 2; G.bannerTxt = '배부른 피버 타임!'; G.bannerSub = '무적 · 점수 2배'; G.flash = 0.5; feverJingle(); vib([40, 40, 80]); burst(SX(), PL.y - 40, 60, 'conf', FX, 520); burst(SX(), PL.y - 40, 30, 'spark', FX, 400); }
 const FEVER_T = 8; const fv2 = () => G.fever > 0;
 function feverJingle() { if (muted) return; try { AC = AC || new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { return; } [523, 659, 784, 1047, 1319].forEach((f, i) => { const t = AC.currentTime + i * 0.07, o = AC.createOscillator(), g = AC.createGain(); o.type = 'triangle'; o.frequency.value = f; o.connect(g); g.connect(AC.destination); g.gain.setValueAtTime(0.1, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.25); o.start(t); o.stop(t + 0.26); }); }
-const MEM = ['호수공원에서 우리를 간택한 날', '하루에도 수십 번 밥 달라고 조르던 풍년이', '소파에 누우면 옆에 와서 애교 부리던 풍년이', '처음 보는 손님도 반갑게 맞던 개냥이 풍년이', '먹고 나면 바로 벌러덩 눕던 풍년이', '언제나 씩씩하게 달리던 풍년이'];
+const MEM = ['호수공원에서 우리를 간택한 날', '하루에도 수십 번 밥 달라고 조르는 풍년이', '소파에 누우면 옆에 와서 애교 부리는 풍년이', '처음 보는 손님도 반갑게 맞는 개냥이 풍년이', '먹고 나면 바로 벌러덩 눕는 풍년이', '오늘도 씩씩하게 달리는 풍년이'];
 const THEMES = [{ name: '노을', k: 'sunset' }, { name: '밤하늘', k: 'night' }, { name: '벚꽃', k: 'spring' }, { name: '눈 오는 날', k: 'snow' }, { name: '시장 골목', k: 'market' }, { name: '지붕 위', k: 'roof' }, { name: '강 다리', k: 'bridge' }];
 const score = () => Math.floor(G.dist / 10) + G.bonus;
 
@@ -1138,7 +1138,7 @@ function hud() {
   const gx = 64, gy = 44, gw = 110, gh = 9, k = G.fever > 0 ? Math.min(1, G.fever / FEVER_T) : G.gauge / 100;
   rr(ctx, gx, gy, gw, gh, 4.5); ctx.fillStyle = 'rgba(30,20,60,.5)'; ctx.fill(); ctx.strokeStyle = 'rgba(255,255,255,.7)'; ctx.lineWidth = 1.2; ctx.stroke();
   if (k > 0.01) { rr(ctx, gx + 1.5, gy + 1.5, (gw - 3) * k, gh - 3, 3); const gr = ctx.createLinearGradient(gx, 0, gx + gw, 0); if (G.fever > 0) { const o = (G.t * 1.5) % 1; ['#ff6b9a', '#ffb347', '#ffe27a', '#7fd84a', '#7fd6ff', '#b58cff'].forEach((c, i) => gr.addColorStop((i / 6 + o) % 1, c)); } else { gr.addColorStop(0, '#ff9ac0'); gr.addColorStop(1, '#ffd27a'); } ctx.fillStyle = gr; ctx.fill(); }
-  if (G.fever > 0) { const pu = 1 + Math.sin(G.t * 12) * 0.08; ctx.save(); ctx.translate(gx + gw + 40, gy + 5); ctx.scale(pu, pu); text(G.feverEat >= 15 ? '너무 배불러!' : G.memT ? '추억 타임' : 'FEVER ×2', 0, 0, 15, 'center', FX[Math.floor(G.t * 8) % 4]); ctx.restore(); } else text('피버', gx + gw + 8, gy + 5, 12, 'left', '#ffe3f0');
+  if (G.fever > 0) { const pu = 1 + Math.sin(G.t * 12) * 0.08; ctx.save(); ctx.translate(gx + gw + 40, gy + 5); ctx.scale(pu, pu); text(G.feverEat >= 15 ? '너무 배불러!' : G.memT ? '별빛 타임' : 'FEVER ×2', 0, 0, 15, 'center', FX[Math.floor(G.t * 8) % 4]); ctx.restore(); } else text('피버', gx + gw + 8, gy + 5, 12, 'left', '#ffe3f0');
   { const fx = 44, fy = 18, fw = 150, fh = 16, fk = Math.max(0, Math.min(1, (G.food == null ? 100 : G.food) / 100)), low = fk < 0.25, bl = low && Math.floor(G.t * 6) % 2; // 배부름 막대
     
     rr(ctx, fx + 22, fy, fw, fh, 6); ctx.fillStyle = 'rgba(30,20,60,.55)'; ctx.fill(); ctx.strokeStyle = bl ? '#ff6a7a' : 'rgba(255,255,255,.8)'; ctx.lineWidth = bl ? 2.2 : 1.2; ctx.stroke();
@@ -1989,10 +1989,10 @@ const DIARY = [
   ['g_jump', '꽃잎이 날린다. 잡으려고 폴짝 뛰었다.'], ['c_doze', '창가 햇볕 자리를 찾았다. 오늘부터 내 자리.'], ['c_eat', '밥 달라고 열 번 불렀다. 열 번 다 들어줬다.'], ['c_love', '츄르는 세상에서 제일 맛있다. 진짜다.'], ['c_yay', '엄마가 내 털이 은빛으로 반짝인대. 알고 있었다.'], ['c_sleep', '낮잠 자다 깨 보니 담요가 덮여 있었다.'],
   ['c_daze', '하얀 게 하늘에서 내린다. 차갑고 신기하다.'], ['c_doze', '보일러 앞이 최고다. 아무도 비켜 주지 않을 거다.'], ['c_wave', '가족이 다 모인 날. 나도 가운데 앉았다.'], ['c_eat', '생선 냄새가 난다. 부엌 앞에서 기다려야지.'], ['c_love', '꾹꾹이를 했더니 엄마가 좋아했다.'], ['c_yay', '올해도 잘 먹고 잘 잤다. 진짜 풍년이다.'],
   ['c_wave2', '아침마다 제일 먼저 밥 달라고 깨운다. 내 일이다.'], ['g_roll', '새 장난감 털실공. 굴러가면 쫓아간다.'], ['c_love', '소파에 누우면 옆에 가서 기댄다. 그게 애교래.'], ['g_slide', '택배 상자는 들어가 봐야 한다. 규칙이다.'], ['c_wave', '초록 눈으로 빤히 보면 간식이 나온다.'], ['c_sleep', '오늘은 조금 많이 먹었다. 바로 누웠다.'],
-  ['c_doze', '가족이 늦게 와도 기다린다. 오면 야옹 한 번.'], ['c_yay', '별이 많은 밤. 하나쯤은 내 별일 거다.'], ['g_boost', '새벽에 우다다 달렸다. 기분이 좋았다.'], ['c_love', '엄마 무릎은 딱 내 크기다.'], ['c_daze', '손님 가방 냄새를 맡았다. 다 확인해야 한다.'], ['c_sleep', '자는 척하면 다들 조용히 쓰다듬는다.'],
+  ['c_doze', '가족이 늦게 와도 기다린다. 오면 야옹 한 번.'], ['c_yay', '별이 많은 밤. 창가에서 같이 별을 셌다.'], ['g_boost', '새벽에 우다다 달렸다. 기분이 좋았다.'], ['c_love', '엄마 무릎은 딱 내 크기다.'], ['c_daze', '손님 가방 냄새를 맡았다. 다 확인해야 한다.'], ['c_sleep', '자는 척하면 다들 조용히 쓰다듬는다.'],
   ['c_wave', '봄바람 냄새. 창문을 열어 달라고 했다.'], ['g_leap', '새 소리를 들으면 꼬리가 저절로 움직인다.'], ['c_doze', '햇볕에 털을 말리면 몸이 노곤해진다.'], ['c_eat', '밥을 다 먹고 한 그릇 더 달라고 했다.'], ['c_wave2', '가족 사진 찍을 때 나도 꼭 들어간다.'], ['g_r5', '오늘도 씩씩하게 집 안을 순찰했다.'],
   ['c_sleep', '추운 날엔 이불 속이 내 집이다.'], ['c_love', '엄마 아빠 사이에 누우면 걱정이 없다.'], ['c_eat', '나이가 들어도 밥 조르는 건 여전히 잘한다.'], ['c_doze', '천천히 걸어도 괜찮다. 다들 기다려 준다.'], ['c_love', '쓰다듬는 손이 따뜻하다. 오래오래 좋다.'], ['c_yay', '올해도 함께여서 다행이다.'],
-  ['g_boost', '꿈속에서는 다리가 가볍다. 마음껏 달린다.'], ['g_r1', '호수공원 길을 다시 달렸다. 처음 만난 그 길.'], ['c_wave', '바람이 좋다. 노을이 예쁘다. 배도 부르다.'], ['c_love', '내가 고른 가족. 역시 내 눈이 맞았다.'], ['g_jump', '언제든 부르면 달려갈게. 밥 시간이면 더 빨리.'], ['c_wave2', '고마워. 나는 언제나 풍년이야.'],
+  ['g_boost', '오늘은 다리가 가볍다. 마음껏 달린다.'], ['g_r1', '호수공원 길을 다시 달렸다. 처음 만난 그 길.'], ['c_wave', '바람이 좋다. 노을이 예쁘다. 배도 부르다.'], ['c_love', '내가 고른 가족. 역시 내 눈이 맞았다.'], ['g_jump', '언제든 부르면 달려갈게. 밥 시간이면 더 빨리.'], ['c_wave2', '오늘도 고마워. 내일 아침밥도 부탁해.'],
 ];
 const diaryN = () => +(localStorage.getItem('pa2_diary') || 0);
 const DP = [0,8,4,3,4,8,1,0,8,4,7,0,2,5,3,3,2,7,7,7,8,3,8,6,3,6,4,6,3,4,5,1,6,8,0,7,2,5,2,3,8,6,7,8,3,5,8,7,2,0,0,8,6,1]; // 일기 쪽마다 Gemini 그림일기 9칸 중 어느 그림인지
@@ -2010,7 +2010,7 @@ function memComplete(st) { // 별자리 완성 → 추억 타임
   const ci = (st - 1) % CONS.length, L = JSON.parse(localStorage.getItem('pa2_cons') || '[]'); L.push(ci); localStorage.setItem('pa2_cons', JSON.stringify(L.slice(-60)));
   G.consFx = 1.6; startRest(st, `${CONS[ci].n} 별자리 완성!`);
 }
-function memTime() { G.memT = true; if (G.fever > 0) G.fever = Math.max(G.fever, 10); else { startFever(); G.fever = 10 + upL('fever') * 2 + permL('fever'); } G.bannerTxt = '다시 출발! 추억 타임'; G.bannerSub = '무적 · 점수 2배 · 간식 비'; G.banner = 2.4; }
+function memTime() { G.memT = true; if (G.fever > 0) G.fever = Math.max(G.fever, 10); else { startFever(); G.fever = 10 + upL('fever') * 2 + permL('fever'); } G.bannerTxt = '다시 출발! 별빛 타임'; G.bannerSub = '무적 · 점수 2배 · 간식 비'; G.banner = 2.4; }
 /* 스테이지 사이 쉼터: 6초 동안 천천히, 장애물·구덩이 없이 간식만 */
 const REST_T = 6;
 function startRest(st, title) {
@@ -2052,7 +2052,7 @@ const ORD = ['첫', '두', '세', '네', '다섯', '여섯', '일곱', '여덟',
 const meetN = () => +(localStorage.getItem('pa2_meet') || 0);
 const ordOf = n => (n <= 10 ? ORD[n - 1] : n) + ' 번째';
 const beatK = () => { try { return JSON.parse(localStorage.getItem('pa2_bk') || '[]'); } catch (e) { return []; } };
-function opLine(m) { return m === 0 ? '호수공원까지, 달려 볼까요?' : m === 1 ? '또 만났네. 몇 번이라도 고를 거야.' : m === 2 ? '행복은 같은 날을 또 사는 거래.' : m < 6 ? '오늘도 호수공원에서 만나요.' : '언제나, 여기서 만나요.'; }
+function opLine(m) { return m === 0 ? '호수공원까지, 달려 볼까요?' : m === 1 ? '또 왔네. 오늘도 같이 달리자.' : m === 2 ? '행복은 같은 날을 또 사는 거래.' : m < 6 ? '오늘도 호수공원에서 만나요.' : '오늘도, 내일도 같이 달려요.'; }
 function opScenes() {
   return [
     { d: 4.0, k: 'home', cap: '어느 밤, 풍년이 귀가 쫑긋', sub: '창밖 별 하나가 반짝' },
@@ -2066,7 +2066,7 @@ function endScenes(m) {
   return [
     { d: 3.2, k: 'arrive', img: 'bg_sunset', cap: '호수공원이 보여요!', sub: '' },
     { d: 3.8, k: 'pic', img: 'e_meet', cap: '벤치 앞에서 누가 불렀어요', sub: '"풍년아! 왕년아!"' },
-    { d: 5.0, k: 'love', cap: `${ordOf(m)} 만남`, sub: '몇 번이라도, 여기서 다시 만나요' },
+    { d: 5.0, k: 'love', cap: `${ordOf(m)} 여행 완주`, sub: '오늘도 같이 달려서 행복했어요' },
     { d: 3.6, k: 'pic', img: 'e_wake', big: true, cap: '…꿈이었어요', sub: '둘이 같이 눈을 떴어요' },
     { d: 5.4, k: 'pic', img: 'e_home', big: true, cap: '진짜 행복은', sub: '여기, 우리 집에 있었어요' },
   ];
@@ -2119,7 +2119,7 @@ function opScene(g, i, p, alpha) {
       const x = -W * 0.2 + (W * 0.7) * Math.min(1, ease(Math.min(1, p * 1.6))), gy = H * 0.88, bob = Math.abs(Math.sin(OP.t * 12)) * 6;
       opImg(g, 'w_run' + (Math.floor(OP.t * 8) % 2), x - H * 0.36, gy - bob, H * 0.22); opImg(g, 'g_r' + (Math.floor(OP.t * 12) % 8), x, gy - bob, H * 0.3);
       const k = Math.max(0, (p - 0.28) / 0.3), s = 1 + (1 - Math.min(1, k)) * 0.4;
-      if (k > 0) { g.save(); g.translate(W / 2, H * 0.27); g.scale(s, s); opText(g, '풍년이의 모험', 0, 0, Math.min(64, W * 0.09), '#ffe27a', k); g.restore(); opText(g, `— ${ordOf(meetN() + 1)} 만남 · ${Math.floor(progN() / 5) + 1}장 —`, W / 2, H * 0.27 + Math.min(48, W * 0.068), Math.min(20, W * 0.032), '#fff', k); }
+      if (k > 0) { g.save(); g.translate(W / 2, H * 0.27); g.scale(s, s); opText(g, '풍년이의 모험', 0, 0, Math.min(64, W * 0.09), '#ffe27a', k); g.restore(); opText(g, `— ${ordOf(meetN() + 1)} 여행 · ${Math.floor(progN() / 5) + 1}장 —`, W / 2, H * 0.27 + Math.min(48, W * 0.068), Math.min(20, W * 0.032), '#fff', k); }
       opText(g, opLine(meetN()), W / 2, H * 0.47, Math.min(24, W * 0.04), '#fff', (p - 0.55) * 4);
     }
   } else if (S.k === 'card') {
@@ -2217,7 +2217,7 @@ function storyChapter(ch) {
 }
 function storyEnding() { // 보스 4종을 다 친구로 만들면: 호수공원 도착 → 만남 횟수 +1 → 계속 달리기
   const m = meetN() + 1; localStorage.setItem('pa2_meet', m); G.state = 'story'; slideHeld = false;
-  opOpen(false, endScenes(m), 'end', () => { G.state = 'play'; PL.hurt = 1.5; startRest(G.stage - 1, ''); G.banner = 2.8; G.bannerTxt = `${ordOf(m)} 만남!`; G.bannerSub = '다시 1장부터!'; });
+  opOpen(false, endScenes(m), 'end', () => { G.state = 'play'; PL.hurt = 1.5; startRest(G.stage - 1, ''); G.banner = 2.8; G.bannerTxt = `${ordOf(m)} 여행 완주!`; G.bannerSub = '다시 1장부터!'; });
 }
 /* ---------- 왕년이: 덩치 큰 겁쟁이 동생 (상자 아이템) ---------- */
 const WANG_T = 10;
@@ -2247,7 +2247,7 @@ ART.wbox = () => imgArt('w_box', 52, 40, 0.5, 0.5) || ART.yarn();
 $('op-tap').addEventListener('click', opStart);
 $('op-skip').addEventListener('click', e => { e.stopPropagation(); opEnd(); });
 $('op-btn').addEventListener('click', () => opOpen(false));
-{ const m = meetN(), P = progN(), d = document.querySelector('.home .desc'), t = []; if (P || m) t.push(`${Math.floor(P / 5) + 1}장 ${P % 5}/5`); if (m) t.push(`벌써 ${m}번 만났어요`); if (t.length && d) d.textContent += ' · ' + t.join(' · '); }
+{ const m = meetN(), P = progN(), d = document.querySelector('.home .desc'), t = []; if (P || m) t.push(`${Math.floor(P / 5) + 1}장 ${P % 5}/5`); if (m) t.push(`호수공원 여행 ${m}번 완주`); if (t.length && d) d.textContent += ' · ' + t.join(' · '); }
 addEventListener('resize', () => { if (!$('op').hidden && OP.cv) setTimeout(opSize, 60); });
 if (!localStorage.getItem('pa2_op') && !/[?&]noop/.test(location.search)) { const go = () => opOpen(true); if (IMG.bg_sunset.complete) go(); else IMG.bg_sunset.addEventListener('load', go, { once: true }); }
 window.__G = G; window.__op = { opOpen, opEnd, OP }; window.__startBoss = startBoss; window.__shop = { addCoin, openShop, PERM_LV }; window.__objsPush = o => objs.push(o); window.__DECO = DECO; window.__PL = PL; window.__start = start;
