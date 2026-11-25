@@ -904,7 +904,11 @@ cv.addEventListener('pointerdown', e => { e.preventDefault(); jump(); });
 const bJ = document.getElementById('bj'), bS = document.getElementById('bs');
 bJ.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); bJ.classList.add('dn'); jump(); });
 ['pointerup', 'pointercancel', 'pointerleave'].forEach(ev => bJ.addEventListener(ev, () => bJ.classList.remove('dn')));
-bS.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); bS.setPointerCapture(e.pointerId); bS.classList.add('dn'); setSlide(true); });
+let slidePid = null; /* FIX_V58 */
+bS.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); slidePid = e.pointerId; try { bS.setPointerCapture(e.pointerId); } catch (_) {} bS.classList.add('dn'); setSlide(true); });
+['pointerup', 'pointercancel'].forEach(ev => addEventListener(ev, e => { if (slideHeld && (slidePid === null || e.pointerId === slidePid)) { slidePid = null; bS.classList.remove('dn'); setSlide(false); } }, true));
+setInterval(() => { if (slideHeld && G.state !== 'play') { slidePid = null; slideHeld = false; bS.classList.remove('dn'); } }, 150);
+addEventListener('blur', () => { slidePid = null; bS.classList.remove('dn'); setSlide(false); }); document.addEventListener('visibilitychange', () => { if (document.hidden) { slidePid = null; bS.classList.remove('dn'); setSlide(false); } });
 ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(ev => bS.addEventListener(ev, () => { bS.classList.remove('dn'); setSlide(false); }));
 addEventListener('keydown', e => { if (e.repeat) return; if (e.code === 'Space' || e.code === 'ArrowUp') { e.preventDefault(); jump(); } if (e.code === 'ArrowDown') setSlide(true); });
 addEventListener('keyup', e => { if (e.code === 'ArrowDown') setSlide(false); });
@@ -956,10 +960,10 @@ function update(dt) {
       else if (o.close && !o.nm && box.x1 < pb.x0) { o.nm = true; nearMiss(o); }
     }
   }
-  if (G.scT > 0) { G.scT -= dt; if (G.scT <= 0) { if ((G.sc | 0) >= 10 && !G.demo) pop(PX(), PL.y - 120, '간식 콤보 ' + G.sc + '!', '#ffd27a', 18); G.sc = 0; } } if (fv && !G.wr && G.fever <= 1.6 && !G.demo) { G.wr = true; feverWarr(); } if (fv) { G.fever -= dt; if (G.fever <= 0) { G.fever = 0; G.gauge = 0; G.memT = false; } }
+  if (G.dashT > 0) G.dashT -= dt; if (G.scT > 0) { G.scT -= dt; if (G.scT <= 0) { if ((G.sc | 0) >= 10 && !G.demo) pop(PX(), PL.y - 120, '간식 콤보 ' + G.sc + '!', '#ffd27a', 18); G.sc = 0; } } if (fv && !G.wr && G.fever <= 1.6 && !G.demo) { G.wr = true; feverWarr(); } if (fv) { G.fever -= dt; if (G.fever <= 0) { G.fever = 0; G.gauge = 0; G.memT = false; } }
   if (G.napDelay > 0) { G.napDelay -= dt; if (G.napDelay <= 0) G.napWant = true; }
   if (G.napWant && PL.ground && !G.demo) { G.napWant = false; G.nap = 1.8; G.napT0 = 1.8; G.naps++; localStorage.setItem('pa2_napT', +(localStorage.getItem('pa2_napT') || 0) + 1); G.banner = 2.2; G.bannerTxt = '친구랑 실컷 놀고 꾸벅…'; G.bannerSub = ''; slideHeld = false; }
-  if (fv) { G.flash = Math.max(0, (G.flash || 0) - dt); if (Math.random() < dt * 20) objs.push({ t: 'snack', k: SNACKS[Math.floor(Math.random() * 5)], x: G.cam + LW * rnd(0.55, 1.1), y: rnd(GY - 230, GY - 40) }); G.fShape = (G.fShape || 0) - dt; if (G.fShape <= 0 && !G.boss) { G.fShape = 0.9; feverShape(); } }
+  if (fv) { G.flash = Math.max(0, (G.flash || 0) - dt); if (Math.random() < dt * 20) objs.push({ t: 'snack', nog: 1, k: SNACKS[Math.floor(Math.random() * 5)], x: G.cam + LW * rnd(0.55, 1.1), y: rnd(GY - 230, GY - 40) }); G.fShape = (G.fShape || 0) - dt; if (G.fShape <= 0 && !G.boss) { G.fShape = 0.9; feverShape(); } }
   G.nmT = Math.max(0, (G.nmT || 0) - dt); if (G.nmT <= 0) G.combo = 0;
   if (!G.demo && G.state === 'play' && !(G.fever > 0) && !(G.rest > 0) && !(G.boss && G.boss.hp <= 0)) { // 배부름이 조금씩 줄어요 (쿠키런 에너지처럼)
     G.food = Math.max(0, (G.food == null ? 100 : G.food) - dt * FOOD_DRAIN);
@@ -982,7 +986,7 @@ function starve() { // 배고파서 털썩 → 이어 달리기(광고) 또는 �
   G.state = 'over'; PL.vy = 0; if (PL.y > GY) PL.y = GY; const sc = score(); if (sc > G.best) { G.best = sc; localStorage.setItem('pa2_best', sc); } setTimeout(showOver, 1000);
 }
 function hurt() { if ((G.sc | 0) >= 10) pop(PX(), PL.y - 120, '콤보 끊김…', '#ffe3f0', 16); G.sc = 0; G.scT = 0;
-  if (PL.hurt > 0 || G.fever > 0 || G.demo || G.safe > 0) return;
+  if (PL.hurt > 0 || G.fever > 0 || G.demo || G.safe > 0 || G.dashT > 0) return;
   G.combo = 0; G.nmT = 0;
   if (wangHurt()) return;
   if (G.cush > 0) { G.cush--; PL.hurt = 1.2; vib(20); sfx('hit'); pop(PX(), PL.y - 96, '방석 방어!', '#ffe3a0', 18); burst(SX(), PL.y - 36, 14, 'puff', ['#fff', '#ffd8a8'], 170); return; }
@@ -997,7 +1001,7 @@ function kill(o) {
   burst(o.x, y, 16, 'spark', FX, 300); burst(o.x, y, 6, 'puff', ['#fff'], 120); pop(o.x, y - 24, '+' + pts, '#ffd27a', 22); sfx('kill'); vib(15); addGauge(6);
 }
 function collect(o) {
-  if (o.t === 'snack') { const big = o.k === 'bowl' || o.k === 'sack'; G.snacks++; if (!G.demo) addSnackTotal(); /* COMBO_V54 */ G.sc = (G.scT > 0 ? (G.sc | 0) : 0) + 1; G.scT = 0.9; snackCombo(o); const v = Math.round((1 + Math.min(G.sc, 50) * 0.02) * (big ? 300 : 10) * (G.fever ? 2 : 1) * (1 + upL('snk') * 0.5 + permL('snk') * 0.1)); if (!G.demo) addCoin(big ? 5 : 1); G.bonus += v; if (G.fever) G.feverEat++; addGauge(big ? 10 : 1.4); if (big && !G.demo) { G.food = Math.min(100, (G.food || 0) + 20); pop(o.x, o.y - 50, '배부름 +20', '#9af07a', 18); } burst(o.x, o.y, big ? 20 : 3, 'spark', big ? ['#ffd27a', '#fff'] : ['#fff1c8'], big ? 300 : 90); if (big) { G.bigs++; pop(o.x, o.y - 24, o.k === 'sack' ? '참치캔! +300' : '사료! +300', '#ffd27a', 22); sfx('big'); } else if (Math.random() < 0.5) sfx('snack'); }
+  if (o.t === 'snack') { const big = o.k === 'bowl' || o.k === 'sack'; G.snacks++; if (!G.demo) addSnackTotal(); /* COMBO_V54 */ G.sc = (G.scT > 0 ? (G.sc | 0) : 0) + 1; G.scT = 0.9; snackCombo(o); const v = Math.round((1 + Math.min(G.sc, 50) * 0.02) * (big ? 300 : 10) * (G.fever ? 2 : 1) * (1 + upL('snk') * 0.5 + permL('snk') * 0.1)); if (!G.demo) addCoin(big ? 5 : 1); G.bonus += v; if (G.fever) G.feverEat++; if (!o.nog) addGauge(big ? 10 : 1.0); if (big && !G.demo) { G.food = Math.min(100, (G.food || 0) + 20); pop(o.x, o.y - 50, '배부름 +20', '#9af07a', 18); } burst(o.x, o.y, big ? 20 : 3, 'spark', big ? ['#ffd27a', '#fff'] : ['#fff1c8'], big ? 300 : 90); if (big) { G.bigs++; pop(o.x, o.y - 24, o.k === 'sack' ? '참치캔! +300' : '사료! +300', '#ffd27a', 22); sfx('big'); } else if (Math.random() < 0.5) sfx('snack'); }
   else if (o.t === 'heart') { G.food = Math.min(100, (G.food || 0) + 25); pop(o.x, o.y - 24, '배부름 +25', '#9af07a', 22); burst(o.x, o.y, 14, 'spark', ['#ffd27a', '#fff'], 220); sfx('big'); }
   else if (o.t === 'piece') {
     G.pieces++; G.bonus += 200; const phI = ALBUM ? unlockPhoto() : -1; sfx('big'); vib(30); burst(o.x, o.y, 30, 'spark', ['#ffe58a', '#fff', '#ffc93a'], 340);
@@ -1011,7 +1015,7 @@ function collect(o) {
   
 }
 function feverShape() { // 피버 간식 모양: 동그라미·하트·물결·계단
-  const x0 = G.cam + LW * 1.08, k = Math.floor(Math.random() * 4), add = (x, y, i) => objs.push({ t: 'snack', k: i === 0 && Math.random() < 0.25 ? 'sack' : SNACKS[i % 5], x, y });
+  const x0 = G.cam + LW * 1.08, k = Math.floor(Math.random() * 4), add = (x, y, i) => objs.push({ t: 'snack', nog: 1 /* FIXB_V58 */, k: i === 0 && Math.random() < 0.25 ? 'sack' : SNACKS[i % 5], x, y });
   if (k === 0) { const cy = GY - rnd(110, 170); for (let i = 0; i < 12; i++) { const a = i / 12 * Math.PI * 2; add(x0 + 70 + Math.cos(a) * 64, cy + Math.sin(a) * 52, i); } }
   else if (k === 1) { const cy = GY - 150; for (let i = 0; i < 16; i++) { const t = i / 16 * Math.PI * 2; add(x0 + 80 + 4.2 * 16 * Math.pow(Math.sin(t), 3), cy - 4.2 * (13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t)), i); } }
   else if (k === 2) { for (let i = 0; i < 14; i++) add(x0 + i * 30, GY - 110 - Math.sin(i * 0.7) * 70, i); }
@@ -1186,7 +1190,7 @@ function banner() {
 let last = performance.now();
 function frame(now) { const raw = (now - last) / 1000, dt = Math.max(0, Math.min(1 / 30, raw)); last = now; perf(raw); update(dt); if (G.state === 'play') { missionTick(); if (G.tut > 0) { G.tut -= dt; if (G.tut <= 0) localStorage.setItem('pa2_tut', '1'); } } draw(); requestAnimationFrame(frame); }
 const $ = id => document.getElementById(id);
-function start() { try { PungRank.start(); } catch (e) {} $('home').hidden = true; $('over').hidden = true; reset(false); G.state = 'play'; { const P = G.p0 | 0, c = Math.floor(P / 5); G.banner = 2.4; G.bannerTxt = `${c + 1}장 · ${CH[c]}`; G.bannerSub = `보스 ${P % 5}/5`; } if (permL('dash')) { G.fever = 3; G.bannerTxt = '출발 대시!'; G.bannerSub = '3초 무적'; G.banner = 1.6; } document.body.classList.add('playing'); try { AC = AC || new (window.AudioContext || window.webkitAudioContext)(); AC.resume(); } catch (e) {} }
+function start() { try { PungRank.start(); } catch (e) {} $('home').hidden = true; $('over').hidden = true; reset(false); G.state = 'play'; { const P = G.p0 | 0, c = Math.floor(P / 5); G.banner = 2.4; G.bannerTxt = `${c + 1}장 · ${CH[c]}`; G.bannerSub = `보스 ${P % 5}/5`; } if (permL('dash')) { G.dashT = 3; G.bannerTxt = '출발 대시!'; G.bannerSub = '3초 무적'; G.banner = 1.6; } document.body.classList.add('playing'); try { AC = AC || new (window.AudioContext || window.webkitAudioContext)(); AC.resume(); } catch (e) {} }
 function showOver() { localStorage.setItem('pa2_coin', COIN); try { PungRank.submit('pungadventure', score()); PungRank.maybeInvite('pungadventure', score(), { host: wrap }); } catch (e) {} localStorage.setItem('pa2_distT', +(localStorage.getItem('pa2_distT') || 0) + Math.floor(G.dist / 10)); $('ov-score').textContent = score().toLocaleString(); $('ov-best').textContent = G.best.toLocaleString(); $('ov-stats').innerHTML = `<span>달린 거리 <b>${Math.floor(G.dist / 10)}m</b></span><span>간식 <b>${G.snacks}</b></span><span>별 <b>${(G.stage - 1) * 6 + G.pieces}</b></span><span>꿀잠 <b>${G.naps}번</b></span><span>상점 간식 <b>+${G.coinRun | 0}</b></span>`; $('over').hidden = false; document.body.classList.remove('playing'); }
 function goHome() { $('polar').classList.remove('show'); renderMis(); $('over').hidden = true; $('home').hidden = false; reset(true); G.state = 'home'; }
 // 11-24 닉네임 랭킹 (PungRank)
@@ -1879,7 +1883,7 @@ function zoneFx() {
 }
 function snackCombo(o) {
   const c = G.sc | 0; if (G.demo || c < 10 || c % 10) return;
-  const pts = c * 10; G.bonus += pts; if (!G.fever) addGauge(4);
+  const pts = c * 10; G.bonus += pts;
   pop(o.x, o.y - 40, '간식 콤보 ' + c + '! +' + pts, c >= 30 ? '#ff9ad0' : '#ffd27a', 20 + Math.min(8, c / 10));
   sfx('big'); vib(20); burst(o.x, o.y, 10 + Math.min(20, c / 2), 'spark', ['#ffd27a', '#fff', '#ff9ad0'], 220);
 }
@@ -1887,8 +1891,8 @@ function feverWarr() {
   // 피버가 끝나기 직전, 앞쪽에 간식이 와르르 쏟아져요
   G.banner = 1.6; G.bannerTxt = '막판 와르르!'; G.bannerSub = '마지막까지 다 먹어요!';
   const x0 = G.cam + LW * 0.45;
-  for (let i = 0; i < 34; i++) { const t = i / 33; objs.push({ t: 'snack', k: SNACKS[i % 5], x: x0 + t * LW * 1.1, y: GY - 50 - Math.sin(t * Math.PI * 3) * 70 - rnd(0, 40) }); }
-  for (let i = 0; i < 3; i++) objs.push({ t: 'snack', k: 'bowl', x: x0 + LW * (0.35 + i * 0.35), y: GY - 150 });
+  for (let i = 0; i < 34; i++) { const t = i / 33; objs.push({ t: 'snack', nog: 1, k: SNACKS[i % 5], x: x0 + t * LW * 1.1, y: GY - 50 - Math.sin(t * Math.PI * 3) * 70 - rnd(0, 40) }); }
+  for (let i = 0; i < 3; i++) objs.push({ t: 'snack', nog: 1, k: 'bowl', x: x0 + LW * (0.35 + i * 0.35), y: GY - 150 });
   sfx('big'); feverJingle(); vib([30, 30, 60]); burst(SX() + 120, GY - 220, 50, 'conf', ['#ffd27a', '#ff9ad0', '#8af0ff', '#fff'], 480);
 }
 function nearMiss(o) {
