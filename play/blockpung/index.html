@@ -2539,18 +2539,17 @@ JE.input.on({
     const pr = pauseRect();
     if (inRect(p, { x: pr.x - 10, y: pr.y - 10, w: pr.w + 20, h: pr.h + 20 })) return pause();
     for (let i = 0; i < 3; i++) if (G.tray[i] && inRect(p, slotRect(i))) {
-      G.drag = { i, x: p.x, y: p.y, sx: p.x, sy: p.y, t0: performance.now(), k: 0, snap: null };
-      JE.tweens.to(G.drag, { k: 1 }, 0.12, 'outCubic');
+      G.drag = { i, x: p.x, y: p.y, sx: p.x, sy: p.y, t0: performance.now(), k: 0, snap: null, mv: 0, lifted: false }; /* TAP_V70 */
       SND.pick(); JE.haptic('tap');
       return;
     }
   },
-  move(p) { const d = G.drag; if (!d) return; d.x = p.x; d.y = p.y; const s = snapOf(d); if (s && (!d.snap || s.gr !== d.snap.gr || s.gc !== d.snap.gc)) JE.haptic('tap'); d.snap = s; d.preview = s ? previewClear(G.tray[d.i], s) : null; },
+  move(p) { const d = G.drag; if (!d) return; d.x = p.x; d.y = p.y; d.mv = Math.max(d.mv, Math.hypot(p.x - d.sx, p.y - d.sy)); if (!d.lifted && d.mv >= 10) { d.lifted = true; JE.tweens.to(d, { k: 1 }, 0.12, 'outCubic'); } const s = snapOf(d); if (s && (!d.snap || s.gr !== d.snap.gr || s.gc !== d.snap.gc)) JE.haptic('tap'); d.snap = s; d.preview = s ? previewClear(G.tray[d.i], s) : null; },
   up(p) {
     const d = G.drag; if (!d) return; G.drag = null;
     if (G.state !== 'play') return;
     d.x = p.x; d.y = p.y;
-    if (Math.hypot(p.x - d.sx, p.y - d.sy) < 14 && performance.now() - d.t0 < 350) { const pc = G.tray[d.i], n = rotOf(pc.sh); if (n !== pc.sh) { pc.sh = n; pc.face = Math.min(pc.face, n.cells.length - 1); G.trayPop[d.i] = 0.55; SND.pick(); JE.haptic('tap'); save(); } return; }
+    if (Math.max(d.mv || 0, Math.hypot(p.x - d.sx, p.y - d.sy)) < 22 && performance.now() - d.t0 < 1000) { const pc = G.tray[d.i], n = rotOf(pc.sh); if (n !== pc.sh) { pc.sh = n; pc.face = Math.min(pc.face, n.cells.length - 1); G.trayPop[d.i] = 0.55; SND.pick(); JE.haptic('tap'); save(); } return; }
     const s = snapOf(d);
     if (s) place(d.i, s.gr, s.gc); else { SND.bad(); G.trayPop[d.i] = 0; }
   },
