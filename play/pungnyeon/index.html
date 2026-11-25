@@ -1120,7 +1120,7 @@ function drawCat() {
   let f;
   if (G.nap > 0) f = G.nap > 1.9 ? 'c_eat' : 'c_sleep'; else if (G.state === 'over') f = 'c_sleep'; else if (G.state === 'ask') f = 'c_doze'; else if (PL.hurt > 1.0) f = 'c_daze'; else if (PL.slide) f = 'g_slide';
   else if (!PL.ground) f = PL.jumps >= 2 && PL.vy < -250 ? 'g_roll' : PL.vy < 420 ? 'g_boost' : 'g_leap'; // POSE_V29 점프 = 슈퍼맨 대시
-  else f = IMG.g_r0 && IMG.g_r0.complete ? 'g_r' + (Math.floor(PL.anim * (G.fever > 0 ? 2.6 : 1.5)) % 8) : 'r' + (Math.floor(PL.anim * 1.6) % 13);
+  else f = IMG.g_r0 && IMG.g_r0.complete ? 'g_r' + (G.fever > 0 ? [0, 1, 2, 5, 6, 7][Math.floor(PL.anim * 1.9) % 6] : Math.floor(PL.anim * 1.5) % 8) /* FEVERPOSE_V57 */ : 'r' + (Math.floor(PL.anim * 1.6) % 13);
   if (f.startsWith('c_') && !(IMG[f] && IMG[f].complete && IMG[f].naturalWidth)) f = f === 'c_daze' ? 'hurt' : 'slide';
   if (f.startsWith('g_') && !(IMG[f] && IMG[f].complete && IMG[f].naturalWidth)) f = f === 'g_slide' ? 'slide' : f === 'g_boost' ? 'r' + (Math.floor(PL.anim * 1.6) % 13) : 'jump';
   if (PL.hurt > 0 && PL.hurt <= 1.0 && G.state === 'play' && Math.floor(G.t * 14) % 2) return;
