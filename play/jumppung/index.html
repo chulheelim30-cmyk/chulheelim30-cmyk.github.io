@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="ko">
-<head><!--PV--><meta http-equiv="Cache-Control" content="no-cache"><script>(function(){var V=48;if(!/github\.io$/.test(location.hostname))return;fetch('/play/version.json?t='+Date.now(),{cache:'no-store'}).then(function(r){return r.json()}).then(function(j){if(j&&j.v>V){var u=new URL(location.href);if(u.searchParams.get('v')!==String(j.v)){u.searchParams.set('v',j.v);location.replace(u.toString())}}}).catch(function(){})})()</script><!--/PV-->
+<head><!--PV--><meta http-equiv="Cache-Control" content="no-cache"><script>(function(){var V=52;if(!/github\.io$/.test(location.hostname))return;fetch('/play/version.json?t='+Date.now(),{cache:'no-store'}).then(function(r){return r.json()}).then(function(j){if(j&&j.v>V){var u=new URL(location.href);if(u.searchParams.get('v')!==String(j.v)){u.searchParams.set('v',j.v);location.replace(u.toString())}}}).catch(function(){})})()</script><!--/PV-->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#fbf6ea">
@@ -1406,28 +1406,26 @@ JE.art.add('jp_star','data:image/webp;base64,UklGRr4RAABXRUJQVlA4WAoAAAAQAAAAvgA
   }
 
   /* ---------------- 상태 ---------------- */
-  let markT = Date.now(), inviting = false, runTok = null;
-  async function newRun() { runTok = null; try { const r = await rpc('pung_run', {}); runTok = (r && r.run) || null; } catch (e) { runTok = null; } }
-  newRun();               // 지난 제출(또는 시작) 시각 → 플레이 시간 추정
+  let markT = Date.now(), inviting = false;               // 지난 제출(또는 시작) 시각 → 플레이 시간 추정
   const me = () => LS.get('me', null);  // {id, secret, nick}
-  function pendSet(game, s, dur, run) { const p = LS.get('pend', {}); if (!p[game] || s > p[game].s) { p[game] = { s, dur, run }; LS.set('pend', p); } }
+  function pendSet(game, s, dur) { const p = LS.get('pend', {}); if (!p[game] || s > p[game].s) { p[game] = { s, dur }; LS.set('pend', p); } }
 
-  async function send(game, s, dur, run) {
+  async function send(game, s, dur) {
     const m = me(); if (!m) return { queued: true };
-    if (navigator.onLine === false) { pendSet(game, s, dur, run); return { queued: true }; }
+    if (navigator.onLine === false) { pendSet(game, s, dur); return { queued: true }; }
     try {
-      const r = await rpc('pung_submit2', { p_id: m.id, p_secret: m.secret, p_game: game, p_score: Math.floor(s), p_run: run || null });
-      if (r && r.error === 'rate') { pendSet(game, s, dur, run); return r; }
+      const r = await rpc('pung_submit', { p_id: m.id, p_secret: m.secret, p_game: game, p_score: Math.floor(s), p_dur_ms: Math.floor(dur), p_sig: await sig(game, Math.floor(s), m.id) });
+      if (r && r.error === 'rate') { pendSet(game, s, dur); return r; }
       const p = LS.get('pend', {}); if (p[game] && p[game].s <= s) { delete p[game]; LS.set('pend', p); }
       return r || {};
     } catch (e) {
-      pendSet(game, s, dur, run); return { queued: true };
+      pendSet(game, s, dur); return { queued: true };
     }
   }
   async function flush() {
     const m = me(); if (!m) return;
     const p = LS.get('pend', {});
-    for (const g of Object.keys(p)) await send(g, p[g].s, p[g].dur, p[g].run);
+    for (const g of Object.keys(p)) await send(g, p[g].s, p[g].dur);
   }
 
   const PR = {
@@ -1436,13 +1434,13 @@ JE.art.add('jp_star','data:image/webp;base64,UklGRr4RAABXRUJQVlA4WAoAAAAQAAAAvgA
     /** 한 판 끝날 때 점수 제출. durMs 를 모르면 지난 제출부터 지난 시간으로 추정 */
     submit(game, score, durMs) {
       score = Math.floor(Number(score) || 0);
-      const now = Date.now(), dur = durMs != null ? durMs : now - markT; markT = now; const run = runTok; newRun();
+      const now = Date.now(), dur = durMs != null ? durMs : now - markT; markT = now;
       if (!game || score <= 0) return Promise.resolve({});
-      if (!me()) { pendSet(game, score, dur, run); return Promise.resolve({ queued: true }); }
-      return send(game, score, dur, run);
+      if (!me()) { pendSet(game, score, dur); return Promise.resolve({ queued: true }); }
+      return send(game, score, dur);
     },
     /** 한 판 시작 시각 표시(선택) */
-    start() { markT = Date.now(); newRun(); },
+    start() { markT = Date.now(); },
     /** 이 기기에 남은 예전 최고점(랭킹 전 기록)도 참가할 때 올리기 */
     legacy(game, best) { best = Math.floor(Number(best) || 0); if (!game || best <= 0 || LS.get('legacy:' + game)) return; LS.set('legacy:' + game, 1); pendSet(game, best, 600000); },
     flush,
@@ -1461,52 +1459,6 @@ JE.art.add('jp_star','data:image/webp;base64,UklGRr4RAABXRUJQVlA4WAoAAAAQAAAAvgA
     homeCTA() { if (me()) return ''; try { ensureCSS(); } catch (e) {} return '<button class="pr-homecta" type="button">🏆 <b>닉네임 등록</b>하고 랭킹 참여하기</button>'; },
   };
   global.PungRank = PR;
-
-  // 시작 화면 '이번 주 랭킹 TOP 3'(11-24 대표: 랭킹을 먼저 보여 줘서 자극). 월요일 0시(한국) 초기화. 1분 캐시
-  let hbCache = {};
-  PR.homeBoardHTML = function (game, compact) { try { ensureCSS(); } catch (e) {} return `<div class="pr-hb${compact ? ' pr-hb-c' : ''}" data-game="${esc(game || '')}"><div class="pr-hb-t">🏆 이번 주 랭킹 ${compact || me() ? '<small>월요일 0시 초기화</small>' : '<button class="pr-homecta pr-hb-join" type="button">✏️ 닉네임 등록하고 참여</button>'}</div><div class="pr-hb-l">불러오는 중…</div></div>`; };
-  PR.homeBoard = function () {
-    document.querySelectorAll('.pr-hb:not([data-done])').forEach(async el => {
-      el.dataset.done = '1'; const game = el.dataset.game; const box = el.querySelector('.pr-hb-l'); const m = me();
-      try {
-        let r = hbCache[game];
-        if (!r || Date.now() - r.t > 60000) { r = { t: Date.now(), d: await rpc('pung_board', { p_game: game, p_period: 'week', p_me: m ? m.id : null, p_limit: 3 }, 6000) }; hbCache[game] = r; }
-        const top = (r.d && r.d.top) || [], mine = r.d && r.d.me;
-        const medal = ['🥇', '🥈', '🥉'];
-        let h = top.length ? top.map((t, i) => `<div class="pr-hb-r${t.me ? ' me' : ''}"><span>${medal[i] || (i + 1)}</span><b>${esc(t.nick)}</b><i>${fmt(t.score)}</i></div>`).join('')
-          : `<div class="pr-hb-e">이번 주 1등 자리가 비어 있어요!<br>지금 한 판이면 바로 <b>1등</b></div>`;
-        if (top.length && top.length < 3) h += `<div class="pr-hb-e">${top.length + 1}등 자리가 비어 있어요!</div>`;
-        if (mine && mine.rank > 3) h += `<div class="pr-hb-r me"><span>${mine.rank}</span><b>나</b><i>${fmt(mine.score)}</i></div>`;
-        box.innerHTML = h;
-      } catch (e) { if (el.querySelector('.pr-homecta')) el.outerHTML = PR.homeCTA(); else el.remove(); }
-    });
-  };
-  try { new MutationObserver(() => { if (document.querySelector('.pr-hb:not([data-done])')) PR.homeBoard(); }).observe(document.documentElement, { childList: true, subtree: true }); } catch (e) {}
-
-  // 결과 화면 버튼(11-24 대표): 등록 전까지 매 판 점수 아래에 표시. 누르면 홈 버튼과 같은 참여 화면(.pr-homecta)
-  PR.resultCTA = function (score) {
-    if (me()) return ''; try { ensureCSS(); } catch (e) {}
-    return `<button class="pr-homecta pr-rescta" type="button">🏆 <b>닉네임 등록</b>하고 이 점수 랭킹에 올리기</button>`;
-  };
-
-  // 입장 알림(11-24 대표): 닉네임 없으면 게임 홈 화면에서 하루 1번 등록 권유 카드. 판 중이면 띄우지 않음
-  const kstDay = () => new Date(Date.now() + 9 * 36e5).toISOString().slice(0, 10);
-  PR.entryInvite = function (game, opts = {}) {
-    try {
-      if (me() || inviting || LS.get('inv:day', '') === kstDay()) return false;
-      const onHome = opts.onlyIf || (() => { const b = document.querySelector('.pr-homecta'); return !!(b && b.offsetParent); });
-      setTimeout(() => {
-        if (me() || inviting || !onHome()) return;
-        LS.set('inv:day', kstDay()); inviting = true; ensureCSS();
-        openUI(game, Object.assign({}, opts, { invite: { score: 0 } })).then(() => {
-          inviting = false;
-          if (me()) document.querySelectorAll('.pr-homecta').forEach(x => x.remove());
-          if (opts.done) try { opts.done(); } catch (e) {}
-        });
-      }, opts.delay != null ? opts.delay : 1200);
-      return true;
-    } catch (e) { return false; }
-  };
 
   /* ---------------- 화면 ---------------- */
   const CSS = `
@@ -1552,15 +1504,6 @@ JE.art.add('jp_star','data:image/webp;base64,UklGRr4RAABXRUJQVlA4WAoAAAAQAAAAvgA
   .pr-short .pr-pungi{width:48px}.pr-short .pr-inv-h{font-size:20px}.pr-short .pr-inv-p{font-size:14px;margin:0 0 3px}
   .pr-homecta{display:block;width:100%;margin:10px 0 0;font:700 18px var(--pr-font,inherit);color:#2b2b2b;border:2.5px dashed #2b2b2b;border-radius:14px;background:#fff3c4;padding:8px 6px;cursor:pointer;animation:prWig 2.4s ease-in-out infinite}
   .pr-homecta b{color:#e08a00}
-  .pr-hb{margin:8px 0 0;border:2.5px solid #2b2b2b;border-radius:14px;background:#fffdf5;padding:6px 10px 8px;text-align:left;font-family:var(--pr-font,inherit)}
-  .pr-hb-t{font:800 15px var(--pr-font,inherit);color:#2b2b2b;margin:0 0 2px;white-space:nowrap}.pr-hb-t small{font-weight:600;font-size:11px;color:#8a7a6a;margin-left:4px}
-  .pr-hb-l{font-size:14px;color:#8a7a6a}
-  .pr-hb-t{display:flex;align-items:center;gap:4px;flex-wrap:nowrap}.pr-hb .pr-hb-join{display:inline-block;width:auto;margin:0 0 0 auto;font-size:13px;padding:2px 8px;border-width:2px;white-space:nowrap}
-  .pr-hb-r{display:flex;align-items:center;gap:6px;font-size:15px;line-height:1.3;color:#2b2b2b}.pr-hb-r span{width:22px;text-align:center}.pr-hb-r b{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.pr-hb-r i{font-style:normal;font-weight:800;color:#e08a00}
-  .pr-hb-r.me b{color:#3a7bd5}
-  .pr-hb-e{font-size:13px;color:#5b5550;line-height:1.35;margin-top:2px}.pr-hb-e b{color:#e08a00}
-  .pr-hb-c{max-width:340px;margin:4px auto 8px;padding:4px 10px 6px}.pr-hb-c .pr-hb-t{font-size:13px;margin:0 0 2px}.pr-hb-c .pr-hb-r{font-size:13px;line-height:1.35}
-  .pr-rescta{margin:12px 0 2px;font-size:16px;white-space:nowrap}
   @keyframes prWig{0%,86%,100%{transform:rotate(0)}90%{transform:rotate(-1.5deg)}95%{transform:rotate(1.5deg)}}
   .pr-short{padding:8px 12px!important}
   .pr-short .pr-card{width:min(560px,100%);padding:10px 14px 8px}
@@ -1745,19 +1688,14 @@ JE.art.add('jp_star','data:image/webp;base64,UklGRr4RAABXRUJQVlA4WAoAAAAQAAAAvgA
     // 홈 화면에 참여 버튼 (등록 전까지)
     if (JE.brand && JE.brand.homeHTML) {
       const baseHome = JE.brand.homeHTML;
-      JE.brand.homeHTML = function (o) { return baseHome.call(this, Object.assign({}, o, { extra: PR.homeBoardHTML(JE.gameId) + ((o && o.extra) || '') })); }; // 랭킹을 미션 줄보다 위에
-    }
-    // 결과 화면에 참여 버튼 (등록 전까지)
-    if (JE.brand && JE.brand.resultHTML) {
-      const baseRes = JE.brand.resultHTML;
-      JE.brand.resultHTML = function (o) { return baseRes.call(this, o) + PR.resultCTA(o && o.score); };
+      JE.brand.homeHTML = function (o) { return baseHome.call(this, o) + PR.homeCTA(); };
     }
     const baseLB = JE.ui.leaderboard.bind(JE.ui);
     JE.ui.leaderboard = function (mode = 'main', title) { return mode === 'main' ? PR.open(JE.gameId) : baseLB(mode, title); };
     if (JE.sdk) JE.sdk.openLeaderboard = function (mode) { return JE.ui.leaderboard(mode || 'main'); };
     // 엔진 init 뒤(게임 id 가 정해진 뒤) 예전 최고점·밀린 점수 올리기
     const baseInit = JE.init && JE.init.bind(JE);
-    if (baseInit) JE.init = function (o) { const r = baseInit(o); try { PR.legacy(JE.gameId, JE.best.get('main')); setTimeout(flush, 1500); } catch (e) {} try { PR.entryInvite(JE.gameId); } catch (e) {} return r; };
+    if (baseInit) JE.init = function (o) { const r = baseInit(o); try { PR.legacy(JE.gameId, JE.best.get('main')); setTimeout(flush, 1500); } catch (e) {} return r; };
   }
 })(window);
 
@@ -1951,6 +1889,9 @@ JE.art.add('jp_star','data:image/webp;base64,UklGRr4RAABXRUJQVlA4WAoAAAAQAAAAvgA
       M.d.stamps = (M.d.stamps || []).filter(x => x > M.d.day - 30).concat(M.d.day);
     }
     M.save();
+    M.lastScore = Math.round(score || 0);
+    M.markPlayed();
+    M.maybeReview(M.lastScore);
     if (newly.length) setTimeout(() => { JE.sfx.coin(); JE.haptic('success'); if (stamp) { K.confetti(60); JE.sfx.fanfare(); } }, 450);
     return { newly, stamp };
   };
@@ -1978,7 +1919,7 @@ JE.art.add('jp_star','data:image/webp;base64,UklGRr4RAABXRUJQVlA4WAoAAAAQAAAAvgA
       <div class="bar"><i style="width:${Math.min(100, m.v / m.n * 100)}%"></i></div></li>`;
   M.homeExtra = function () {
     M.css(); M.load();
-    return `<div class="pk-row"><button data-pk="mis">오늘의 미션 <b>${M.doneCount()}/3</b></button><button data-pk="games">다른 게임</button></div>
+    return `<div class="pk-row"><button data-pk="mis">오늘의 미션 <b>${M.doneCount()}/3</b></button><button data-pk="games">다른 게임 <b>${M.stampCount()}/10</b></button></div>
       ${M.d.streak > 0 ? `<p class="pk-note">연속 출석 ${M.d.streak}일${M.d.allDone ? ' · 오늘 도장 완료' : ''}</p>` : ''}`;
   };
   M.resultExtra = function (r) {
@@ -1986,7 +1927,7 @@ JE.art.add('jp_star','data:image/webp;base64,UklGRr4RAABXRUJQVlA4WAoAAAAQAAAAvgA
     const isNew = m => r && r.newly.includes(m);
     return `<ul class="pk-mis">${M.d.list.map(m => misLI(m, { isNew: isNew(m) })).join('')}</ul>
       ${r && r.stamp ? `<p class="pg-tip">오늘의 미션 3개 완료! 도장 쾅 · 연속 ${M.d.streak}일</p>` : ''}
-      <div class="pk-row"><button data-pk="games">풍년 게임 더보기</button></div>`;
+      <div class="pk-row"><button data-pk="share">친구에게 도전장</button><button data-pk="games">더보기 <b>${M.stampCount()}/10</b></button></div>`;
   };
   M.stampsHTML = function () {
     const t = M.d.day, set = new Set(M.d.stamps || []), names = ['일', '월', '화', '수', '목', '금', '토'];
@@ -2015,7 +1956,8 @@ JE.art.add('jp_star','data:image/webp;base64,UklGRr4RAABXRUJQVlA4WAoAAAAQAAAAvgA
     M.css();
     const list = K.GAMES.filter(g => g.id !== JE.gameId);
     const card = g => `<a href="${g.url}" target="_blank" rel="noopener" data-g="${g.id}"><span class="dots">${g.c.map(i => `<i style="background:radial-gradient(circle at 35% 30%,${JE.shade(B.JELLY[i], 0.4)},${B.JELLY[i]} 60%)"></i>`).join('')}</span><b>${g.name}</b><small>${g.d}</small></a>`;
-    const m = JE.ui.modal(`${JE.art ? JE.art.tag('pungi_' + (JE.sketch ? JE.sketch.pick(['love', 'happy', 'cheer', 'roll']) : 'love'), 'pg-pungi pg-pungi-s') : ''}<h2>풍년게임즈 더보기</h2><p class="pk-note">풍년이랑 같이 노는 다른 게임이에요. 누르면 바로 열려요.</p><div class="pk-games">${list.map(card).join('')}</div>`, [{ label: '닫기', cls: 'ghost' }]);
+    const m = JE.ui.modal(`${JE.art ? JE.art.tag('pungi_' + (JE.sketch ? JE.sketch.pick(['love', 'happy', 'cheer', 'roll']) : 'love'), 'pg-pungi pg-pungi-s') : ''}<h2>풍년게임즈 더보기</h2><div class="pk-board">${M.boardHTML()}</div><p class="pk-note">풍년이랑 같이 노는 다른 게임이에요. 누르면 바로 열려요.</p><div class="pk-games">${list.map(card).join('')}</div>`, [{ label: '닫기', cls: 'ghost' }]);
+    M.refreshStamps().then(() => { const b = m.el && m.el.querySelector('.pk-board'); if (b) b.innerHTML = M.boardHTML(); M.checkMaster(); });
     m.el.querySelectorAll('[data-g]').forEach(a => a.addEventListener('click', e => {
       JE.sfx.tap();
       const AIT = window.__AIT__, g = K.GAMES.find(x => x.id === a.dataset.g);
@@ -2026,11 +1968,126 @@ JE.art.add('jp_star','data:image/webp;base64,UklGRr4RAABXRUJQVlA4WAoAAAAQAAAAvgA
     if (!modal || !modal.el) return;
     modal.el.querySelectorAll('[data-pk]').forEach(b => b.onclick = e => {
       e.stopPropagation(); JE.sfx.tap();
+      if (b.dataset.pk === 'share') { M.share(); return; }
       if (b.dataset.pk === 'mis') {
         M.openMissions();
         // 홈 버튼 숫자 갱신 (미션을 바꿨을 수 있음)
       } else M.openGames();
     });
+  };
+
+  /* ---------------- 2-2. 퍼뜨리기 장치 (11-25 추가) ----------------
+   * A 친구에게 도전장: 결과 화면 버튼 → 풍년이 + 내 점수 그림 카드를 만들어 카톡·인스타 등으로 공유
+   * B 리뷰 요청: 5판 이상 한 뒤 (이 장치에서 잰) 최고점을 깬 판에만, 앱에서만, 최대 3번(20일 간격). 보상 없음(구글 정책)
+   * D 풍년게임즈 도장판: 10종 중 해 본(웹) / 설치한(앱) 게임마다 도장. 10개 다 모으면 '풍년 마스터'
+   * 앱 기능은 native-bridge.js 의 __AIT__.share / requestReview / installedGames (GameRank 플러그인) */
+  const AITx = () => window.__AIT__ || null;
+  const gameName = id => (K.GAMES.find(g => g.id === id) || { name: '풍년게임즈' }).name;
+  M.storeUrl = id => 'https://play.google.com/store/apps/details?id=kr.pungnyeon.' + id;
+  M.shareUrl = function () {
+    if (AITx() && AITx().share) return M.storeUrl(JE.gameId);
+    try { const u = new URL(location.href); u.search = ''; u.hash = ''; return u.toString(); } catch (e) { return M.storeUrl(JE.gameId); }
+  };
+
+  /* ---- D 도장판 ---- */
+  const ALL = () => K.GAMES.map(g => g.id);
+  M.stampSet = () => new Set(JE.store.get('st10', []).concat(JE.gameId ? [JE.gameId] : []).filter(id => ALL().includes(id)));
+  M.stampCount = () => M.stampSet().size;
+  M.markPlayed = function () { const s = M.stampSet(); JE.store.set('st10', [...s]); };
+  /** 웹: 같은 주소(github.io)에서 해 본 게임 = localStorage 에 je:<id>: 기록이 있음. 앱: 설치된 풍년 게임 */
+  M.refreshStamps = async function () {
+    const s = M.stampSet();
+    try {
+      for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i) || '', m = /^je:(\w+):/.exec(k); if (m && ALL().includes(m[1])) s.add(m[1]); }
+    } catch (e) {}
+    const A = AITx();
+    if (A && A.installedGames) { try { (await A.installedGames(ALL())).forEach(id => s.add(id)); } catch (e) {} }
+    JE.store.set('st10', [...s]);
+    return s;
+  };
+  M.boardHTML = function () {
+    const s = M.stampSet(), n = s.size, master = n >= 10;
+    const dots = K.GAMES.map(g => `<span class="${s.has(g.id) ? 'on' : ''}"><i>${s.has(g.id) ? '풍' : ''}</i><small>${g.name}</small></span>`).join('');
+    const how = AITx() && AITx().installedGames ? '풍년게임즈를 설치하면 도장이 찍혀요.' : '풍년게임즈를 한 판씩 하면 도장이 찍혀요.';
+    return `<p class="pk-bt">풍년게임즈 도장판 <b>${n}/10</b></p><div class="pk-st10">${dots}</div>
+      <p class="pk-note">${master ? '<b style="color:#e0533f">풍년 마스터!</b> 10종 도장을 다 모았어요. 고마워요!' : how + ' 10개 다 모으면 풍년 마스터!'}</p>`;
+  };
+  M.checkMaster = function () {
+    if (M.stampCount() < 10 || JE.store.get('master', 0)) return;
+    JE.store.set('master', 1); K.confetti(90); JE.sfx.fanfare(); JE.haptic('success');
+    JE.ui.toast && JE.ui.toast('풍년 마스터 달성! 10종 도장 완성');
+  };
+
+  /* ---- B 리뷰 요청 ---- */
+  M.maybeReview = function (score) {
+    const A = AITx();
+    const rv = JE.store.get('rv', { n: 0, best: 0, asked: 0, at: 0 });
+    rv.n++;
+    const beat = rv.best > 0 && score > rv.best;
+    rv.best = Math.max(rv.best, score);
+    if (A && A.requestReview && beat && rv.n >= 5 && rv.asked < 3 && Date.now() - rv.at > 20 * 864e5) {
+      rv.asked++; rv.at = Date.now();
+      setTimeout(() => { try { Promise.resolve(A.requestReview()).catch(() => {}); } catch (e) {} }, 2600);
+    }
+    JE.store.set('rv', rv);
+  };
+
+  /* ---- A 도전장 카드 ---- */
+  M.cardCanvas = function (score, best) {
+    const W = 1080, H = 1350, cv = document.createElement('canvas'); cv.width = W; cv.height = H;
+    const c = cv.getContext('2d'), F = JE.FONT, ink = '#3a3a46';
+    c.fillStyle = '#fffdf6'; c.fillRect(0, 0, W, H);
+    c.strokeStyle = '#dfe8f5'; c.lineWidth = 3; for (let y = 120; y < H; y += 64) { c.beginPath(); c.moveTo(0, y); c.lineTo(W, y); c.stroke(); }
+    c.strokeStyle = 'rgba(243,179,179,.8)'; c.lineWidth = 4; c.beginPath(); c.moveTo(96, 0); c.lineTo(96, H); c.stroke();
+    c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillStyle = ink;
+    c.font = `700 52px ${F}`; c.fillText('풍년게임즈 도전장', W / 2, 120);
+    // 형광펜 + 게임 이름
+    const name = gameName(JE.gameId);
+    c.font = `700 120px ${F}`; const nw = c.measureText(name).width;
+    c.fillStyle = '#ffe27a'; c.fillRect(W / 2 - nw / 2 - 20, 262, nw + 40, 52);
+    c.fillStyle = ink; c.fillText(name, W / 2, 250);
+    c.font = `700 58px ${F}`; c.fillText('내 점수', W / 2, 400);
+    c.font = `700 210px ${F}`; c.lineJoin = 'round'; c.lineWidth = 18; c.strokeStyle = ink;
+    const st = Number(score).toLocaleString(); c.strokeText(st, W / 2, 540); c.fillStyle = '#ffb21f'; c.fillText(st, W / 2, 540);
+    c.fillStyle = ink; c.font = `700 64px ${F}`; c.fillText('이 점수, 이길 수 있어?', W / 2, 700);
+    if (best > score) { c.font = `700 42px ${F}`; c.fillStyle = '#6b6b7b'; c.fillText(`(내 최고 기록은 ${Number(best).toLocaleString()}점)`, W / 2, 770); }
+    const A = JE.art, k = A && (A.has('pungi_cheer') ? 'pungi_cheer' : A.has('pungi_happy') ? 'pungi_happy' : null);
+    if (k) A.draw(c, k, W / 2, 1010, 420, 380);
+    c.fillStyle = ink; c.font = `700 46px ${F}`;
+    c.fillText(AITx() && AITx().share ? `플레이스토어에서 '${name}' 검색` : '링크를 눌러 바로 도전!', W / 2, 1250);
+    return cv;
+  };
+  M.share = async function () {
+    JE.sfx.tap();
+    const score = M.lastScore || JE.best.get('main') || 0, best = JE.best.get('main') || 0, name = gameName(JE.gameId);
+    try { if (document.fonts && document.fonts.ready) await document.fonts.ready; } catch (e) {}
+    const cv = M.cardCanvas(score, best), url = M.shareUrl();
+    const text = `${name}에서 ${Number(score).toLocaleString()}점! 이 점수 이길 수 있어?\n${url}`;
+    const A = AITx();
+    if (A && A.share) { try { await A.share({ text, image: cv.toDataURL('image/png').split(',')[1] }); return; } catch (e) {} }
+    try {
+      const blob = await new Promise(r => cv.toBlob(r, 'image/png'));
+      const file = new File([blob], 'pung-challenge.png', { type: 'image/png' });
+      if (navigator.canShare && navigator.canShare({ files: [file] })) { await navigator.share({ files: [file], text }); return; }
+      if (navigator.share) { await navigator.share({ text, url }); return; }
+    } catch (e) { if (e && e.name === 'AbortError') return; }
+    // 공유 기능이 없는 브라우저: 그림 보여 주고 링크 복사
+    const m = JE.ui.modal(`<h2>친구에게 도전장</h2><img src="${cv.toDataURL('image/png')}" style="width:100%;border-radius:12px" alt=""><p class="pk-note">그림을 길게 눌러 저장하고, 링크와 함께 보내 주세요.</p>`,
+      [{ label: '링크 복사', onClick: () => { try { navigator.clipboard.writeText(text); JE.ui.toast && JE.ui.toast('복사했어요'); } catch (e) {} } }, { label: '닫기', cls: 'ghost' }]);
+    return m;
+  };
+  // 도장판·도전장 모양 (M.css 뒤에 덧붙임)
+  const cssBase = M.css;
+  M.css = function () {
+    const first = !M._css; cssBase();
+    if (!first) return;
+    const s = document.createElement('style');
+    s.textContent = `.pk-bt{font:700 20px ${JE.FONT};color:#2b2b2b;margin:8px 0 4px}.pk-bt b{color:#e0533f}
+    .pk-st10{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin:4px 0}.pk-st10 span{display:flex;flex-direction:column;align-items:center;gap:2px}
+    .pk-st10 i{width:34px;height:34px;border-radius:50%;border:2px dashed rgba(43,43,43,.35);display:flex;align-items:center;justify-content:center;font:700 18px ${JE.FONT};font-style:normal;color:#d63b28}
+    .pk-st10 span.on i{border:3px solid #e0533f;background:#fff1e8;transform:rotate(-12deg)}
+    .pk-st10 small{font:700 13px ${JE.FONT};color:#6b6b7b;white-space:nowrap}`;
+    document.head.appendChild(s);
   };
 
   /* ---------------- 3. HUD ---------------- */
