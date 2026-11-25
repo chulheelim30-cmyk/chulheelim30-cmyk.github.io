@@ -115,7 +115,7 @@ body.playing .pad{display:flex}
 <div id="op" hidden><canvas id="op-cv"></canvas><button id="op-tap" hidden><b>풍년이의 모험</b><span>화면을 눌러 시작 ▶</span></button><button id="op-skip">건너뛰기 ▶▶</button></div>
 <div class="ov" id="shop" hidden style="background:rgba(20,14,50,.6)"><div class="card alb">
  <h2>🐟 간식 상점 <small id="shop-n"></small></h2>
- <div class="sub" style="margin:2px 0 6px">달리며 모은 간식으로 풍년이를 영구 강화해요 · 보스 5종을 모두 이기면 간식 100개 선물</div>
+ <div class="sub" style="margin:2px 0 6px">달리며 모은 간식으로 풍년이를 영구 강화해요 · 처음으로 보스 5종을 이기면 간식 100개 선물</div>
  <div id="shop-grid"></div>
  <button class="btn ghost" id="shop-close">닫기</button>
 </div></div>
@@ -820,6 +820,12 @@ const prD = () => Math.min(1, ((((bIdx() % TOT) + TOT) % TOT)) / 45); // HARD_V5
 const chOf = i => Math.floor((((i % TOT) + TOT) % TOT) / 5);
 const zoneI = () => (((bIdx() % TOT) + TOT) % TOT) % 10; // STAGE_V68: 단계마다 동네(보스) 하나
 const lvOf = i => Math.floor((((i % TOT) + TOT) % TOT) / 10);
+/* SEASON_V72: 레벨마다 계절 — 1 봄 · 2 여름 · 3 가을 · 4 겨울 · 5 다시 봄. 동네(보스)는 그대로, 배경·날씨만 계절에 맞게 */
+const SEA_N = ['봄', '여름', '가을', '겨울'];
+const seaOf = () => [0, 1, 2, 3, 0][lvOf(bIdx())] | 0;
+const SEA_BG = [{ sunset: 'spring', snow: 'spring', ginkgo: 'spring' }, { snow: 'rain', ginkgo: 'night' }, { snow: 'ginkgo', spring: 'hill' }, { spring: 'snow', ginkgo: 'snow', rain: 'snow' }];
+const zBg = (z, se) => (SEA_BG[se] || {})[z.bg] || z.bg;
+const zName = (i, se) => { const n = ZONES[i].n; if (i === 8 && se !== 3) return '놀이터'; if (i === 6 && se !== 2) return '숲길'; if (i === 5 && se === 3) return '눈 쌓인 골목'; return n; };
 // 장 표지: 있는 그림(ch1 봄 발자국·ch2 반딧불·ch3 눈 오는 밤)은 1·4·9장, 나머지는 새 그림(cv2…cv10)이 오면 그걸, 없으면 배경 그림
 const COVER = ['ch1', 'cv2', 'cv3', 'ch2', 'cv5', 'cv6', 'cv7', 'cv8', 'ch3', 'cv10'], COVER0 = ['ch1', 'bg_market', 'bg_roof', 'ch2', 'bg_bridge', 'bg_night', 'bg_sunset', 'bg_sunset', 'ch3', 'bg_night'];
 const imOk = k => IMG[k] && IMG[k].complete && IMG[k].naturalWidth;
@@ -1253,7 +1259,7 @@ document.addEventListener('fullscreenchange', fsLabel); document.addEventListene
 document.getElementById('fsbtn').addEventListener('click', e => { e.stopPropagation();
   if (!FS.can()) { alert('이 기기에선 브라우저 전체화면이 안 돼요.\n공유 버튼 → "홈 화면에 추가"로 앱처럼 꽉 찬 화면으로 즐겨 주세요!'); return; }
   if (FS.on()) { FS.off(); localStorage.setItem('pa2_fs', '0'); } else { FS.go(); localStorage.setItem('pa2_fs', '1'); } });
-function start() { if (localStorage.getItem('pa2_fs') === '1' && FS.can() && !FS.on()) FS.go(); if ((CHQ || SQ) && BQ) setTimeout(() => { if (G.state === 'play' && !G.boss) startBoss(); }, 1800); try { PungRank.start(); } catch (e) {} $('home').hidden = true; $('over').hidden = true; reset(false); G.state = 'play'; { const P = G.p0 | 0, c = Math.floor(P / 5); G.banner = 2.4; G.bannerTxt = `${P + 1}단계 · ${ZONES[P % 10].n}`; G.bannerSub = `레벨 ${Math.floor(P / 10) + 1} · ${(NEWF[bossAt(P)] || BOSSES[bossAt(P)]).n}`; } if (permL('dash')) { G.dashT = 3; G.bannerTxt = '출발 대시!'; G.bannerSub = '3초 무적'; G.banner = 1.6; } document.body.classList.add('playing'); try { AC = AC || new (window.AudioContext || window.webkitAudioContext)(); AC.resume(); } catch (e) {} }
+function start() { if (localStorage.getItem('pa2_fs') === '1' && FS.can() && !FS.on()) FS.go(); if ((CHQ || SQ) && BQ) setTimeout(() => { if (G.state === 'play' && !G.boss) startBoss(); }, 1800); try { PungRank.start(); } catch (e) {} $('home').hidden = true; $('over').hidden = true; reset(false); G.state = 'play'; { const P = G.p0 | 0, c = Math.floor(P / 5); G.banner = 2.4; G.bannerTxt = `${P + 1}단계 · ${zName(P % 10, [0, 1, 2, 3, 0][Math.floor(P / 10) % 5])}`; G.bannerSub = `레벨 ${Math.floor(P / 10) + 1} · ${(NEWF[bossAt(P)] || BOSSES[bossAt(P)]).n}`; } if (permL('dash')) { G.dashT = 3; G.bannerTxt = '출발 대시!'; G.bannerSub = '3초 무적'; G.banner = 1.6; } document.body.classList.add('playing'); try { AC = AC || new (window.AudioContext || window.webkitAudioContext)(); AC.resume(); } catch (e) {} }
 function showOver() { localStorage.setItem('pa2_coin', COIN); try { PungRank.submit('pungadventure', score()); PungRank.maybeInvite('pungadventure', score(), { host: wrap }); } catch (e) {} localStorage.setItem('pa2_distT', +(localStorage.getItem('pa2_distT') || 0) + Math.floor(G.dist / 10)); $('ov-score').textContent = score().toLocaleString(); $('ov-best').textContent = G.best.toLocaleString(); $('ov-stats').innerHTML = `<span>달린 거리 <b>${Math.floor(G.dist / 10)}m</b></span><span>간식 <b>${G.snacks}</b></span><span>별 <b>${(G.stage - 1) * 6 + G.pieces}</b></span><span>꿀잠 <b>${G.naps}번</b></span><span>상점 간식 <b>+${G.coinRun | 0}</b></span>`; $('over').hidden = false; document.body.classList.remove('playing'); }
 function goHome() { $('polar').classList.remove('show'); renderMis(); $('over').hidden = true; $('home').hidden = false; reset(true); G.state = 'home'; }
 // 11-24 닉네임 랭킹 (PungRank)
@@ -1621,7 +1627,7 @@ function imgArt(key, w, h, ax, ay, flip, sy) {
 const SEASON = ['sunset', 'night', 'spring', 'snow', 'market', 'roof', 'bridge', 'rain', 'ginkgo', 'hill'];
 const SB = { cur: 0, prev: 0, mix: 1 };
 function seasonBg() {
-  const zb = G.state !== 'home' && !G.demo && ZONES[zoneI()].bg, zw = zb && bgLayer(zb) ? SEASON.indexOf(zb) : -1;
+  const zb = G.state !== 'home' && !G.demo && zBg(ZONES[zoneI()], seaOf()), zw = zb && bgLayer(zb) ? SEASON.indexOf(zb) : -1;
   const zbase = G.state !== 'home' && !G.demo ? ZONES[zoneI()].base : undefined, want = G.state === 'home' ? 0 : zw >= 0 ? zw : zbase != null ? zbase : (G.stage - 1) % 4;
   if (want !== SB.cur) { SB.prev = SB.cur; SB.cur = want; SB.mix = 0; }
   SB.mix = Math.min(1, SB.mix + G.dt * 0.6); TH.cur = SB.cur; TH.mix = SB.mix;
@@ -1897,7 +1903,7 @@ function bossWin() {
   const allFive = first && beat.length === 5; // GIFT5_V45: 다섯 보스 모두 처음 이긴 그 순간 한 번
   addCoin(30 * B.lv + (allFive ? 100 : 0));
   const cW = chOf(bIdx() - 1), chW = Math.min(2, Math.floor(cW / 4)); // WINLINE_V38 (10장: 1~4장·5~8장·9~10장)
-  G.banner = 3; G.bannerTxt = ['친구가 됐어요!', '우정이 깊어졌어요!', '고마워, 친구야!'][chW]; G.bannerSub = `${D.n} · +${bon}` + (allFive ? ' · 보스 5종 완료! 간식 100개' : '');
+  G.banner = 3; G.bannerTxt = ['친구가 됐어요!', '우정이 깊어졌어요!', '고마워, 친구야!'][chW]; G.bannerSub = `${D.n} · +${bon}` + (allFive ? ' · 보스 5종 달성! 간식 100개' : '');
   const BOSS_LINES = {crow: ['츄르 나눠 먹고 친구!', '"또 나눠 줄 거지?"', '"하늘에서 길 봐 줄게!"'], goose: ['"수고 많으세요~"', '"통행증 확인 완료!"', '꽥! 경례로 배웅'], robot: ['길 알려 주고 친구!', '"또 길 잃었어요…"', '"지름길 안내 시작!"'], owl: ['별자리 길이 열렸어요', '"왕년이 놀래켜서 미안~"', '"이제 다 왔다"'], raccoon: ['꺼내 주고 친구!', '"츄르 또 있어?"', '"다리 건너가!"']}; pop(B.x, bossCY(B) - 90, B.nk ? D.line : (BOSS_LINES[B.kind] || [D.story])[chW] || D.story, '#fff3c8', 17); sfx('big'); feverJingle(); vib([40, 40, 80]); burst(B.x, bossCY(B), 60, 'conf', FX, 520); burst(B.x, bossCY(B), 30, 'spark', FX, 380);
   objs.forEach(o => { if (o.t === 'cone' || o.t === 'bolt' || o.t === 'wave') o.gone = true; }); buls = [];
   for (let i = 0; i < 36; i++) objs.push({ t: 'snack', k: i % 9 === 4 ? 'sack' : SNACKS[i % 5], x: PX() + 260 + i * 30, y: GY - 36 - Math.abs(Math.sin(i * 0.45)) * 140 });
@@ -2001,7 +2007,12 @@ function bossTop() { // 어둠·경고 (화면 위 레이어)
 function zoneFx() {
   if (G.state === 'home' || G.demo) return; const Z = ZONES[zoneI()];
   if (Z.tint && !(Z.bg && bgLayer(Z.bg))) { ctx.fillStyle = Z.tint; ctx.fillRect(0, 0, LW, LH); }
-  const fx = Z.fx || (zoneI() === 3 ? 'firefly' : '');
+  const se = seaOf(), zf = Z.fx || (zoneI() === 3 ? 'firefly' : '');
+  const fx = se === 3 ? 'snow' : se === 2 ? (zf === 'rain' ? 'rain' : 'leaf') : se === 0 ? (zf === 'rain' ? 'rain' : 'petal') : (zoneI() === 3 ? 'firefly' : 'rain'); // 여름 = 장마
+  if (se === 3 && !LOW) { ctx.fillStyle = 'rgba(225,238,255,.10)'; ctx.fillRect(0, 0, LW, LH); }
+  if (se === 1 && fx === 'rain' && zoneI() !== 5 && !LOW) { ctx.fillStyle = 'rgba(60,90,140,.13)'; ctx.fillRect(0, 0, LW, LH); }
+  if (fx === 'snow') { ctx.fillStyle = 'rgba(255,255,255,.85)'; ctx.beginPath(); for (let i = 0; i < 44; i++) { const a = (i * 0.618) % 1, b = (i * 0.383) % 1, sp = 30 + (i % 5) * 9, x = ((a * (LW + 40) - G.t * (18 + (i % 3) * 10) + Math.sin(G.t * 1.3 + i) * 10) % (LW + 40) + LW + 40) % (LW + 40) - 20, y = ((b * (GY + 30) + G.t * sp) % (GY + 30)) - 10, r = 1.4 + (i % 3) * 0.8; ctx.moveTo(x + r, y); ctx.arc(x, y, r, 0, 7); } ctx.fill(); }
+  if (fx === 'petal' && Math.random() < 0.22) parts.push({ x: G.cam + rnd(LW * 0.2, LW * 1.2), y: -10, vx: rnd(-80, -30), vy: rnd(18, 40), life: 4.5, max: 4.5, kind: 'conf', col: Math.random() < 0.7 ? '#ffc4dc' : '#fff0f6', size: 0.7, rot: rnd(0, 6), vr: rnd(-3, 3), g: 8 });
   if (fx === 'rain') { ctx.strokeStyle = 'rgba(210,225,255,.45)'; ctx.lineWidth = 1.2; const r0 = rng(Math.floor(G.t * 24)); ctx.beginPath(); for (let i = 0; i < 46; i++) { const x = r0() * LW, y = r0() * (GY + 20); ctx.moveTo(x, y); ctx.lineTo(x - 5, y + 16); } ctx.stroke(); }
   if (fx === 'leaf' && Math.random() < 0.3) parts.push({ x: G.cam + rnd(LW * 0.2, LW * 1.2), y: -10, vx: rnd(-90, -30), vy: rnd(20, 50), life: 4, max: 4, kind: 'conf', col: Math.random() < 0.7 ? '#ffc83a' : '#e8602a', size: 0.9, rot: rnd(0, 6), vr: rnd(-4, 4), g: 12 });
   if (fx === 'wind') { ctx.strokeStyle = 'rgba(255,255,255,.28)'; ctx.lineWidth = 1.6; for (let i = 0; i < 6; i++) { const y = 60 + i * 37, x = ((i * 173 - G.t * 420) % (LW + 220) + LW + 220) % (LW + 220) - 110; ctx.beginPath(); ctx.moveTo(x, y); ctx.quadraticCurveTo(x + 40, y - 8, x + 90, y); ctx.stroke(); } }
@@ -2029,7 +2040,7 @@ function nearMiss(o) {
 }
 function hudX() {
   if ((G.sc | 0) >= 5 && !(G.fever > 0)) { const k = G.sc, big = k >= 30; text('간식 콤보 ' + k + (big ? ' 🔥' : ''), LW / 2, 126, big ? 22 : 18, 'center', big ? '#ff9ad0' : '#ffd27a', { grad: big }); }
-  if (!G.boss) { const m = BOSS_EVERY - ((G.stage - 1) % BOSS_EVERY) - 1; const P = bIdx() % TOT; text(`${Math.floor(P / 5) + 1}장 · 보스 처치 ${P % 5}/5${m > 0 ? '' : ' · 곧 보스!'}`, LW - 16, 78, 14, 'right', '#ffe3f0'); }
+  if (!G.boss) { const m = BOSS_EVERY - ((G.stage - 1) % BOSS_EVERY) - 1; const P = bIdx() % TOT; text(`레벨 ${Math.floor(P / 10) + 1} · ${SEA_N[seaOf()]} · 보스 ${P % 10}/10${m > 0 ? '' : ' · 곧 보스!'}`, LW - 16, 78, 14, 'right', '#ffe3f0'); }
   else if (G.boss.hp > 0) {
     const B = G.boss, D = bossD(B), w = 220, x = LW / 2 - w / 2, y = 70; text(D.n + (B.lv > 1 ? ` Lv.${B.lv}` : ''), LW / 2, y - 2, 15, 'center', '#fff');
     rr(ctx, x, y + 8, w, 11, 5.5); ctx.fillStyle = 'rgba(30,20,60,.55)'; ctx.fill(); ctx.strokeStyle = 'rgba(255,255,255,.8)'; ctx.lineWidth = 1.3; ctx.stroke();
@@ -2199,7 +2210,7 @@ function startRest(st, title) {
   genX = sg.x1; G.restEnd = sg.x1; nextPiece = sg.x1 + 900;
   for (let x = PX() + 420; x < sg.x1 - 200; x += 380) { if (Math.random() < 0.5) snackArc(x, 160, 70); else snackLine(x, 5, GY - 30); }
   objs.push({ t: 'sign', x: PX() + LW * 0.75, wp: Math.random() < 0.55 ? 'w_sleep' : Math.random() < 0.6 ? 'w_groom' : 'w_churu' });
-  G.banner = 2.8; G.bannerTxt = title || `다음 동네: ${ZONES[zoneI()].n}`; G.bannerSub = '잠깐 쉬어 가요';
+  G.banner = 2.8; G.bannerTxt = title || `다음 동네: ${zName(zoneI(), seaOf())}`; G.bannerSub = '잠깐 쉬어 가요';
 }
 function endRest() {
   G.rest = 0; G.food = Math.min(100, (G.food || 0) + 15); pop(PX(), PL.y - 100, '배부름 +15', '#9af07a', 20);
@@ -2415,7 +2426,7 @@ function seasonScenes(e) { // SEASON_V71: 10·20·30·40단계 = 봄 → 여름 
 function storyEvent(e) { // STAGE_V68: 10단계마다 이벤트(1~4), 옛 장 끝 장면을 둘씩 묶음 → 다음 레벨 표지
   const Z = ZONES[(e * 10) % 10];
   G.state = 'story'; slideHeld = false;
-  opOpen(false, seasonScenes(e), 'chap', () => { G.state = 'play'; PL.hurt = 1.5; startRest(G.stage - 1, ''); G.banner = 2.6; G.bannerTxt = `레벨 ${e + 1} · ${e * 10 + 1}단계`; G.bannerSub = Z.n; });
+  opOpen(false, seasonScenes(e), 'chap', () => { G.state = 'play'; PL.hurt = 1.5; startRest(G.stage - 1, ''); G.banner = 2.6; G.bannerTxt = `레벨 ${e + 1} · ${e * 10 + 1}단계`; G.bannerSub = zName(0, [0, 1, 2, 3, 0][e]); });
 }
 function storyChapter(ch) {
   G.state = 'story'; slideHeld = false;
