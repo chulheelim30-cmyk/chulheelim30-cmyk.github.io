@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="ko">
-<head><!--PV--><meta http-equiv="Cache-Control" content="no-cache"><script>(function(){var V=47;if(!/github\.io$/.test(location.hostname))return;fetch('/play/version.json?t='+Date.now(),{cache:'no-store'}).then(function(r){return r.json()}).then(function(j){if(j&&j.v>V){var u=new URL(location.href);if(u.searchParams.get('v')!==String(j.v)){u.searchParams.set('v',j.v);location.replace(u.toString())}}}).catch(function(){})})()</script><!--/PV-->
+<head><!--PV--><meta http-equiv="Cache-Control" content="no-cache"><script>(function(){var V=48;if(!/github\.io$/.test(location.hostname))return;fetch('/play/version.json?t='+Date.now(),{cache:'no-store'}).then(function(r){return r.json()}).then(function(j){if(j&&j.v>V){var u=new URL(location.href);if(u.searchParams.get('v')!==String(j.v)){u.searchParams.set('v',j.v);location.replace(u.toString())}}}).catch(function(){})})()</script><!--/PV-->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#fbf6ea">
@@ -1406,26 +1406,28 @@ JE.art.add('jp_star','data:image/webp;base64,UklGRr4RAABXRUJQVlA4WAoAAAAQAAAAvgA
   }
 
   /* ---------------- 상태 ---------------- */
-  let markT = Date.now(), inviting = false;               // 지난 제출(또는 시작) 시각 → 플레이 시간 추정
+  let markT = Date.now(), inviting = false, runTok = null;
+  async function newRun() { runTok = null; try { const r = await rpc('pung_run', {}); runTok = (r && r.run) || null; } catch (e) { runTok = null; } }
+  newRun();               // 지난 제출(또는 시작) 시각 → 플레이 시간 추정
   const me = () => LS.get('me', null);  // {id, secret, nick}
-  function pendSet(game, s, dur) { const p = LS.get('pend', {}); if (!p[game] || s > p[game].s) { p[game] = { s, dur }; LS.set('pend', p); } }
+  function pendSet(game, s, dur, run) { const p = LS.get('pend', {}); if (!p[game] || s > p[game].s) { p[game] = { s, dur, run }; LS.set('pend', p); } }
 
-  async function send(game, s, dur) {
+  async function send(game, s, dur, run) {
     const m = me(); if (!m) return { queued: true };
-    if (navigator.onLine === false) { pendSet(game, s, dur); return { queued: true }; }
+    if (navigator.onLine === false) { pendSet(game, s, dur, run); return { queued: true }; }
     try {
-      const r = await rpc('pung_submit', { p_id: m.id, p_secret: m.secret, p_game: game, p_score: Math.floor(s), p_dur_ms: Math.floor(dur), p_sig: await sig(game, Math.floor(s), m.id) });
-      if (r && r.error === 'rate') { pendSet(game, s, dur); return r; }
+      const r = await rpc('pung_submit2', { p_id: m.id, p_secret: m.secret, p_game: game, p_score: Math.floor(s), p_run: run || null });
+      if (r && r.error === 'rate') { pendSet(game, s, dur, run); return r; }
       const p = LS.get('pend', {}); if (p[game] && p[game].s <= s) { delete p[game]; LS.set('pend', p); }
       return r || {};
     } catch (e) {
-      pendSet(game, s, dur); return { queued: true };
+      pendSet(game, s, dur, run); return { queued: true };
     }
   }
   async function flush() {
     const m = me(); if (!m) return;
     const p = LS.get('pend', {});
-    for (const g of Object.keys(p)) await send(g, p[g].s, p[g].dur);
+    for (const g of Object.keys(p)) await send(g, p[g].s, p[g].dur, p[g].run);
   }
 
   const PR = {
@@ -1434,13 +1436,13 @@ JE.art.add('jp_star','data:image/webp;base64,UklGRr4RAABXRUJQVlA4WAoAAAAQAAAAvgA
     /** 한 판 끝날 때 점수 제출. durMs 를 모르면 지난 제출부터 지난 시간으로 추정 */
     submit(game, score, durMs) {
       score = Math.floor(Number(score) || 0);
-      const now = Date.now(), dur = durMs != null ? durMs : now - markT; markT = now;
+      const now = Date.now(), dur = durMs != null ? durMs : now - markT; markT = now; const run = runTok; newRun();
       if (!game || score <= 0) return Promise.resolve({});
-      if (!me()) { pendSet(game, score, dur); return Promise.resolve({ queued: true }); }
-      return send(game, score, dur);
+      if (!me()) { pendSet(game, score, dur, run); return Promise.resolve({ queued: true }); }
+      return send(game, score, dur, run);
     },
     /** 한 판 시작 시각 표시(선택) */
-    start() { markT = Date.now(); },
+    start() { markT = Date.now(); newRun(); },
     /** 이 기기에 남은 예전 최고점(랭킹 전 기록)도 참가할 때 올리기 */
     legacy(game, best) { best = Math.floor(Number(best) || 0); if (!game || best <= 0 || LS.get('legacy:' + game)) return; LS.set('legacy:' + game, 1); pendSet(game, best, 600000); },
     flush,
