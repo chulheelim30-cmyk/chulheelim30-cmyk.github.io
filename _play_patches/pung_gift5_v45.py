@@ -11,3 +11,4 @@ rep("G.bannerSub = `${D.n} · +${bon}` + (first ? ' · 첫 승리 간식 100개'
     "G.bannerSub = `${D.n} · +${bon}` + (allFive ? ' · 보스 5종 완료! 간식 500개' : '');")
 P.write_text(s, encoding='utf-8'); print('ok')
 rep('보스를 처음 이기면 간식 100개 선물</div>', '보스 5종을 모두 이기면 간식 500개 선물</div>')  # (수동 반영)
+# (수동 반영) 선물 500 → 100개
