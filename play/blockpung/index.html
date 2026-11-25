@@ -2418,26 +2418,64 @@ function setValue(b, set) {
       for (let r = 0; r <= N - sh.h; r++) for (let c = 0; c <= N - sh.wd; c++) { if (!fits(nb, sh, r, c)) continue; const a = boardAfter(nb, sh, r, c), v = a.lines * 100 - holesOf(a.nb) * 12; if (v > bv) { bv = v; bn = a.nb; bl = a.lines; } }
       if (!bn) { ok = false; break; } nb = bn; lines += bl; if (bl && nb.every(r => r.every(x => !x))) acHit = true;
     }
-    if (ok) { let f = 0; for (const r of nb) for (const x of r) if (x) f++; best = Math.max(best, lines * 40 - holesOf(nb) * 25 - f * 8 + (acHit ? 900 : 0)); }
+    if (ok) { let f = 0; for (const r of nb) for (const x of r) if (x) f++; let spread = 0; if (f && f <= 30) { let rs = 0, cs = 0; for (let i = 0; i < N; i++) { if (nb[i].some(x => x)) rs++; if (nb.some(r => r[i])) cs++; } spread = Math.max(0, Math.min(rs, cs) - 2) * 70; }
+      best = Math.max(best, lines * 40 - holesOf(nb) * 25 - f * 8 - spread + (acHit ? 900 : 0)); }
   }
   return best;
 }
-function findAllClear(b) { // 판을 싹 비울 수 있는 블록 3개 찾기 (순서 6가지 × 상위 5개 판을 이어 보는 빔 탐색)
+const shKey = sh => sh.cells.map(x => x.join(',')).join('|');
+function exactCover(b0) { // 채워진 칸을 모두 지나는 줄(가로·세로 섞어서) 3개 이하를 골라, 그 줄의 빈칸을 블록 3개 이하로 딱 맞게 채우기
+  const t0 = performance.now(), filled = []; for (let r = 0; r < N; r++) for (let c = 0; c < N; c++) if (b0[r][c]) filled.push([r, c]);
+  if (!filled.length || filled.length > 24) return null;
+  const lines = []; for (let i = 0; i < N; i++) { if (b0[i].some(x => x)) lines.push(['r', i]); if (b0.some(r => r[i])) lines.push(['c', i]); }
+  const subs = []; const L = lines.length;
+  for (let a = 0; a < L; a++) { subs.push([lines[a]]); for (let b = a + 1; b < L; b++) { subs.push([lines[a], lines[b]]); for (let c = b + 1; c < L; c++) subs.push([lines[a], lines[b], lines[c]]); } }
+  const on = (ls, r, c) => ls.some(([k, i]) => k === 'r' ? r === i : c === i);
+  const sols = [];
+  for (const ls of subs.sort(() => Math.random() - 0.5)) {
+    if (performance.now() - t0 > 70 || sols.length) break;
+    if (!filled.every(([r, c]) => on(ls, r, c))) continue;
+    const M = new Set(); for (let r = 0; r < N; r++) for (let c = 0; c < N; c++) if (!b0[r][c] && on(ls, r, c)) M.add(r * N + c);
+    if (!M.size || M.size > 26) continue;
+    const found = [];
+    const dfs = (rem, path) => { if (found.length > 6) return; if (!rem.size) { found.push(path); return; } if (path.length >= 3) return;
+      const first = Math.min(...rem), fr = Math.floor(first / N), fc = first % N;
+      for (const sh of SHAPES) for (const [cr, cc] of sh.cells) { const r0 = fr - cr, c0 = fc - cc; if (r0 < 0 || c0 < 0 || r0 + sh.h > N || c0 + sh.wd > N) continue;
+        const cells = sh.cells.map(([a, bb]) => (r0 + a) * N + c0 + bb); if (!cells.every(x => rem.has(x))) continue;
+        const nr = new Set(rem); cells.forEach(x => nr.delete(x)); dfs(nr, path.concat([{ sh, r: r0, c: c0 }])); } };
+    dfs(M, []);
+    for (const path of found) { // 실제로 놓아 보며 판이 비는 순서 찾기 (먼저 지워진 줄 때문에 꼬이지 않게)
+      const perms = path.length === 1 ? [[0]] : path.length === 2 ? [[0, 1], [1, 0]] : PERMS3;
+      for (const ord of perms) { let nb = b0, ok = true, empty = false;
+        for (const k of ord) { const st = path[k]; if (!fits(nb, st.sh, st.r, st.c)) { ok = false; break; } const a = boardAfter(nb, st.sh, st.r, st.c); nb = a.nb; if (a.lines && nb.every(r => r.every(x => !x))) empty = true; }
+        if (ok && empty) { sols.push(ord.map(k => path[k])); break; } }
+      if (sols.length) break;
+    }
+  }
+  if (!sols.length) return null;
+  const sol = sols[0], set = sol.map(x => x.sh);
+  const small = SHAPES.filter(x => x.cells.length <= 3); while (set.length < 3) set.push(small[Math.floor(Math.random() * small.length)]);
+  return { set, plan: sol.map(x => ({ key: shKey(x.sh), r: x.r, c: x.c })) };
+}
+function findAllClear(b) { // ACPLAN_V44: 판을 싹 비울 블록 3개 + 놓을 자리 찾기 (딱 맞게 채우기 → 빔 탐색)
   const b0 = b.map(r => r.map(x => !!x)), t0 = performance.now();
+  const ex = exactCover(b0); if (ex) return ex;
   const conc = nb => { let s = 0; for (let r = 0; r < N; r++) { let k = 0; for (let c = 0; c < N; c++) if (nb[r][c]) k++; s += k * k; } for (let c = 0; c < N; c++) { let k = 0; for (let r = 0; r < N; r++) if (nb[r][c]) k++; s += k * k; } return s; };
-  const pool = SHAPES.filter(x => x.cells.length <= 6);
-  for (let t = 0; t < 70 && performance.now() - t0 < 120; t++) {
-    const cand = [pool[Math.floor(Math.random() * pool.length)], pool[Math.floor(Math.random() * pool.length)], pool[Math.floor(Math.random() * pool.length)]];
+  const pool = SHAPES.filter(x => x.cells.length <= 6), hit = pool.filter(x => clearsLine(b0, x));
+  const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
+  for (let t = 0; t < 200 && performance.now() - t0 < 120; t++) {
+    const cand = t % 2 && hit.length ? [pick(hit), pick(pool), pick(pool)] : [pick(pool), pick(pool), pick(pool)];
     if (new Set(cand.map(x => x.id)).size < 3) continue;
     for (const ord of PERMS3) {
-      let beam = [b0];
+      let beam = [{ nb: b0, path: [] }];
       for (const i of ord) { const sh = cand[i], next = [];
-        for (const nb of beam) for (let r = 0; r <= N - sh.h; r++) for (let c = 0; c <= N - sh.wd; c++) { if (!fits(nb, sh, r, c)) continue; const a = boardAfter(nb, sh, r, c); let f = 0; for (const rr of a.nb) for (const x of rr) if (x) f++; next.push({ nb: a.nb, v: (f === 0 && a.lines ? 1e6 : 0) + a.lines * 200 - f * 6 + conc(a.nb) }); }
+        for (const e of beam) for (let r = 0; r <= N - sh.h; r++) for (let c = 0; c <= N - sh.wd; c++) { if (!fits(e.nb, sh, r, c)) continue; const a = boardAfter(e.nb, sh, r, c); let f = 0; for (const rr of a.nb) for (const x of rr) if (x) f++;
+          const path = e.path.concat([{ key: shKey(sh), r, c }]);
+          if (f === 0 && a.lines) return { set: cand, plan: path }; // 중간에 판이 비면 올 클리어
+          next.push({ nb: a.nb, path, v: a.lines * 200 - f * 6 + conc(a.nb) }); }
         if (!next.length) { beam = null; break; }
-        if (next.some(x => x.v >= 1e6)) return cand; // 중간에 판이 비면 올 클리어
-        next.sort((x, y) => y.v - x.v); beam = next.slice(0, 5).map(x => x.nb);
+        next.sort((x, y) => y.v - x.v); beam = next.slice(0, 6);
       }
-      if (beam && beam.some(nb => nb.every(r => r.every(x => !x)))) return cand;
     }
   }
   return null;
@@ -2449,7 +2487,7 @@ function newTray() {
   const early = 1 - clamp((G.placed || 0) / 45, 0, 1), giftFill = 29 - Math.round(early * 10), giftP = 0.6 + early * 0.35;
   let fill = 0; for (const r of b) for (const x of r) if (x) fill++;
   let set = null; const good = [];
-  let acSet = null; if (fill > 0 && fill <= 24) acSet = findAllClear(b); // 올 클리어 기회 만들기
+  let acSet = null, ac = null; G.acPlan = null; if (fill > 0 && fill <= 30) { ac = findAllClear(b); if (ac) acSet = ac.set; } // 올 클리어 기회 만들기
   for (let tries = 0; tries < 40 && good.length < 8 && !acSet; tries++) {
     const ban = new Set(), cand = [];
     if (fill > giftFill && Math.random() < giftP) { const g = SHAPES.filter(s => clearsLine(b, s)); if (g.length) { const s = g[Math.floor(Math.random() * g.length)]; cand.push(s); ban.add(s.id); } }
@@ -2458,7 +2496,7 @@ function newTray() {
     if (setSolvable(b, cand)) { good.push(cand); continue; }
     if (!set && cand.some(s => canPlaceAnywhere(b, s))) set = cand;
   }
-  if (acSet) { set = acSet; G.acFound = (G.acFound || 0) + 1; }
+  if (acSet) { set = acSet; G.acFound = (G.acFound || 0) + 1; G.acPlan = ac.plan; G.acT = G.t; if (G.state === 'play') fxPop('올 클리어 기회!', L.W / 2, L.by - 14, { size: 22, rainbow: true, life: 1.6 }); }
   else if (good.length) { // 판에 잘 맞는 세트 우선 (75%는 최고, 나머지는 상위 3개 중 하나 → 너무 뻔하지 않게)
     const sc = good.map(c => ({ c, v: setValue(b, c) + Math.random() * 20 })).sort((x, y) => y.v - x.v);
     set = (Math.random() < 0.75 ? sc[0] : sc[Math.floor(Math.random() * Math.min(3, sc.length))]).c;
@@ -2530,6 +2568,7 @@ function previewClear(pc, s) {
 /* ---------------- 놓기·지우기 ---------------- */
 function place(i, gr, gc) {
   const pc = G.tray[i]; G.tray[i] = null;
+  if (G.acPlan) { const st = G.acPlan[0]; if (st && st.key === shKey(pc.sh) && st.r === gr && st.c === gc) { G.acPlan.shift(); G.acT = G.t; if (!G.acPlan.length) G.acPlan = null; } else G.acPlan = null; }
   pc.sh.cells.forEach(([r, c], k) => { G.board[gr + r][gc + c] = { col: pc.col, face: k === pc.face, sq: { v: 0.6, vel: 0 }, gray: 0 }; });
   const n = pc.sh.cells.length;
   G.score += n; G.placed++;
@@ -2610,12 +2649,22 @@ function reset() {
   Object.assign(G, { board: emptyBoard(), score: 0, scoreShown: 0, combo: 0, miss: 0, maxCombo: 0, lines: 0, sameLines: 0, placed: 0, drag: null, continued: 0, glowLines: [], passedBest: false, best: JE.best.get('main') });
   FX.parts = []; FX.pops = []; FX.rings = []; FX.dying = []; FX.flash = 0;
 }
+function openPuzzle() { // 판 시작: 한두 줄에 블록을 깔아 두고 '올 클리어' 첫 기회를 줘요 (ACPLAN_V44)
+  for (let t = 0; t < 25; t++) {
+    const b = [...Array(N)].map(() => Array(N).fill(null)), nRows = Math.random() < 0.5 ? 1 : 2, vert = Math.random() < 0.4;
+    const idx = [...Array(N).keys()].sort(() => Math.random() - 0.5).slice(0, nRows);
+    for (const i of idx) { const k = 3 + Math.floor(Math.random() * 3), js = [...Array(N).keys()].sort(() => Math.random() - 0.5).slice(0, k);
+      for (const j of js) { const r = vert ? j : i, c = vert ? i : j; b[r][c] = { col: COLORS[Math.floor(Math.random() * 6)], face: false, sq: { v: 1, vel: 0 }, gray: 0 }; } }
+    if (exactCover(b.map(r => r.map(x => !!x)))) { G.board = b; return; }
+  }
+}
 function start(resume) {
   banner(false); adState.games++;
   reset();
   const sv = resume && JE.store.get('save', null);
-  if (sv) { load(sv); G.scoreShown = G.score; } else { newTray(); clearSave(); }
+  if (sv) { load(sv); G.scoreShown = G.score; } else { openPuzzle(); newTray(); clearSave(); }
   G.state = 'play';
+  if (!sv && G.acPlan) { G.acT = G.t - 1.5; fxPop('올 클리어 기회!', L.W / 2, L.by - 14, { size: 22, rainbow: true, life: 2 }); }
   JE.sfx.ready();
   if (!G.tray.some(x => x && canPlaceRot(G.board, x.sh))) stuck();
 }
@@ -2754,6 +2803,9 @@ function render(c) {
       if (ln.same) { c.font = `900 13px ${JE.FONT}`; c.textAlign = 'center'; c.fillStyle = '#b0447e'; const tx = ln.k === 'r' ? L.bx + L.bs - 18 : x + w / 2, ty = ln.k === 'r' ? y - 8 : L.by - 8; rr(c, tx - 16, ty - 10, 32, 20, 10); c.fill(); c.fillStyle = '#fff'; c.fillText('x2', tx, ty + 1); }
     }
   }
+  if (G.acPlan && G.acPlan.length && !d && G.state === 'play' && G.t - G.acT > 4) { const st = G.acPlan[0], tp = G.tray.find(t => t && shKey(t.sh) === st.key);
+    if (tp) { const a = 0.5 + 0.3 * Math.sin(G.t * 5); c.save(); c.shadowColor = 'rgba(255,240,150,.9)'; c.shadowBlur = 14; c.strokeStyle = `rgba(255,236,140,${a + 0.3})`; c.fillStyle = `rgba(255,236,140,${a * 0.5})`; c.lineWidth = 2;
+      tp.sh.cells.forEach(([r, cc]) => { rr(c, cellX(st.c + cc) + 3, cellY(st.r + r) + 3, s - 6, s - 6, s * 0.25); c.fill(); c.stroke(); }); c.restore(); } }
   for (let r = 0; r < N; r++) for (let col = 0; col < N; col++) {
     const x = G.board[r][col]; if (!x) continue;
     const v = x.sq.v; drawCube(c, cellX(col), cellY(r), s, x.col, { face: x.face, sx: 2 - v, sy: v, gray: x.gray });
