@@ -2400,7 +2400,7 @@ const cs = () => L.p - L.gap;
 /* ---------------- 규칙 ---------------- */
 /* ROT_V64 톡 = 돌리기 */
 function rotOf(sh) { const key = JSON.stringify(norm(sh.cells.map(([r, c]) => [c, -r]))); return SHAPES.find(x => x.id === sh.id && JSON.stringify(x.cells) === key) || sh; }
-function canPlaceRot(b, sh) { let v = sh; for (let k = 0; k < 4; k++) { if (canPlaceAnywhere(b, v)) return true; const n = rotOf(v); if (n === v) break; v = n; } return false; }
+/* ROT1_V71 한 번만 */ function canPlaceRot(b, sh, used) { if (canPlaceAnywhere(b, sh)) return true; if (used) return false; const n = rotOf(sh); return n !== sh && canPlaceAnywhere(b, n); }
 function fits(b, sh, gr, gc) {
   for (const [r, c] of sh.cells) { const R = gr + r, C = gc + c; if (R < 0 || C < 0 || R >= N || C >= N || b[R][C]) return false; }
   return true;
@@ -2549,7 +2549,7 @@ JE.input.on({
     const d = G.drag; if (!d) return; G.drag = null;
     if (G.state !== 'play') return;
     d.x = p.x; d.y = p.y;
-    if (Math.max(d.mv || 0, Math.hypot(p.x - d.sx, p.y - d.sy)) < 22 && performance.now() - d.t0 < 1000) { const pc = G.tray[d.i], n = rotOf(pc.sh); if (n !== pc.sh) { pc.sh = n; pc.face = Math.min(pc.face, n.cells.length - 1); G.trayPop[d.i] = 0.55; SND.pick(); JE.haptic('tap'); save(); } return; }
+    if (Math.max(d.mv || 0, Math.hypot(p.x - d.sx, p.y - d.sy)) < 22 && performance.now() - d.t0 < 1000) { const pc = G.tray[d.i], n = rotOf(pc.sh); if (pc.rot) { SND.bad(); JE.haptic('tap'); G.trayPop[d.i] = 0.3; return; } if (n !== pc.sh) { pc.rot = 1; pc.sh = n; pc.face = Math.min(pc.face, n.cells.length - 1); G.trayPop[d.i] = 0.55; SND.pick(); JE.haptic('tap'); save(); } return; }
     const s = snapOf(d);
     if (s) place(d.i, s.gr, s.gc); else { SND.bad(); G.trayPop[d.i] = 0; }
   },
@@ -2620,7 +2620,7 @@ function place(i, gr, gc) {
   }
   if (G.tray.every(x => !x)) newTray();
   checkBest();
-  if (!G.tray.some(x => x && canPlaceRot(G.board, x.sh))) stuck();
+  if (!G.tray.some(x => x && canPlaceRot(G.board, x.sh, x.rot))) stuck();
   else save();
 }
 function checkBest() {
@@ -2632,12 +2632,12 @@ function checkBest() {
 
 /* ---------------- 저장 (앱을 닫아도 이어서) ---------------- */
 function save() {
-  JE.store.set('save', { b: G.board.map(r => r.map(x => x ? [COLORS.indexOf(x.col), x.face ? 1 : 0] : 0)), t: G.tray.map(x => x ? [SHAPES.indexOf(x.sh), COLORS.indexOf(x.col), x.face] : 0), s: G.score, c: G.combo, m: G.miss, k: G.continued, st: [G.lines, G.sameLines, G.placed, G.maxCombo] });
+  JE.store.set('save', { b: G.board.map(r => r.map(x => x ? [COLORS.indexOf(x.col), x.face ? 1 : 0] : 0)), t: G.tray.map(x => x ? [SHAPES.indexOf(x.sh), COLORS.indexOf(x.col), x.face, x.rot ? 1 : 0] : 0), s: G.score, c: G.combo, m: G.miss, k: G.continued, st: [G.lines, G.sameLines, G.placed, G.maxCombo] });
 }
 const clearSave = () => JE.store.set('save', null);
 function load(sv) {
   G.board = sv.b.map(r => r.map(x => x ? { col: COLORS[x[0]], face: !!x[1], sq: { v: 1, vel: 0 }, gray: 0 } : null));
-  G.tray = sv.t.map(x => x ? { sh: SHAPES[x[0]], col: COLORS[x[1]], face: x[2] } : null);
+  G.tray = sv.t.map(x => x ? { sh: SHAPES[x[0]], col: COLORS[x[1]], face: x[2], rot: x[3] || 0 } : null);
   G.score = sv.s; G.combo = sv.c; G.miss = sv.m; G.continued = sv.k; [G.lines, G.sameLines, G.placed, G.maxCombo] = sv.st;
 }
 
@@ -2653,7 +2653,7 @@ function start(resume) {
   if (sv) { load(sv); G.scoreShown = G.score; } else { newTray(); clearSave(); }
   G.state = 'play';
   JE.sfx.ready();
-  if (!G.tray.some(x => x && canPlaceRot(G.board, x.sh))) stuck();
+  if (!G.tray.some(x => x && canPlaceRot(G.board, x.sh, x.rot))) stuck();
 }
 async function again() { if (interstitialDue()) await showInterstitial(); start(false); }
 function pause() {
@@ -2820,7 +2820,7 @@ function render(c) {
     let anyDim = false;
         for (let i = 0; i < 3; i++) {
       const pc = G.tray[i]; if (!pc || (d && d.i === i)) continue;
-      const sr = slotRect(i), ok0 = canPlaceAnywhere(G.board, pc.sh), rotOk = !ok0 && canPlaceRot(G.board, pc.sh), ok = ok0; if (!ok0 && !rotOk) anyDim = true; const tp = L.p * TRAY_K(pc.sh);
+      const sr = slotRect(i), ok0 = canPlaceAnywhere(G.board, pc.sh), rotOk = !ok0 && canPlaceRot(G.board, pc.sh, pc.rot), ok = ok0; if (!ok0 && !rotOk) anyDim = true; const tp = L.p * TRAY_K(pc.sh);
       const pop = clamp(G.trayPop[i], 0, 1), e = pop < 1 ? JE.ease.outBack(pop) : 1;
       const ox = sr.x + sr.w / 2 - pc.sh.wd * tp / 2, oy = sr.y + sr.h / 2 - pc.sh.h * tp / 2;
       const bob = Math.sin(G.t * 2.2 + i) * 1.5;
@@ -2828,7 +2828,7 @@ function render(c) {
       if (rotOk) { c.font = `700 18px ${JE.FONT}`; c.textAlign = 'center'; c.fillStyle = '#ff8a3d'; c.fillText('↻', sr.x + sr.w - 12, sr.y + 18); }
     }
     c.font = `700 12px ${JE.FONT}`; c.textAlign = 'center'; c.fillStyle = BC.sub;
-    const hint = G.placed < 2 ? '끌어서 놓고, 톡 누르면 돌아가요' : anyDim ? '흐린 블록은 돌려도 놓을 자리가 없어요' : '';
+    const hint = G.placed < 2 ? '끌어서 놓고, 톡 누르면 한 번 돌아가요' : anyDim ? '흐린 블록은 돌려도 놓을 자리가 없어요' : '';
     if (hint) c.fillText(hint, W / 2, L.hintY + 10); // 흐린 블록이 있을 때만 (11-22 점검)
   }
   if (G.state !== 'home') {
