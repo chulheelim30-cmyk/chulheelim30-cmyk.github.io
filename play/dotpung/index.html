@@ -2324,6 +2324,16 @@ function toSlot(sh) {
   const same = G.slots.findIndex(x => x && x.col === sh.col);
   if (same >= 0) {
     G.slots[same].ammo += sh.ammo; G.slots[same].sq.vel -= 8; G.slots[same].pop = 1; G.merges++; G.score += 30;
+    const PT = G.slots[same]; PT.mc = (PT.mc || 0) + 1;
+    if (PT.mc >= 2) { // POTBURST_V1 같은 색 3번 → 냄비 펑: 그 색 칸을 아래부터 탄 수만큼 지움
+      const x0 = slotX(same), y0 = L.potY - L.potW * 0.4; let n = 0;
+      for (let r = N - 1; r >= 0 && PT.ammo > 0; r--) for (let c = 0; c < N && PT.ammo > 0; c++) if (G.grid[r][c] === PT.col) {
+        G.grid[r][c] = null; PT.ammo--; n++; G.left--; G.cleared++;
+        G.shots.push({ x0, y0, x1: L.bx + (c + 0.5) * L.cs, y1: L.by + (r + 0.5) * L.cs, col: PT.col, t: -n * 0.03, r, c });
+      }
+      G.score += n * 15; G.slots[same] = null; JE.fx.burst(x0, y0, PT.col, 18, 260); JE.shake.add(6); JE.sfx.pop(9); JE.haptic('heavy');
+      K.pop(n ? `냄비 펑! ${n}칸` : '냄비 펑!', L.W / 2, L.potY - L.potW * 0.6, { size: 28, c1: '#fff3c8', c2: '#ff6bc1', life: 1 }); return;
+    }
     K.pop('냄비 합체!', slotX(same), L.potY - L.potW * 0.5, { size: 24, c1: '#ffe0f3', c2: '#ff6bc1', life: 0.8 }); JE.sfx.pop(6); return;
   }
   const i = G.slots.findIndex(x => !x);
@@ -2334,7 +2344,7 @@ function toSlot(sh) {
 const F = K.flow({
   title: '도트풍',
   colors: [PAL.r, PAL.b, PAL.y, PAL.g, PAL.p],
-  desc: '벨트의 젤리 슈터를 <b style="color:#ffd23f">톡</b> 골라요.<br>레일을 넘어가며 <b style="color:#7ee0ff">같은 색 칸</b>을 쏴요.<br>남은 탄은 <b style="color:#ff9ad5">합체 냄비</b>로 쏙!<br>냄비 3개가 다 차면 끝.',
+  desc: '벨트의 젤리 슈터를 <b style="color:#ffd23f">톡</b> 골라요.<br>레일을 넘어가며 <b style="color:#7ee0ff">같은 색 칸</b>을 쏴요.<br>남은 탄은 <b style="color:#ff9ad5">합체 냄비</b>로 쏙!<br>같은 색 3번이면 <b style="color:#ff9ad5">냄비 펑</b>! 그림을 바로 지워요.<br>냄비 3개가 다 차면 끝.',
   onHome: () => { G.level = 1; G.extra = 0; setupLevel(); },
   onStart: () => { Object.assign(G, { level: 1, extra: 0, score: 0, shown: 0, cleared: 0, merges: 0, levels: 0, best: JE.best.get('main'), passedBest: false }); setupLevel(); },
   onRevive: () => {

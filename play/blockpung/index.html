@@ -2465,14 +2465,38 @@ function setSolvable(b, set, bud = { n: 30000 }) {
   return false;
 }
 function clearsLine(b, sh) { for (let r = 0; r <= N - sh.h; r++) for (let c = 0; c <= N - sh.wd; c++) if (fits(b, sh, r, c) && boardAfter(b, sh, r, c).lines) return true; return false; }
+/* ACPLAN_V65 올 클리어 기회 */
+const PERMS3 = [[0, 1, 2], [0, 2, 1], [1, 0, 2], [1, 2, 0], [2, 0, 1], [2, 1, 0]], shKey = sh => JSON.stringify(sh.cells);
+function findAllClear(b) { // 판을 싹 비울 블록 3개 + 놓을 자리 (순서 6가지 × 상위 6개 판을 이어 보는 빔 탐색)
+  const b0 = b.map(r => r.map(x => !!x)), t0 = performance.now();
+  const conc = nb => { let s = 0; for (let r = 0; r < N; r++) { let k = 0; for (let c = 0; c < N; c++) if (nb[r][c]) k++; s += k * k; } for (let c = 0; c < N; c++) { let k = 0; for (let r = 0; r < N; r++) if (nb[r][c]) k++; s += k * k; } return s; };
+  const pool = SHAPES.filter(x => x.cells.length <= 6), hit = pool.filter(x => clearsLine(b0, x)), pick = a => a[Math.floor(Math.random() * a.length)];
+  for (let t = 0; t < 200 && performance.now() - t0 < 180; t++) {
+    const cand = t % 2 && hit.length ? [pick(hit), pick(pool), pick(pool)] : [pick(pool), pick(pool), pick(pool)];
+    if (new Set(cand.map(x => x.id)).size < 3) continue;
+    for (const ord of PERMS3) {
+      let beam = [{ nb: b0, path: [] }];
+      for (const i of ord) { const sh = cand[i], next = [];
+        for (const e of beam) for (let r = 0; r <= N - sh.h; r++) for (let c = 0; c <= N - sh.wd; c++) { if (!fits(e.nb, sh, r, c)) continue; const a = boardAfter(e.nb, sh, r, c); let f = 0; for (const rr of a.nb) for (const x of rr) if (x) f++;
+          const path = e.path.concat([{ k: shKey(sh), id: sh.id, r, c }]);
+          if (f === 0 && a.lines) return { set: cand, plan: path };
+          next.push({ nb: a.nb, path, v: a.lines * 200 - f * 6 + conc(a.nb) }); }
+        if (!next.length) { beam = null; break; }
+        next.sort((x, y) => y.v - x.v); beam = next.slice(0, 6);
+      }
+    }
+  }
+  return null;
+}
 function newTray() {
   // dif 0~2: 0~1 = 1500→9000점, 1~2 = 9000→30000점
   const b = G.board, dif = G.score < 9000 ? clamp((G.score - 1500) / 7500, 0, 1) : 1 + clamp((G.score - 9000) / 21000, 0, 1), prev = G.prevIds || [];
   // 처음 약 2분(45번 놓기)은 '선물' 블록을 더 자주, 더 일찍 (첫 콤보를 빨리 맛보게)
   const early = 1 - clamp((G.placed || 0) / 45, 0, 1), giftFill = 29 - Math.round(early * 10), giftP = 0.6 + early * 0.35;
   let fill = 0; for (const r of b) for (const x of r) if (x) fill++;
-  let set = null;
-  for (let tries = 0; tries < 40; tries++) {
+  let set = null, ac = null; G.acPlan = null;
+  if (fill > 0 && fill <= 30) { ac = findAllClear(b); if (ac) { set = ac.set; G.acPlan = ac.plan; G.acT = G.t; G.acFound = (G.acFound || 0) + 1; if (G.state === 'play') fxPop('올 클리어 기회!', L.W / 2, L.by - 14, { size: 24, rainbow: true, life: 1.8 }); } }
+  for (let tries = 0; tries < 40 && !set; tries++) {
     const ban = new Set(), cand = [];
     if (fill > giftFill && Math.random() < giftP) { const g = SHAPES.filter(s => clearsLine(b, s)); if (g.length) { const s = g[Math.floor(Math.random() * g.length)]; cand.push(s); ban.add(s.id); } }
     while (cand.length < 3) { const s = pickShape(dif, ban, early); cand.push(s); ban.add(s.id); }
@@ -2543,6 +2567,7 @@ function previewClear(pc, s) {
 /* ---------------- 놓기·지우기 ---------------- */
 function place(i, gr, gc) {
   const pc = G.tray[i]; G.tray[i] = null;
+  if (G.acPlan) { const st = G.acPlan[0]; if (st && st.k === shKey(pc.sh) && st.r === gr && st.c === gc) { G.acPlan.shift(); G.acT = G.t; if (!G.acPlan.length) G.acPlan = null; } else G.acPlan = null; }
   pc.sh.cells.forEach(([r, c], k) => { G.board[gr + r][gc + c] = { col: pc.col, face: k === pc.face, sq: { v: 0.6, vel: 0 }, gray: 0 }; });
   const n = pc.sh.cells.length;
   G.score += n; G.placed++;
@@ -2587,8 +2612,9 @@ function place(i, gr, gc) {
       fxStars(L.W / 2, L.by + L.bs / 2, 10 + nSame * 6, '#ffd6ef');
     }
     if (G.board.every(r => r.every(x => !x))) {
-      G.score += 300; SND.sweep(); fxConfetti(80); fxFlash(0.5, '255,220,90'); JE.shake.add(12);
-      fxPop('판 싹쓸이! +300', L.W / 2, L.by + L.bs * 0.35, { size: 42, rainbow: true, life: 1.6, delay: 0.25 });
+      G.score += 1000; G.allClear = (G.allClear || 0) + 1; SND.sweep(); fxConfetti(140); fxFlash(0.6, '255,220,90'); JE.shake.add(14); JE.haptic('success');
+      fxPop('올 클리어!', L.W / 2, L.by + L.bs * 0.32, { size: 52, rainbow: true, life: 1.8, delay: 0.2 });
+      fxPop('+1000', L.W / 2, L.by + L.bs * 0.32 + 56, { size: 34, c1: '#fff', c2: '#ffd23f', life: 1.6, delay: 0.35 });
     }
   } else {
     G.miss++; if (G.miss >= 3 && G.combo) { G.combo = 0; } // 3번 연속 못 지우면 콤보 끝 [추정]
@@ -2753,6 +2779,9 @@ function render(c) {
     if (JE.sketch) JE.sketch.cell(c, cellX(col) + 2, cellY(r) + 2, s - 4, s - 4, s * 0.22);
     else { c.fillStyle = 'rgba(0,0,0,.22)'; rr(c, cellX(col), cellY(r), s, s, s * 0.29); c.fill(); }
   }
+  if (G.acPlan && G.acPlan.length && !G.drag && G.state === 'play' && G.t - (G.acT || 0) > 4) { const st = G.acPlan[0], tp = G.tray.find(t => t && shKey(t.sh) === st.k);
+    if (tp) { const a = 0.35 + 0.25 * Math.sin(G.t * 5); c.save(); c.shadowColor = 'rgba(255,220,90,.95)'; c.shadowBlur = 16; c.strokeStyle = `rgba(255,190,40,${a + 0.4})`; c.fillStyle = `rgba(255,230,120,${a * 0.6})`; c.lineWidth = 3;
+      tp.sh.cells.forEach(([r, cc]) => { rr(c, cellX(st.c + cc) + 3, cellY(st.r + r) + 3, s - 6, s - 6, s * 0.25); c.fill(); c.stroke(); }); c.restore(); } }
   // 놓기 미리보기: 지워질 줄 테두리 빛
   const d = G.drag;
   if (d && d.snap && d.preview) {
