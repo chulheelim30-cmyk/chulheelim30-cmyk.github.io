@@ -24,7 +24,7 @@ canvas{display:block;position:absolute;inset:0}
 body.playing .pad{display:flex}
 .ov{position:absolute;inset:0;z-index:6;display:flex;align-items:center;justify-content:center;background:linear-gradient(270deg,rgba(20,14,50,.6),rgba(20,14,50,.05) 62%)}
 .ov[hidden]{display:none}
-.home{position:absolute;right:max(36px,env(safe-area-inset-right));text-align:right;top:50%;transform:translateY(-50%);color:#fff;max-width:340px}
+.home{position:absolute;right:max(28px,env(safe-area-inset-right));text-align:right;top:50%;transform:translateY(-50%) scale(var(--hs,1));transform-origin:100% 50%;color:#fff;max-width:340px}body.short .home .desc+.desc{display:none}body.tiny .home .en{display:none}#restart:not([hidden]){display:inline-block;vertical-align:middle;margin:0 8px 0 0}#restart[hidden]{display:none}
 .title{font-size:54px;line-height:1;margin:0;background:linear-gradient(#fff6b0,#ffd23f 50%,#ff9a2a);-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 3px 0 #5a2a6a) drop-shadow(0 6px 10px rgba(20,10,50,.5))}
 .en{font-size:15px;letter-spacing:.5px;margin:6px 0 14px;text-shadow:0 2px 3px #3a2560}
 .desc{font-size:14px;line-height:1.5;opacity:.95;text-shadow:0 1px 3px #2a1850;font-family:"Noto Sans KR",sans-serif;margin-bottom:14px}
@@ -74,15 +74,14 @@ body.playing .pad{display:flex}
 <button id="snd">🔊</button>
 <button class="pad" id="bj"><b>JUMP</b><small>(점프)</small></button>
 <button class="pad" id="bs"><b>SLIDE</b><small>(슬라이드)</small></button>
-<div class="ov" id="home"><button id="fsbtn" aria-label="전체화면" style="position:absolute;top:max(10px,env(safe-area-inset-top));right:max(12px,env(safe-area-inset-right));z-index:5;border:0;border-radius:12px;padding:8px 12px;font:700 15px/1 inherit;color:#fff;background:rgba(40,24,80,.55);backdrop-filter:blur(4px)">⛶ 전체화면</button><div class="home">
+<div class="ov" id="home"><button id="fsbtn" aria-label="전체화면" style="position:absolute;top:max(10px,env(safe-area-inset-top));left:max(12px,env(safe-area-inset-left));z-index:5;border:0;border-radius:12px;padding:8px 12px;font:700 15px/1 inherit;color:#fff;background:rgba(40,24,80,.55);backdrop-filter:blur(4px)">⛶ 전체화면</button><div class="home">
  <h1 class="title">풍년이의 모험</h1>
  <div class="en">PUNGNYEON'S ADVENTURE</div>
  <div class="desc" style="opacity:.85;margin:-6px 0 10px">호수공원에서 우리를 간택한 고양이, 풍년이</div>
  <div class="desc">간식 냠냠 · 배부르면 피버 · 너무 먹으면 벌러덩 꿀잠</div>
  <div id="pr-hb-slot"></div>
  <div id="mis"></div>
- <button class="btn" id="go">모험 시작</button>
- <button class="btn ghost" id="restart" hidden style="display:block;margin:6px auto 0;font-size:13px;padding:6px 14px">처음부터 (1단계)</button>
+ <div style="white-space:nowrap"><button class="btn ghost" id="restart" hidden style="font-size:13px;padding:7px 12px">처음부터</button><button class="btn" id="go">모험 시작</button></div>
 </div><a id="lic" href="../licenses.html" style="position:absolute;right:max(14px,env(safe-area-inset-right));bottom:6px;font-size:11px;color:rgba(255,255,255,.6);text-decoration:none">오픈소스 라이선스</a><div class="hrow"><button class="btn ghost" id="album-btn">추억 앨범</button><button class="btn ghost" id="diary-btn" style="display:none">그림일기</button><button class="btn ghost" id="shop-btn">🐟 간식 상점</button><button class="btn ghost" id="deco-btn">꾸미기</button><button class="btn ghost" id="op-btn">🎬 오프닝</button><button class="btn ghost" id="rank-btn">랭킹</button></div></div>
 <div class="ov" id="over" hidden style="background:rgba(20,14,50,.45)"><div class="card">
  <img id="ov-cat" alt="" style="height:70px;float:left;margin:-6px 6px 0 -6px"><h2>풍년이가 낮잠 자러 갔어요</h2><div class="big" id="ov-score">0</div>
@@ -572,6 +571,7 @@ function resize() {
   K = h / LH; LW = Math.max(600, Math.round(w / K)); DPR = Math.min(LOW ? 1.5 : 2, devicePixelRatio || 1);
   cv.width = Math.round(w * DPR); cv.height = Math.round(h * DPR); cv.style.width = w + 'px'; cv.style.height = h + 'px';
   SS = Math.min(3, DPR * K); GY = 316;
+  /* HOMEFIT_V76: 전체화면이 아니어서 높이가 낮으면 홈 글자·버튼을 같이 줄임 */ document.documentElement.style.setProperty('--hs', Math.max(0.62, Math.min(1, (h - 24) / 400)).toFixed(3)); document.body.classList.toggle('short', h < 430); document.body.classList.toggle('tiny', h < 360);
   cache.clear(); built = false; BGP = null; BGS = {};
 }
 function layer(w, h, fn) { const c = document.createElement('canvas'); c.width = Math.ceil(w * SS); c.height = Math.ceil(h * SS); const g = c.getContext('2d'); g.scale(SS, SS); fn(g); return { cv: c, w, h }; }
@@ -1274,8 +1274,8 @@ try { PungRank.entryInvite('pungadventure', { host: wrap, onlyIf: () => !$('home
 $('go').addEventListener('click', start);
 /* RESTART_V75: 처음부터 — 두 번 눌러야 1단계로 (완주 횟수·친구·간식은 그대로) */
 { const rb = $('restart'); let armed = 0; const show = () => { rb.hidden = !((+(localStorage.getItem('pa2_prog') || 0)) % TOT); }; show();
-  rb.addEventListener('click', () => { if (!armed) { armed = 1; rb.textContent = '한 번 더 누르면 1단계부터 시작해요'; setTimeout(() => { armed = 0; rb.textContent = '처음부터 (1단계)'; }, 3000); return; }
-    localStorage.setItem('pa2_prog', 0); armed = 0; rb.textContent = '처음부터 (1단계)'; show(); const d = $('home-prog'); if (d) d.textContent = d.textContent.replace(/레벨 \d+ · \d+단계/, '레벨 1 · 1단계'); try { G.p0 = 0; } catch (e) {} }); window.__restartShow = show; } $('again').addEventListener('click', start); $('tohome').addEventListener('click', goHome);
+  rb.addEventListener('click', () => { if (!armed) { armed = 1; rb.textContent = '한 번 더 누르면 1단계로'; setTimeout(() => { armed = 0; rb.textContent = '처음부터'; }, 3000); return; }
+    localStorage.setItem('pa2_prog', 0); armed = 0; rb.textContent = '처음부터'; show(); const d = $('home-prog'); if (d) d.textContent = d.textContent.replace(/레벨 \d+ · \d+단계/, '레벨 1 · 1단계'); try { G.p0 = 0; } catch (e) {} }); window.__restartShow = show; } $('again').addEventListener('click', start); $('tohome').addEventListener('click', goHome);
 $('snd').addEventListener('pointerdown', e => { e.stopPropagation(); muted = !muted; $('snd').textContent = muted ? '🔇' : '🔊'; });
 addEventListener('resize', resize); addEventListener('orientationchange', () => setTimeout(resize, 200));
 resize(); reset(true);
