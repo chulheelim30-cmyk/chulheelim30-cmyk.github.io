@@ -769,6 +769,9 @@ function photoLayer() { return bgLayer('sunset'); }
 /* ---------- 게임 ---------- */
 const G = { state: 'home', t: 0, dt: 0, dist: 0, speed: 300, cam: 0, bonus: 0, snacks: 0, pieces: 0, stage: 1, hp: 3, gauge: 0, fever: 0, kills: 0, shake: 0, banner: 0, bannerTxt: '', bannerSub: '', demo: true, best: +(localStorage.getItem('pa2_best') || 0) };
 const PL = { y: 0, vy: 0, ground: true, jumps: 0, slide: false, hurt: 0, anim: 0, fire: 0, sq: 1 };
+let hills = []; /* HILL_V59 언덕 */
+function hillH(x) { for (const h of hills) if (x > h.x0 && x < h.x1) { const t = (x - h.x0) / (h.x1 - h.x0), r = 0.3, e = t < r ? t / r : t > 1 - r ? (1 - t) / r : 1; return h.h * e * e * (3 - 2 * e); } return 0; }
+function hillK() { if (!PL.ground) return 1; const d = hillH(PX() + 20) - hillH(PX() - 20); return d > 2 ? 0.9 : d < -2 ? 1.08 : 1; }
 let segs = [], objs = [], buls = [], parts = [], pops = [], genX = 0, nextPiece = 900;
 const SX = () => Math.round(LW * 0.2), PX = () => G.dist;
 const BUD = { x: 0, y: 0, flash: 0 }; // 별 친구 (반짝이)
@@ -815,7 +818,7 @@ const coverK = c => imOk(COVER[c]) ? COVER[c] : COVER0[c];
 function reset(demo) {
   Object.assign(G, { fevers: 0, bigs: 0, revived: 0, noRevive: false, tut: !demo && !localStorage.getItem('pa2_tut') ? 9 : 0, naps: 0, nap: 0, napWant: false, napDelay: 0, napAfter: false, pickWant: false, seenYarn: 0, seenWang: 0, fShape: 0, feverEat: 0, memT: false, consFx: 0, rest: 0, restK: 1, restEnd: 0, newPages: 0, yarn: 0, up: {}, boss: null, tok: Math.random(), cush: permL('cushion'), food: 100, p0: progN(), braveDone: false, braveB: false, napSaid: false, wang: 0, wangOut: 0, combo: 0, nmT: 0, coinRun: 0, nextCard: 50, cards: 0, safe: 0, bossWin: 0, dist: 0, speed: 300, bonus: 0, snacks: 0, pieces: 0, stage: 1, hp: 3, gauge: 0, fever: 0, kills: 0, shake: 0, banner: 0, demo });
   Object.assign(PL, { y: GY, vy: 0, ground: true, jumps: 0, slide: false, hurt: 0, anim: 0, fire: 0, sq: 1 }); BUD.x = -26; BUD.y = GY - 118;
-  segs = [{ x0: -600, n: 14, x1: -600 + 80 + 14 * 120, v: Array.from({ length: 14 }, (_, i) => i % 3) }]; genX = segs[0].x1;
+  hills = []; segs = [{ x0: -600, n: 14, x1: -600 + 80 + 14 * 120, v: Array.from({ length: 14 }, (_, i) => i % 3) }]; genX = segs[0].x1;
   objs = []; buls = []; parts = []; pops = []; nextPiece = 900; gen();
 }
 const onGround = x => segs.some(s => x >= s.x0 + 10 && x <= s.x1 - 10);
@@ -826,15 +829,18 @@ function snackArc(x, w, h, y0 = GY - 30) { const n = Math.max(4, Math.round(w / 
 function gen() {
   while (genX < G.dist + LW * 2.2) {
     // 11-24: 장애물 난이도 8000(약 20초)→45000(약 1분 40초)에 걸쳐 오름. 보스 뒤엔 장애물 비율만 조금 더(diffO)
-    const pd = prD(), diff = Math.min(1, G.dist / 45000 + pd * 0.7), diffO = diff + Math.min(0.6, (G.bossWin || 0) * 0.15) + pd * 0.6;
+    const pd = prD(), diff = Math.min(1, G.dist / 45000 + pd * 0.7), diffO = diff + Math.min(0.6, (G.bossWin || 0) * 0.15) + pd * 0.6 + Math.min(0.6, Math.max(0, G.dist - 45000) / 90000); /* HILL_V59: 오래 달릴수록 계속 어려워짐 */
     let gap = 0;
     const roof = zoneI() === 2 || zoneI() === 4 || zoneI() === 7; if (!G.demo && !(G.boss && G.boss.kind !== 'crow') && Math.random() < 0.45 + diff * 0.2 + (roof ? 0.15 : 0)) { gap = Math.round(110 + (roof ? 30 : 0) + Math.random() * (40 + diff * 70)); snackArc(genX - 30, gap + 60, 120); }
     const n = 3 + Math.floor(Math.random() * 5), x0 = genX + gap, x1 = x0 + 80 + n * 120;
     segs.push({ x0, x1, n, v: Array.from({ length: n }, () => Math.floor(Math.random() * 3)) });
-    let x = x0 + 160; while (x < x1 - 220) { x += place(x, diffO) * (1 - pd * 0.18); }
+    let hx0 = 1e12, hx1 = -1e12;
+    if (!G.demo && !G.boss && !(G.rest > 0) && n >= 6 && G.dist > 3000 && Math.random() < 0.35 + pd * 0.1) { const L = Math.min(900, x1 - x0 - 300); if (L >= 460) { hx0 = x0 + 170; hx1 = hx0 + L; const h = Math.round(60 + Math.random() * 40 + pd * 20); hills.push({ x0: hx0, x1: hx1, h }); for (let hx = hx0 + 40; hx < hx1 - 20; hx += 46) objs.push({ t: 'snack', k: SNACKS[Math.floor(hx / 46) % 5], x: hx, y: GY - hillH(hx) - 34 }); } }
+    const tight = 1 - pd * 0.18 - Math.min(0.12, Math.max(0, G.dist - 45000) / 300000);
+    let x = x0 + 160; while (x < x1 - 220) { if (x > hx0 - 260 && x < hx1 + 60) { x = hx1 + 160; continue; } x += place(x, diffO) * tight; }
     genX = x1;
   }
-  segs = segs.filter(s => s.x1 > G.dist - LW);
+  segs = segs.filter(s => s.x1 > G.dist - LW); hills = hills.filter(h => h.x1 > G.dist - LW);
   objs = objs.filter(o => o.x > G.dist - LW * 0.5 && !o.gone);
 }
 function place(x, diff) {
@@ -927,17 +933,20 @@ function update(dt) {
   const fv = G.fever > 0;
   G.restK = (G.restK == null ? 1 : G.restK) + ((G.rest > 0 ? 0.6 : 1) - (G.restK == null ? 1 : G.restK)) * Math.min(1, dt * 2);
   // 11-24 난이도 곡선: 예전엔 35초 만에 최고 속도 → 처음 2분에 걸쳐 340→600으로 천천히, 보스를 깰 때마다 최고 속도 +30 (최대 660)
-  G.speed = Math.min(600 + prD() * 90 + Math.min(60, (G.bossWin || 0) * 15), 340 + prD() * 140 + G.dist * 0.005) * (fv ? 1.5 : 1) * G.restK;
+  G.speed = Math.min(600 + prD() * 90 + Math.min(60, (G.bossWin || 0) * 15) + Math.min(120, G.dist / 1500), 340 + prD() * 140 + G.dist * 0.005) * hillK() * (fv ? 1.5 : 1) * G.restK;
   if (G.rest > 0) { G.rest -= dt; if (Math.random() < dt * 3) parts.push({ x: G.cam + rnd(0, LW), y: rnd(GY - 220, GY - 60), vx: rnd(-20, 20), vy: -14, life: 1.6, max: 1.6, kind: 'spark', col: '#fff3b0', size: 0.45, rot: 0, vr: 1, g: 0 }); if (G.rest <= 0) endRest(); }
   G.dist += G.speed * dt; G.cam = G.dist - SX(); gen();
   PL.slide = slideHeld && PL.ground && G.state === 'play';
   const prevY = PL.y; PL.vy += 2500 * dt; PL.y += PL.vy * dt;
   const over = onGround(PX() - 16) || onGround(PX() + 18);
-  if (PL.vy >= 0 && PL.y >= GY && prevY <= GY + 6 && over) { if (!PL.ground) { PL.sq = 1.18; burst(SX(), GY, 5, 'puff', ['#fff'], 70); } PL.y = GY; PL.vy = 0; PL.ground = true; PL.jumps = 0; }
+  const gy = GY - hillH(PX());
+  if (PL.ground && over && PL.vy >= 0 && PL.y < gy && PL.y > gy - 26) { PL.y = gy; PL.vy = 0; } // 언덕 내려갈 때 붙어서 내려가기
+  if (PL.vy >= 0 && PL.y >= gy && prevY <= gy + 26 && over) { if (!PL.ground) { PL.sq = 1.18; burst(SX(), gy, 5, 'puff', ['#fff'], 70); } PL.y = gy; PL.vy = 0; PL.ground = true; PL.jumps = 0; }
   else if (PL.ground && !over) { PL.ground = false; PL.jumps = 1; }
   if (PL.y > GY + 110) { if (G.demo) { PL.y = GY; PL.vy = 0; } else { hurt(); PL.y = GY + 100; PL.vy = -1200; PL.jumps = 1; burst(SX(), GY, 14, 'spark', FX, 240); } }
   if (G.demo) { const o = objs.find(o => !o.gone && o.t === 'crow' && o.x - PX() < 150 && o.x > PX()); }
-  PL.sq += (1 - PL.sq) * Math.min(1, dt * 12); PL.anim += dt * G.speed / 34; if (PL.ground && !G.demo && Math.random() < dt * (6 + G.speed / 60)) parts.push({ x: PX() - 18 + rnd(-6, 6), y: GY - 4, vx: -G.speed * 0.12 - rnd(20, 60), vy: -rnd(30, 80), life: 0.45, max: 0.45, kind: 'puff', col: '#f3e6d2', size: 0.55 + Math.random() * 0.4, rot: 0, vr: 0, g: 60 }); // 발밑 먼지 PL.hurt = Math.max(0, PL.hurt - dt);
+  PL.sq += (1 - PL.sq) * Math.min(1, dt * 12); PL.anim += dt * G.speed / 34; if (PL.ground && !G.demo && Math.random() < dt * (6 + G.speed / 60)) parts.push({ x: PX() - 18 + rnd(-6, 6), y: PL.y - 4, vx: -G.speed * 0.12 - rnd(20, 60), vy: -rnd(30, 80), life: 0.45, max: 0.45, kind: 'puff', col: '#f3e6d2', size: 0.55 + Math.random() * 0.4, rot: 0, vr: 0, g: 60 }); // 발밑 먼지
+  PL.hurt = Math.max(0, PL.hurt - dt); // FIX_V59
   const pb = { x0: PX() - 30, x1: PX() + 34, y0: PL.y - (PL.slide ? 36 : 62), y1: PL.y - 4 };
   for (const o of objs) {
     if (o.gone) continue; if (o.hit) o.hit = Math.max(0, o.hit - dt);
@@ -990,7 +999,8 @@ function hurt() { if ((G.sc | 0) >= 10) pop(PX(), PL.y - 120, '콤보 끊김…'
   G.combo = 0; G.nmT = 0;
   if (wangHurt()) return;
   if (G.cush > 0) { G.cush--; PL.hurt = 1.2; vib(20); sfx('hit'); pop(PX(), PL.y - 96, '방석 방어!', '#ffe3a0', 18); burst(SX(), PL.y - 36, 14, 'puff', ['#fff', '#ffd8a8'], 170); return; }
-  G.food = Math.max(0, (G.food || 0) - 20); PL.hurt = 1.4; // NOHEART_V35: 하트 대신 배부름 -20 G.shake = 3; vib(40); sfx('hurt'); pop(PX(), PL.y - 90, '앗!', '#ffe3f0', 20); burst(SX(), PL.y - 36, 12, 'puff', ['#fff'], 170);
+  G.food = Math.max(0, (G.food || 0) - 20); PL.hurt = 1.4; // NOHEART_V35: 하트 대신 배부름 -20
+  G.shake = 3; vib(40); sfx('hurt'); pop(PX(), PL.y - 90, '앗!', '#ffe3f0', 20); burst(SX(), PL.y - 36, 12, 'puff', ['#fff'], 170);
   if (G.food <= 0) { PL.hurt = 0; G.state = 'play'; starve(); return; }
   if (G.hp <= 0 && !G.noRevive && (G.revived | 0) < REVIVE_MAX) { G.state = 'ask'; PL.vy = 0; if (PL.y > GY) PL.y = GY; setTimeout(showRevive, 800); return; }
   if (G.hp <= 0) { G.state = 'over'; PL.vy = 0; if (PL.y > GY) PL.y = GY; const sc = score(); if (sc > G.best) { G.best = sc; localStorage.setItem('pa2_best', sc); } setTimeout(showOver, 1000); }
@@ -1058,6 +1068,13 @@ function draw() {
   { const vg = ctx.createLinearGradient(0, 0, 0, GY); vg.addColorStop(0, 'rgba(236,232,248,.10)'); vg.addColorStop(0.55, 'rgba(236,232,248,.26)'); vg.addColorStop(1, 'rgba(236,232,248,.30)'); ctx.fillStyle = vg; ctx.fillRect(0, 0, LW, GY); } // VIS_V52: 배경은 살짝 뿌옇게, 길 위 물건은 또렷하게
   drawLayer(BG.pit, GY - 4, 1);
   for (const s of segs) { const sx = s.x0 - G.cam; if (sx > LW + 10 || s.x1 - G.cam < -10) continue; tile('L', 0, sx); for (let i = 0; i < s.n; i++) { const x = sx + 40 + i * 120; if (x < LW && x + 120 > 0) tile('M', s.v[i], x); } tile('R', 0, sx + 40 + s.n * 120); }
+  for (const h of hills) { const a = h.x0 - G.cam, b = h.x1 - G.cam; if (a > LW + 10 || b < -10) continue;
+    const top = []; for (let x = Math.max(a, -20); x <= Math.min(b, LW + 20) + 12; x += 12) { const xx = Math.min(x, b); top.push([xx, GY - hillH(xx + G.cam)]); }
+    ctx.save(); ctx.beginPath(); ctx.moveTo(top[0][0], GY + 4); for (const [x, y] of top) ctx.lineTo(x, y - 2); ctx.lineTo(top[top.length - 1][0], GY + 4); ctx.closePath();
+    const lgH = ctx.createLinearGradient(0, GY - h.h, 0, GY + 4); lgH.addColorStop(0, '#d9b08a'); lgH.addColorStop(0.6, '#c39470'); lgH.addColorStop(1, '#b0835f'); ctx.fillStyle = lgH; ctx.fill();
+    ctx.lineJoin = 'round'; ctx.lineCap = 'round'; ctx.beginPath(); top.forEach(([x, y], i) => i ? ctx.lineTo(x, y - 3) : ctx.moveTo(x, y - 3)); ctx.strokeStyle = '#6f9a4a'; ctx.lineWidth = 9; ctx.stroke(); ctx.strokeStyle = '#9fd36f'; ctx.lineWidth = 5; ctx.stroke();
+    for (let i = 0; i < top.length; i += 3) { const [x, y] = top[i]; ctx.fillStyle = 'rgba(110,70,50,.14)'; ctx.beginPath(); ctx.ellipse(x + 6, y + (GY - y) * 0.55, 6, 2.4, 0, 0, 7); ctx.fill(); }
+    ctx.restore(); }
   for (const o of objs) {
     if (o.gone) continue; const x = o.x - G.cam; if (x < -100 || x > LW + 100) continue; const j = o.hit ? rnd(-2, 2) : 0;
     const hz = HAZ.has(o.t); if (hz) { ctx.save(); ctx.filter = OUTF; }
@@ -1130,8 +1147,8 @@ function drawCat() {
   if (PL.hurt > 0 && PL.hurt <= 1.0 && G.state === 'play' && Math.floor(G.t * 14) % 2) return;
   const im = IMG[f], sp = SPR[f]; if (!im.complete) return;
   const s = sp.dw ? sp.dw / sp.w : CAT_W / 576, w = sp.w * s, h = sp.h * s;
-  const hgt = Math.max(0, GY - PL.y);
-  if (onGround(PX())) { ctx.fillStyle = `rgba(30,20,50,${0.3 * Math.max(0.2, 1 - hgt / 200)})`; ctx.beginPath(); ctx.ellipse(SX() + 4, GY + 3, 46 * Math.max(0.4, 1 - hgt / 300), 7, 0, 0, 7); ctx.fill(); }
+  const sgy = GY - hillH(PX()), hgt = Math.max(0, sgy - PL.y);
+  if (onGround(PX())) { ctx.fillStyle = `rgba(30,20,50,${0.3 * Math.max(0.2, 1 - hgt / 200)})`; ctx.beginPath(); ctx.ellipse(SX() + 4, sgy + 3, 46 * Math.max(0.4, 1 - hgt / 300), 7, 0, 0, 7); ctx.fill(); }
   if (G.fever > 0) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = rg(ctx, SX(), PL.y - 40, 6, 90, ['rgba(255,190,230,.6)', 'rgba(255,190,230,0)']); ctx.fillRect(SX() - 90, PL.y - 130, 180, 180); ctx.restore(); }
   drawTrail(f, h);
   const sx = 1 / Math.sqrt(PL.sq), sy = PL.sq;
