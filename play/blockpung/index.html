@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="ko">
-<head><!--PV--><meta http-equiv="Cache-Control" content="no-cache"><script>(function(){var V=52;if(!/github\.io$/.test(location.hostname))return;fetch('/play/version.json?t='+Date.now(),{cache:'no-store'}).then(function(r){return r.json()}).then(function(j){if(j&&j.v>V){var u=new URL(location.href);if(u.searchParams.get('v')!==String(j.v)){u.searchParams.set('v',j.v);location.replace(u.toString())}}}).catch(function(){})})()</script><!--/PV-->
+<head><!--PV--><meta http-equiv="Cache-Control" content="no-cache"><script>(function(){var V=76;if(!/github\.io$/.test(location.hostname))return;fetch('/play/version.json?t='+Date.now(),{cache:'no-store'}).then(function(r){return r.json()}).then(function(j){if(j&&j.v>V){var u=new URL(location.href);if(u.searchParams.get('v')!==String(j.v)){u.searchParams.set('v',j.v);location.replace(u.toString())}}}).catch(function(){})})()</script><!--/PV-->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#fbf6ea">
@@ -2117,7 +2117,7 @@ JE.art.add('blk_f5','data:image/webp;base64,UklGRgYeAABXRUJQVlA4WAoAAAAQAAAAzgAA
 
   /* ---------------- 4. 연출 (엔진 JE.fx 에 붙어서 자동으로 그려짐) ---------------- */
   const FX = K.FX = { pops: [], conf: [], flash: 0, flashCol: '255,255,255' };
-  K.clearFx = () => { FX.pops = []; FX.conf = []; FX.flash = 0; JE.fx.parts = []; JE.fx.texts = []; JE.fx.rings = []; };
+  K.clearFx = () => { if (K.thrill) { K.thrill.d = 0; K.thrill.run = null; } FX.pops = []; FX.conf = []; FX.flash = 0; JE.fx.parts = []; JE.fx.texts = []; JE.fx.rings = []; };
   /** 큰 팝 글자 (굵은 외곽선 + 위→아래 그라데이션) */
   K.pop = function (text, x, y, o = {}) {
     FX.pops.push({ text, x, y, size: o.size || 34, c1: o.c1 || '#fff6b0', c2: o.c2 || '#ffb21f', life: o.life || 1.0, t: -(o.delay || 0), rise: o.rise != null ? o.rise : 40 });
@@ -2136,6 +2136,7 @@ JE.art.add('blk_f5','data:image/webp;base64,UklGRgYeAABXRUJQVlA4WAoAAAAQAAAAzgAA
     FX.pops = FX.pops.filter(p => (p.t += dt) < p.life);
     FX.conf = FX.conf.filter(p => { p.t += dt; p.x += p.vx * dt; p.y += p.vy * dt; p.a += p.spin * dt; return p.t < p.life; });
     FX.flash = Math.max(0, FX.flash - dt * 2.2);
+    thrillUpdate(dt);
   };
   JE.fx.render = function (c) {
     fr(c);
@@ -2151,7 +2152,81 @@ JE.art.add('blk_f5','data:image/webp;base64,UklGRgYeAABXRUJQVlA4WAoAAAAQAAAAzgAA
       c.fillStyle = g; c.fillText(p.text, 0, 0); c.restore();
     }
     if (FX.flash > 0) { c.fillStyle = `rgba(${FX.flashCol},${FX.flash * 0.45})`; c.fillRect(0, 0, JE.W, JE.H); }
+    thrillRender(c);
   };
+
+
+  /* THRILL_V1126 */
+  /* ---------------- 4-1. 박진감 장치 (11-26 사용자 "조금 더 박진감 있게, 더 재밌게") ----------------
+   * 모든 게임 공통. 화면 흔들림은 늘리지 않음(11-23 멀미 → JE.motion 그대로), 소리·색·글자로 긴장감을 준다.
+   *  K.danger(v, vis)   : 위기 정도 0~1 을 매 프레임 알려 주면 빨간 가장자리 + 심장 소리(쿵쿵, 위기일수록 빨라짐). vis=false 면 소리만
+   *  K.speedUp(text)    : '속도 UP!' 큰 글자 + 쉭 소리 (게임이 단계 올릴 때)
+   *  K.lucky(text,x,y)  : 깜짝 보상 금빛 글자 + 반짝 소리
+   *  K.rush(k)          : 연속 콤보 소리 높이 (0,1,2... 올라감)
+   *  자동: 점수가 내 최고점에 다가가면 BEST 아래 진행 줄이 차오르고(85%부터 깜빡), 넘는 순간 '신기록 돌파!' + 색종이 (한 판 한 번) */
+  const TH = K.thrill = { noCross: false, d: 0, dT: 0, vis: true, beatT: 0, ph: 0, run: null };
+  JE.sfx.heart = (v = 0.5) => { JE.audio.tone(78, 0.1, 'sine', 0.22 + v * 0.2, 0.6); JE.audio.tone(64, 0.12, 'sine', 0.18 + v * 0.16, 0.6, 0.15); };
+  JE.sfx.whoosh = () => { JE.audio.noise(0.28, 0.16, 900); JE.audio.tone(300, 0.25, 'sawtooth', 0.05, 3); JE.audio.tone(660, 0.18, 'triangle', 0.08, 1.6, 0.14); };
+  JE.sfx.lucky = () => { [1047, 1319, 1568, 2093].forEach((f, i) => JE.audio.tone(f, 0.14, 'triangle', 0.11, 1.01, i * 0.05)); JE.audio.noise(0.15, 0.06, 5000, 0.05); };
+  JE.sfx.rush = (k = 0) => { const f = 392 * Math.pow(1.0595, Math.min(k, 14) * 2); JE.audio.tone(f, 0.09, 'square', 0.06, 1.25); JE.audio.tone(f * 2, 0.07, 'triangle', 0.05, 1, 0.04); };
+  K.danger = function (v, vis = true) { v = Math.max(0, Math.min(1, +v || 0)); if (v >= TH.dT) { TH.dT = v; TH.vis = vis; } };
+  K.speedUp = function (text = '속도 UP!', y) {
+    K.pop(text, JE.W / 2, y || JE.H * 0.42, { size: 36, c1: '#ffe1c2', c2: '#ff7a3d', life: 1.1, peek: false });
+    JE.sfx.whoosh(); JE.haptic('soft'); K.flash(0.18, '255,170,90');
+  };
+  K.lucky = function (text, x = JE.W / 2, y = JE.H * 0.38, o = {}) {
+    K.pop(text, x, y, Object.assign({ size: 32, c1: '#fffbe0', c2: '#ffc21f', life: 1.2 }, o));
+    JE.sfx.lucky(); JE.haptic('success'); K.flash(0.22, '255,220,90');
+    JE.fx.burst && JE.fx.burst(x, y, '#ffd23f', 16);
+  };
+  K.rush = k => JE.sfx.rush(k);
+  const openModal = () => !!document.querySelector('.je-ov');
+  function thrillUpdate(dt) {
+    TH.d += (TH.dT - TH.d) * Math.min(1, dt * 6); TH.dT = 0; TH.ph += dt;
+    if (TH.d > 0.3 && !openModal()) {
+      TH.beatT -= dt;
+      if (TH.beatT <= 0) { TH.beatT = 1.0 - TH.d * 0.5; JE.sfx.heart(TH.d); if (TH.d > 0.75) JE.haptic('tap'); }
+    } else TH.beatT = Math.min(TH.beatT, 0.25);
+  }
+  function thrillRender(c) {
+    if (TH.d < 0.03 || !TH.vis) return;
+    const W = JE.W, H = JE.H, pulse = 0.7 + 0.3 * Math.sin(TH.ph * (5 + TH.d * 5)), a = TH.d * 0.42 * pulse, e = Math.min(W, H) * (0.16 + TH.d * 0.1);
+    c.save();
+    const side = (x0, y0, x1, y1, x, y, w, h) => { const g = c.createLinearGradient(x0, y0, x1, y1); g.addColorStop(0, `rgba(255,60,90,${a})`); g.addColorStop(1, 'rgba(255,60,90,0)'); c.fillStyle = g; c.fillRect(x, y, w, h); };
+    side(0, 0, e, 0, 0, 0, e, H); side(W, 0, W - e, 0, W - e, 0, e, H); side(0, H, 0, H - e, 0, H - e, W, e); side(0, 0, 0, e * 0.6, 0, 0, W, e * 0.6);
+    c.restore();
+  }
+  // 최고점 쫓기 + 신기록 돌파 (B.hudRow 를 감싸서 10종 모두 자동)
+  const hudRow0 = B.hudRow;
+  B.hudRow = function (c, rowY, score, best, W = JE.W) {
+    const r = hudRow0.apply(this, arguments);
+    try { chase(c, rowY, +score || 0, +best || 0, W); } catch (e) {}
+    return r;
+  };
+  function chase(c, rowY, score, best, W) {
+    let R = TH.run;
+    if (!R || score < R.last - 0.5) R = TH.run = { best0: best, crossed: false, near: false, last: score };
+    R.last = score;
+    if (openModal() || !(R.best0 >= 30)) return;
+    const k = score / R.best0;
+    if (!R.crossed && score > R.best0 + 0.5) {
+      R.crossed = true;
+      if (TH.noCross) return; // 게임이 자기 돌파 연출을 가진 경우(블락풍)
+      K.pop('신기록 돌파!', W / 2, JE.H * 0.3, { size: 44, c1: '#fff6b0', c2: '#ffb21f', life: 1.6 });
+      K.confetti(55); JE.sfx.fanfare(); JE.haptic('success'); K.flash(0.3, '255,220,90');
+    } else if (!R.near && k >= 0.85 && k < 1) {
+      R.near = true; JE.sfx.rush(6);
+      K.pop('최고점이 코앞!', W / 2, rowY + 96, { size: 24, c1: '#fff', c2: '#ff9a4d', life: 1.1, peek: false });
+    }
+    if (k < 0.4 || R.crossed) return;
+    // BEST 숫자 아래 차오르는 줄 (최고점까지 얼마나 왔는지)
+    const s = JE.safe, bx = 16 + s.left + 4, bw = 64, y = rowY + 17, kk = Math.min(1, k);
+    const blink = kk >= 0.85 ? 0.55 + 0.45 * Math.sin(TH.ph * 12) : 1;
+    c.save(); c.lineCap = 'round';
+    c.strokeStyle = 'rgba(43,43,43,.15)'; c.lineWidth = 4; c.beginPath(); c.moveTo(bx, y); c.lineTo(bx + bw, y); c.stroke();
+    c.globalAlpha = blink; c.strokeStyle = kk >= 0.85 ? '#ff5d3a' : '#ff9a4d'; c.beginPath(); c.moveTo(bx, y); c.lineTo(bx + bw * kk, y); c.stroke();
+    c.restore();
+  }
 
   /* ---------------- 5. 그림 도우미 ---------------- */
   /** 얼굴 있는 젤리 한 개 (cx, cy 가운데) */
@@ -2169,6 +2244,7 @@ JE.art.add('blk_f5','data:image/webp;base64,UklGRgYeAABXRUJQVlA4WAoAAAAQAAAAzgAA
 </script>
 <script>
 (function () {
+JE.kit && JE.kit.thrill && (JE.kit.thrill.noCross = true); // 11-26 자체 '최고점 돌파' 연출 사용
 'use strict';
 const { clamp } = JE.util;
 const N = 8;
@@ -2576,6 +2652,7 @@ function place(i, gr, gc) {
   // 주변 칸 출렁
   for (let r = 0; r < N; r++) for (let c = 0; c < N; c++) { const x = G.board[r][c]; if (!x) continue; const dd = Math.hypot(r - (gr + pc.sh.h / 2), c - (gc + pc.sh.wd / 2)); if (dd < 3.2) x.sq.vel -= 2.2 / (1 + dd); }
 
+  const fillBefore = G.board.reduce((a, r) => a + r.filter(Boolean).length, 0) / (N * N); // 11-26 위기 탈출 판정용
   const { rows, cols } = fullLines(G.board);
   const lines = rows.map(r => ({ k: 'r', i: r })).concat(cols.map(c => ({ k: 'c', i: c })));
   if (lines.length) {
@@ -2611,6 +2688,8 @@ function place(i, gr, gc) {
       fxPop(nSame > 1 ? `같은 색 줄 ${nSame}개! x2` : '같은 색 줄! x2', L.W / 2, py - 140, { size: 34, rainbow: true, delay: 0.16, life: 1.3 });
       fxStars(L.W / 2, L.by + L.bs / 2, 10 + nSame * 6, '#ffd6ef');
     }
+    // 11-26 역전: 판이 거의 찬 위기(64%+)에서 줄을 지우면 '위기 탈출' 보너스
+    if (fillBefore >= 0.64) { const eb = 30 + lines.length * 20; G.score += eb; G.escapes = (G.escapes || 0) + 1; setTimeout(() => JE.kit.lucky(`위기 탈출! +${eb}`, L.W / 2, L.by + L.bs * 0.5, { size: 30 }), 220); }
     if (G.board.every(r => r.every(x => !x))) {
       G.score += 1000; G.allClear = (G.allClear || 0) + 1; SND.sweep(); fxConfetti(140); fxFlash(0.6, '255,220,90'); JE.shake.add(14); JE.haptic('success');
       fxPop('올 클리어!', L.W / 2, L.by + L.bs * 0.32, { size: 52, rainbow: true, life: 1.8, delay: 0.2 });
@@ -2621,6 +2700,7 @@ function place(i, gr, gc) {
   }
   if (G.tray.every(x => !x)) newTray();
   checkBest();
+  G.fill = G.board.reduce((a, r) => a + r.filter(Boolean).length, 0) / (N * N);
   if (!G.tray.some(x => x && canPlaceRot(G.board, x.sh, x))) stuck();
   else save();
 }
@@ -2644,7 +2724,7 @@ function load(sv) {
 
 /* ---------------- 흐름 ---------------- */
 function reset() {
-  Object.assign(G, { board: emptyBoard(), score: 0, scoreShown: 0, combo: 0, miss: 0, maxCombo: 0, lines: 0, sameLines: 0, placed: 0, drag: null, continued: 0, glowLines: [], passedBest: false, best: JE.best.get('main') });
+  Object.assign(G, { board: emptyBoard(), score: 0, scoreShown: 0, combo: 0, miss: 0, maxCombo: 0, lines: 0, sameLines: 0, placed: 0, drag: null, continued: 0, glowLines: [], passedBest: false, fill: 0, escapes: 0, best: JE.best.get('main') });
   FX.parts = []; FX.pops = []; FX.rings = []; FX.dying = []; FX.flash = 0;
 }
 function start(resume) {
@@ -2748,6 +2828,7 @@ function demoBoard() {
 function update(rdt) {
   let dt = rdt; if (FX.hit > 0) { FX.hit -= rdt; dt = rdt * 0.08; }
   fxUpdate(dt); G.t += dt;
+  if (G.state === 'play') JE.kit.danger(((G.fill || 0) - 0.58) / 0.3); // 11-26 판이 차면 빨간 가장자리 + 심장 소리
   G.scoreShown += (G.score - G.scoreShown) * Math.min(1, dt * 10);
   for (const row of G.board) for (const x of row) if (x) JE.spring(x.sq, 1, dt, 320, 11);
   for (let i = 0; i < 3; i++) G.trayPop[i] = Math.min(1, G.trayPop[i] + dt * 4);

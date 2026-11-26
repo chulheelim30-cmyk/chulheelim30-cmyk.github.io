@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="ko">
-<head><!--PV--><meta http-equiv="Cache-Control" content="no-cache"><script>(function(){var V=52;if(!/github\.io$/.test(location.hostname))return;fetch('/play/version.json?t='+Date.now(),{cache:'no-store'}).then(function(r){return r.json()}).then(function(j){if(j&&j.v>V){var u=new URL(location.href);if(u.searchParams.get('v')!==String(j.v)){u.searchParams.set('v',j.v);location.replace(u.toString())}}}).catch(function(){})})()</script><!--/PV-->
+<head><!--PV--><meta http-equiv="Cache-Control" content="no-cache"><script>(function(){var V=76;if(!/github\.io$/.test(location.hostname))return;fetch('/play/version.json?t='+Date.now(),{cache:'no-store'}).then(function(r){return r.json()}).then(function(j){if(j&&j.v>V){var u=new URL(location.href);if(u.searchParams.get('v')!==String(j.v)){u.searchParams.set('v',j.v);location.replace(u.toString())}}}).catch(function(){})})()</script><!--/PV-->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#fbf6ea">
@@ -2114,7 +2114,7 @@ JE.art.add('tteok_wild','data:image/webp;base64,UklGRsQUAABXRUJQVlA4WAoAAAAQAAAA
 
   /* ---------------- 4. 연출 (엔진 JE.fx 에 붙어서 자동으로 그려짐) ---------------- */
   const FX = K.FX = { pops: [], conf: [], flash: 0, flashCol: '255,255,255' };
-  K.clearFx = () => { FX.pops = []; FX.conf = []; FX.flash = 0; JE.fx.parts = []; JE.fx.texts = []; JE.fx.rings = []; };
+  K.clearFx = () => { if (K.thrill) { K.thrill.d = 0; K.thrill.run = null; } FX.pops = []; FX.conf = []; FX.flash = 0; JE.fx.parts = []; JE.fx.texts = []; JE.fx.rings = []; };
   /** 큰 팝 글자 (굵은 외곽선 + 위→아래 그라데이션) */
   K.pop = function (text, x, y, o = {}) {
     FX.pops.push({ text, x, y, size: o.size || 34, c1: o.c1 || '#fff6b0', c2: o.c2 || '#ffb21f', life: o.life || 1.0, t: -(o.delay || 0), rise: o.rise != null ? o.rise : 40 });
@@ -2133,6 +2133,7 @@ JE.art.add('tteok_wild','data:image/webp;base64,UklGRsQUAABXRUJQVlA4WAoAAAAQAAAA
     FX.pops = FX.pops.filter(p => (p.t += dt) < p.life);
     FX.conf = FX.conf.filter(p => { p.t += dt; p.x += p.vx * dt; p.y += p.vy * dt; p.a += p.spin * dt; return p.t < p.life; });
     FX.flash = Math.max(0, FX.flash - dt * 2.2);
+    thrillUpdate(dt);
   };
   JE.fx.render = function (c) {
     fr(c);
@@ -2148,7 +2149,81 @@ JE.art.add('tteok_wild','data:image/webp;base64,UklGRsQUAABXRUJQVlA4WAoAAAAQAAAA
       c.fillStyle = g; c.fillText(p.text, 0, 0); c.restore();
     }
     if (FX.flash > 0) { c.fillStyle = `rgba(${FX.flashCol},${FX.flash * 0.45})`; c.fillRect(0, 0, JE.W, JE.H); }
+    thrillRender(c);
   };
+
+
+  /* THRILL_V1126 */
+  /* ---------------- 4-1. 박진감 장치 (11-26 사용자 "조금 더 박진감 있게, 더 재밌게") ----------------
+   * 모든 게임 공통. 화면 흔들림은 늘리지 않음(11-23 멀미 → JE.motion 그대로), 소리·색·글자로 긴장감을 준다.
+   *  K.danger(v, vis)   : 위기 정도 0~1 을 매 프레임 알려 주면 빨간 가장자리 + 심장 소리(쿵쿵, 위기일수록 빨라짐). vis=false 면 소리만
+   *  K.speedUp(text)    : '속도 UP!' 큰 글자 + 쉭 소리 (게임이 단계 올릴 때)
+   *  K.lucky(text,x,y)  : 깜짝 보상 금빛 글자 + 반짝 소리
+   *  K.rush(k)          : 연속 콤보 소리 높이 (0,1,2... 올라감)
+   *  자동: 점수가 내 최고점에 다가가면 BEST 아래 진행 줄이 차오르고(85%부터 깜빡), 넘는 순간 '신기록 돌파!' + 색종이 (한 판 한 번) */
+  const TH = K.thrill = { noCross: false, d: 0, dT: 0, vis: true, beatT: 0, ph: 0, run: null };
+  JE.sfx.heart = (v = 0.5) => { JE.audio.tone(78, 0.1, 'sine', 0.22 + v * 0.2, 0.6); JE.audio.tone(64, 0.12, 'sine', 0.18 + v * 0.16, 0.6, 0.15); };
+  JE.sfx.whoosh = () => { JE.audio.noise(0.28, 0.16, 900); JE.audio.tone(300, 0.25, 'sawtooth', 0.05, 3); JE.audio.tone(660, 0.18, 'triangle', 0.08, 1.6, 0.14); };
+  JE.sfx.lucky = () => { [1047, 1319, 1568, 2093].forEach((f, i) => JE.audio.tone(f, 0.14, 'triangle', 0.11, 1.01, i * 0.05)); JE.audio.noise(0.15, 0.06, 5000, 0.05); };
+  JE.sfx.rush = (k = 0) => { const f = 392 * Math.pow(1.0595, Math.min(k, 14) * 2); JE.audio.tone(f, 0.09, 'square', 0.06, 1.25); JE.audio.tone(f * 2, 0.07, 'triangle', 0.05, 1, 0.04); };
+  K.danger = function (v, vis = true) { v = Math.max(0, Math.min(1, +v || 0)); if (v >= TH.dT) { TH.dT = v; TH.vis = vis; } };
+  K.speedUp = function (text = '속도 UP!', y) {
+    K.pop(text, JE.W / 2, y || JE.H * 0.42, { size: 36, c1: '#ffe1c2', c2: '#ff7a3d', life: 1.1, peek: false });
+    JE.sfx.whoosh(); JE.haptic('soft'); K.flash(0.18, '255,170,90');
+  };
+  K.lucky = function (text, x = JE.W / 2, y = JE.H * 0.38, o = {}) {
+    K.pop(text, x, y, Object.assign({ size: 32, c1: '#fffbe0', c2: '#ffc21f', life: 1.2 }, o));
+    JE.sfx.lucky(); JE.haptic('success'); K.flash(0.22, '255,220,90');
+    JE.fx.burst && JE.fx.burst(x, y, '#ffd23f', 16);
+  };
+  K.rush = k => JE.sfx.rush(k);
+  const openModal = () => !!document.querySelector('.je-ov');
+  function thrillUpdate(dt) {
+    TH.d += (TH.dT - TH.d) * Math.min(1, dt * 6); TH.dT = 0; TH.ph += dt;
+    if (TH.d > 0.3 && !openModal()) {
+      TH.beatT -= dt;
+      if (TH.beatT <= 0) { TH.beatT = 1.0 - TH.d * 0.5; JE.sfx.heart(TH.d); if (TH.d > 0.75) JE.haptic('tap'); }
+    } else TH.beatT = Math.min(TH.beatT, 0.25);
+  }
+  function thrillRender(c) {
+    if (TH.d < 0.03 || !TH.vis) return;
+    const W = JE.W, H = JE.H, pulse = 0.7 + 0.3 * Math.sin(TH.ph * (5 + TH.d * 5)), a = TH.d * 0.42 * pulse, e = Math.min(W, H) * (0.16 + TH.d * 0.1);
+    c.save();
+    const side = (x0, y0, x1, y1, x, y, w, h) => { const g = c.createLinearGradient(x0, y0, x1, y1); g.addColorStop(0, `rgba(255,60,90,${a})`); g.addColorStop(1, 'rgba(255,60,90,0)'); c.fillStyle = g; c.fillRect(x, y, w, h); };
+    side(0, 0, e, 0, 0, 0, e, H); side(W, 0, W - e, 0, W - e, 0, e, H); side(0, H, 0, H - e, 0, H - e, W, e); side(0, 0, 0, e * 0.6, 0, 0, W, e * 0.6);
+    c.restore();
+  }
+  // 최고점 쫓기 + 신기록 돌파 (B.hudRow 를 감싸서 10종 모두 자동)
+  const hudRow0 = B.hudRow;
+  B.hudRow = function (c, rowY, score, best, W = JE.W) {
+    const r = hudRow0.apply(this, arguments);
+    try { chase(c, rowY, +score || 0, +best || 0, W); } catch (e) {}
+    return r;
+  };
+  function chase(c, rowY, score, best, W) {
+    let R = TH.run;
+    if (!R || score < R.last - 0.5) R = TH.run = { best0: best, crossed: false, near: false, last: score };
+    R.last = score;
+    if (openModal() || !(R.best0 >= 30)) return;
+    const k = score / R.best0;
+    if (!R.crossed && score > R.best0 + 0.5) {
+      R.crossed = true;
+      if (TH.noCross) return; // 게임이 자기 돌파 연출을 가진 경우(블락풍)
+      K.pop('신기록 돌파!', W / 2, JE.H * 0.3, { size: 44, c1: '#fff6b0', c2: '#ffb21f', life: 1.6 });
+      K.confetti(55); JE.sfx.fanfare(); JE.haptic('success'); K.flash(0.3, '255,220,90');
+    } else if (!R.near && k >= 0.85 && k < 1) {
+      R.near = true; JE.sfx.rush(6);
+      K.pop('최고점이 코앞!', W / 2, rowY + 96, { size: 24, c1: '#fff', c2: '#ff9a4d', life: 1.1, peek: false });
+    }
+    if (k < 0.4 || R.crossed) return;
+    // BEST 숫자 아래 차오르는 줄 (최고점까지 얼마나 왔는지)
+    const s = JE.safe, bx = 16 + s.left + 4, bw = 64, y = rowY + 17, kk = Math.min(1, k);
+    const blink = kk >= 0.85 ? 0.55 + 0.45 * Math.sin(TH.ph * 12) : 1;
+    c.save(); c.lineCap = 'round';
+    c.strokeStyle = 'rgba(43,43,43,.15)'; c.lineWidth = 4; c.beginPath(); c.moveTo(bx, y); c.lineTo(bx + bw, y); c.stroke();
+    c.globalAlpha = blink; c.strokeStyle = kk >= 0.85 ? '#ff5d3a' : '#ff9a4d'; c.beginPath(); c.moveTo(bx, y); c.lineTo(bx + bw * kk, y); c.stroke();
+    c.restore();
+  }
 
   /* ---------------- 5. 그림 도우미 ---------------- */
   /** 얼굴 있는 젤리 한 개 (cx, cy 가운데) */
@@ -2378,7 +2453,7 @@ async function resolve(chain, focus) {
       if (!G.seen[nl]) { G.seen[nl] = 1; JE.store.set('seen', G.seen); K.pop(`새 떡! ${TT[nl].n}`, L.W / 2, L.by + L.bh * 0.55, { size: 26, life: 1.5, c1: '#fff', c2: colOf(nl) === 'rainbow' ? '#ff9ad5' : colOf(nl) }); JE.sfx.fanfare(); }
     }
     if (nl === MAXLV) { G.score += 5000; K.confetti(80); K.pop('떡케이크 완성! +5000', L.W / 2, L.by + L.bh * 0.45, { size: 28, life: 1.8 }); await JE.wait(0.4); tgt.lv = 0; G.g[r][c] = null; }
-    if (!G.passedBest && G.best > 0 && G.score > G.best) { G.passedBest = true; K.pop('신기록!', L.W / 2, L.by + 30, { size: 34 }); }
+    if (!G.passedBest && G.best > 0 && G.score > G.best) { G.passedBest = true; } // 11-26 신기록 연출은 공통 키트(K.thrill)가 크게
     await JE.wait(0.12 * sp);
     const moved = await gravity();
     // 위치가 바뀌었을 수 있으니 새 기준점: 합친 떡 위치 + 내려온 떡
@@ -2446,6 +2521,7 @@ async function drop(col) {
   let r = -1; for (let y = ROWS - 1; y >= 0; y--) if (!G.g[y][col]) { r = y; break; }
   if (r < 0) { JE.sfx.fail(); K.pop('꽉 찼어요', cxp(col), L.by + 20, { size: 18, c1: '#ffd1da', c2: '#ff5d7a' }); return; }
   G.busy = true;
+  const top0 = G.g[0].filter(Boolean).length + G.g[1].filter(Boolean).length; // 11-26 위기 탈출 판정
   const p = mk(G.cur); p.dy = L.dropY - cyp(r); G.g[r][col] = p;
   G.cur = G.next; G.next = nextPiece(); G.curPop = 0;
   JE.audio.tone(300, 0.08, 'sine', 0.12, 0.7);
@@ -2456,6 +2532,8 @@ async function drop(col) {
   if (p.lv === STONE) { JE.audio.tone(130, 0.1, 'square', 0.08, 0.7); JE.shake.add(2); }
   const chain = await resolve(0, [[r, col]]);
   afterDrop(chain);
+  { const top1 = G.g[0].filter(Boolean).length + G.g[1].filter(Boolean).length;
+    if (chain > 0 && top0 >= COLS + 1 && top1 <= top0 - 2) { const eb = 200 * (G.fever ? 2 : 1); G.score += eb; G.escapes = (G.escapes || 0) + 1; K.lucky(`위기 탈출! +${eb}`, L.W / 2, L.by + L.bh * 0.25, { size: 30 }); } }
   G.busy = false;
   if (F.playing() && G.g[0].every(x => x)) F.fail('떡판이 꽉 찼어요!', 0.8);
 }
@@ -2507,6 +2585,8 @@ function update(dt) {
   for (const row of G.g) for (const p of row) if (p) JE.spring(p.sq, 1, dt, 300, 10);
   for (const a of G.anims) a.t += dt;
   G.curPop = Math.min(1, (G.curPop || 0) + dt * 5);
+  // 11-26 위쪽 두 줄이 차오르면 빨간 가장자리 + 심장 소리
+  if (F.playing() && G.g && G.g[0]) { const d = (G.g[0].filter(Boolean).length + G.g[1].filter(Boolean).length * 0.45) / COLS; K.danger((d - 0.25) / 0.75); }
 }
 
 /* ---------------- 렌더 ---------------- */
