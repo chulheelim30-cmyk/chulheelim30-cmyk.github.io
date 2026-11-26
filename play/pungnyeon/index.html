@@ -1277,6 +1277,13 @@ try { PungRank.legacy('pungadventure', +localStorage.getItem('pa2_best') || 0); 
 try { const s = $('pr-hb-slot'); if (s) s.innerHTML = PungRank.homeBoardHTML('pungadventure', true); } catch (e) {}
 try { PungRank.entryInvite('pungadventure', { host: wrap, onlyIf: () => !$('home').hidden && $('op').hidden, done: () => { if (PungRank.me()) { const rb = $('rank-btn'); rb.textContent = '랭킹'; rb.style.cssText = ''; const ob = $('ov-rank'); ob.textContent = '랭킹'; ob.style.cssText = 'margin-left:6px'; } } }); } catch (e) {}
 $('go').addEventListener('click', start);
+/* MIDSAVE_V78 */ { let pTok = null, pSc = 0;
+  const live = () => !G.demo && ['play', 'ask', 'story', 'pick'].includes(G.state);
+  const midSave = () => { try { if (!live()) return; const sc = score(); if (!(sc > 0)) return;
+    if (sc > G.best) { G.best = sc; localStorage.setItem('pa2_best', sc); } localStorage.setItem('pa2_coin', COIN);
+    if (pTok === G.tok && sc <= pSc) return; pTok = G.tok; pSc = sc; PungRank.submit('pungadventure', sc); } catch (e) {} };
+  document.addEventListener('visibilitychange', () => { if (document.hidden) midSave(); });
+  window.addEventListener('pagehide', midSave); }
 /* RESTART_V75: 처음부터 — 두 번 눌러야 1단계로 (완주 횟수·친구·간식은 그대로) */
 { const rb = $('restart'); let armed = 0; const show = () => { rb.hidden = !((+(localStorage.getItem('pa2_prog') || 0)) % TOT); }; show();
   rb.addEventListener('click', () => { if (!armed) { armed = 1; rb.textContent = '한 번 더 누르면 1단계로'; setTimeout(() => { armed = 0; rb.textContent = '처음부터'; }, 3000); return; }
