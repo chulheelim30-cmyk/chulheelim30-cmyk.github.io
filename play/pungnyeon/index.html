@@ -976,7 +976,7 @@ function update(dt) {
   if (PL.vy >= 0 && PL.y >= GY && prevY <= GY + 6 && over) { if (!PL.ground) { PL.sq = 1.18; burst(SX(), GY, 5, 'puff', ['#fff'], 70); } PL.y = GY; PL.vy = 0; PL.ground = true; PL.jumps = 0; }
   else if (PL.ground && !over) { PL.ground = false; PL.jumps = 1; }
   if (PL.y > GY + 60 && !G.demo && PL.vy > 0 && palUse('pigeon', '구구! 들어 올려 줄게!')) { PL.vy = -1250; PL.jumps = 1; burst(SX(), PL.y - 20, 14, 'spark', ['#fff', '#cfd6e6'], 200); }
-  if (PL.y > GY + 110) { if (G.demo) { PL.y = GY; PL.vy = 0; } else { hurt(); PL.y = GY + 100; PL.vy = -1200; PL.jumps = 1; burst(SX(), GY, 14, 'spark', FX, 240); } }
+  if (PL.y > GY + 110) { if (G.demo) { PL.y = GY; PL.vy = 0; } else { hurt('pit'); PL.y = GY + 100; PL.vy = -1200; PL.jumps = 1; burst(SX(), GY, 14, 'spark', FX, 240); } }
   if (G.demo) { const o = objs.find(o => !o.gone && o.t === 'crow' && o.x - PX() < 150 && o.x > PX()); }
   PL.sq += (1 - PL.sq) * Math.min(1, dt * 12); PL.anim += dt * G.speed / 34; if (PL.ground && !G.demo && Math.random() < dt * (6 + G.speed / 60)) parts.push({ x: PX() - 18 + rnd(-6, 6), y: GY - 4, vx: -G.speed * 0.12 - rnd(20, 60), vy: -rnd(30, 80), life: 0.45, max: 0.45, kind: 'puff', col: '#f3e6d2', size: 0.55 + Math.random() * 0.4, rot: 0, vr: 0, g: 60 }); // 발밑 먼지
   PL.hurt = Math.max(0, PL.hurt - dt); // FIX_V59
@@ -999,7 +999,7 @@ function update(dt) {
     }
     const box = hitbox(o); if (!box) continue;
     if (o.gone) continue;
-    if (pb.x1 > box.x0 && pb.x0 < box.x1 && pb.y1 > box.y0 && pb.y0 < box.y1) { if (!o.passed) { o.passed = true; if (fv) { burst(o.x, PL.y - 40, 10, 'spark', FX, 200); } else hurt(); } }
+    if (pb.x1 > box.x0 && pb.x0 < box.x1 && pb.y1 > box.y0 && pb.y0 < box.y1) { if (!o.passed) { o.passed = true; if (fv) { burst(o.x, PL.y - 40, 10, 'spark', FX, 200); } else hurt(o.t); } }
     else if (!o.passed && NM[o.t]) { // 아슬아슬: 가까이 스쳐 지나가면 보너스
       if (pb.x1 > box.x0 - 6 && pb.x0 < box.x1 + 6) { const gap = Math.max(box.y0 - pb.y1, pb.y0 - box.y1); if (gap > 0 && gap < 24) o.close = true; }
       else if (o.close && !o.nm && box.x1 < pb.x0) { o.nm = true; nearMiss(o); }
@@ -1030,14 +1030,16 @@ function starve() { // 배고파서 털썩 → 이어 달리기(광고) 또는 �
   if (!G.noRevive && (G.revived | 0) < REVIVE_MAX) { G.state = 'ask'; PL.vy = 0; if (PL.y > GY) PL.y = GY; setTimeout(showRevive, 800); return; }
   G.state = 'over'; PL.vy = 0; if (PL.y > GY) PL.y = GY; const sc = score(); if (sc > G.best) { G.best = sc; localStorage.setItem('pa2_best', sc); } setTimeout(showOver, 1000);
 }
-function hurt() { if ((G.sc | 0) >= 10) pop(PX(), PL.y - 120, '콤보 끊김…', '#ffe3f0', 16); G.sc = 0; G.scT = 0;
+const DMG = { puddle: 12, cone: 14, bolt: 14, pot: 16, tcone: 16, pumpkin: 18, pigeon: 18, laundry: 20, branch: 20, bin: 22, boxes: 22, bat: 22, crow: 24, wave: 26, goose: 28, manhole: 28, bike: 30, cart: 30, chimney: 30, pit: 35, boss: 32 }; // DMG_V82: 방해물마다 배부름 감소
+const dmgOf = k => Math.round((DMG[k] || 24) * (0.7 + 0.3 * Math.max(Math.min(1, G.dist / 30000), prD()))); // 처음엔 70%만
+function hurt(k) { if ((G.sc | 0) >= 10) pop(PX(), PL.y - 120, '콤보 끊김…', '#ffe3f0', 16); G.sc = 0; G.scT = 0;
   if (PL.hurt > 0 || G.fever > 0 || G.demo || G.safe > 0 || G.dashT > 0) return;
   G.combo = 0; G.nmT = 0;
   if (palUse('goose', '꽥! 내가 막았어!')) { PL.hurt = 1.0; return; }
   if (wangHurt()) return;
   if (G.cush > 0) { G.cush--; PL.hurt = 1.2; vib(20); sfx('hit'); pop(PX(), PL.y - 96, '방석 방어!', '#ffe3a0', 18); burst(SX(), PL.y - 36, 14, 'puff', ['#fff', '#ffd8a8'], 170); return; }
-  G.food = Math.max(0, (G.food || 0) - 32); PL.hurt = 1.4; // NOHEART_V35: 하트 대신 배부름 -20
-  G.shake = 3; vib(40); sfx('hurt'); pop(PX(), PL.y - 90, '앗!', '#ffe3f0', 20); burst(SX(), PL.y - 36, 12, 'puff', ['#fff'], 170);
+  const dm = dmgOf(k); G.food = Math.max(0, (G.food || 0) - dm); PL.hurt = 1.4; // NOHEART_V35: 하트 대신 배부름 -20
+  G.shake = 3; vib(40); sfx('hurt'); pop(PX(), PL.y - 90, `앗! -${dm}`, '#ffe3f0', 20); burst(SX(), PL.y - 36, 12, 'puff', ['#fff'], 170);
   if (G.food <= 0) { PL.hurt = 0; G.state = 'play'; starve(); return; }
   if (G.hp <= 0 && !G.noRevive && (G.revived | 0) < REVIVE_MAX) { G.state = 'ask'; PL.vy = 0; if (PL.y > GY) PL.y = GY; setTimeout(showRevive, 800); return; }
   if (G.hp <= 0) { G.state = 'over'; PL.vy = 0; if (PL.y > GY) PL.y = GY; const sc = score(); if (sc > G.best) { G.best = sc; localStorage.setItem('pa2_best', sc); } setTimeout(showOver, 1000); }
@@ -1857,7 +1859,7 @@ function bossTouch(B) {
   const box = bossBox(B), pb = { x0: PX() - 28, x1: PX() + 30, y0: PL.y - (PL.slide ? 36 : 60), y1: PL.y - 4 };
   if (!(pb.x1 > box.x0 && pb.x0 < box.x1 && pb.y1 > box.y0 && pb.y0 < box.y1)) return;
   if (B.stomp && !(B.spiky && B.ph === 'roll') && PL.vy > 0 && pb.y1 < box.y0 + 30) return stomp(B);
-  if (G.fever > 0) return; hurt();
+  if (G.fever > 0) return; hurt('boss');
 }
 function stomp(B) {
   const dmg = 6; B.hp -= dmg; B.hit = 0.3; B.stomp = false; B.ph = 'retreat';
