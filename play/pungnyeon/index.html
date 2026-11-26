@@ -1825,9 +1825,9 @@ function startBoss() {
 function startBoss0() {
   const idx = bIdx(), fk = bossAt(idx), nf = NEWF[fk], kind = nf ? nf.base : fk, D = nf || BOSSES[kind], lv = Math.min(5, 1 + lvOf(idx) + Math.min(1, meetN())), hp = D.hp + (lv - 1) * 6; // 2장마다 한 단계
   G.boss = { kind, nk: nf ? fk : null, sx: LW + 200, x: G.cam + LW + 200, y: GY - 200, hp, max: hp, in: 0, t: 0, cd: 1.8, hit: 0, lv, out: 0, throw: 0, ph: 'idle', pt: 0, n: 0, stomp: false, spiky: false };
-  G.boss.y = homeY(G.boss);
-  G.banner = 2.8; G.bannerTxt = D.n + ' 등장!'; G.bannerSub = D.sub;
-  sfx('fever'); vib([30, 30, 60]); objs.forEach(o => { if (['piece', 'crow', 'goose', 'bat', 'bike', 'chimney', 'pigeon', 'boxes', 'laundry', 'pumpkin', 'cart', 'manhole'].includes(o.t)) o.gone = true; });
+  G.boss.y = homeY(G.boss); G.boss.pre = G.demo ? 0 : 2.2; G.boss.nm = D.n; G.boss.nsub = D.sub; // BOSSIN_V80: 갑자기 말고 예고 → 입장
+  G.banner = 2; G.bannerTxt = '누가 다가와요…!'; G.bannerSub = '쿵… 쿵…';
+  sfx('hit'); vib([20, 80, 20]); objs.forEach(o => { if (['piece', 'crow', 'goose', 'bat', 'bike', 'chimney', 'pigeon', 'boxes', 'laundry', 'pumpkin', 'cart', 'manhole'].includes(o.t)) o.gone = true; });
   objs.push({ t: 'yarn', x: PX() + 520, y: GY - 110 });
 }
 function placeBoss(x) {
@@ -1857,13 +1857,27 @@ function stomp(B) {
   pop(B.x, bossCY(B) - 50, '콩! +200', '#ffe27a', 26); burst(B.x, bossCY(B) - 30, 22, 'spark', FX, 320); burst(B.x, bossCY(B) - 30, 8, 'puff', ['#fff'], 160); sfx('kill'); vib([20, 20, 40]);
   if (B.hp <= 0) bossWin();
 }
+const TAUNT = { crow: ['까악! 간식 내놔!', '내 츄르야!', '깍깍~ 잡아 봐!'], goose: ['꽥! 통행증!', '여긴 못 지나가!', '꽥꽥 검문 중!'], robot: ['삐빅, 길 계산 중…', '빙글빙글 간다!', '삐-익!'], owl: ['부엉~ 놀랐지?', '밤길은 내 길이야', '호호, 따라와 봐'], raccoon: ['츄르 있어?', '너굴너굴~', '다리 건너려면 츄르!'],
+  frog: ['개굴! 폴짝!', '물 웅덩이 조심~', '개굴개굴 출항!'], squirrel: ['도토리 받아라!', '하나 둘! 셋!', '쪼르르~'], hedgehog: ['따끔 배달 왔어요', '편지 조심히!', '뾰족뾰족~'], snowman: ['오들오들~', '눈덩이 간다!', '녹기 전에 놀자!'], rabbit: ['등불 따라와~', '깡총깡총!', '달빛 길이야'] };
 function stepBoss(dt) {
   const B = G.boss; B.t += dt; B.hit = Math.max(0, B.hit - dt); B.throw = Math.max(0, B.throw - dt);
   const hx = LW * HOME_X[B.kind];
-  if (B.hp <= 0) { B.out += dt; B.sx = Math.max(B.sx, hx) + B.out * B.out * 30; B.y += (GY - 200 - B.out * 50 - B.y) * Math.min(1, dt * 3); B.x = G.cam + B.sx; if (Math.random() < dt * 5) pops.push({ x: B.x + rnd(-30, 30), y: B.y - 30, txt: '♥', col: '#ff9ac0', size: 18 + Math.random() * 10, life: 1.2 }); if (B.out > 3.2) G.boss = null; return; }
-  if (B.in < 1) { B.in = Math.min(1, B.in + dt * 0.7); B.sx = hx + (1 - B.in) * 300; B.y = homeY(B); B.x = G.cam + B.sx; return; }
+  if (B.hp <= 0) { const o0 = B.out; B.out += dt; const t = B.out, hy = homeY(B); // BOSSOUT_V80
+    if (t < 1.1) { B.sx += (Math.max(B.sx, hx) - B.sx) * Math.min(1, dt * 4); B.y += (hy - B.y) * Math.min(1, dt * 6); B.dizzy = 1; }
+    else if (t < 3.1) { B.dizzy = 0; B.y = hy - Math.abs(Math.sin((t - 1.1) * Math.PI * 2)) * 34; if (o0 < 1.1) { burst(B.x, bossCY(B), 34, 'spark', ['#ffd0e8', '#fff', '#ffe27a'], 360); sfx('big'); vib(30); B.say = 2; } }
+    else { B.sx += (t - 3.1) * 260 * dt * 3; B.y += (hy - 140 - B.y) * Math.min(1, dt * 1.5); }
+    B.say = Math.max(0, (B.say || 0) - dt); B.x = G.cam + B.sx;
+    if (Math.random() < dt * (t > 1.1 ? 7 : 2)) pops.push({ x: B.x + rnd(-36, 36), y: B.y - 40, txt: '♥', col: '#ff9ac0', size: 18 + Math.random() * 10, life: 1.2 });
+    if (t > 4.8 || B.sx > LW + 260) G.boss = null; return; }
+  if (B.pre > 0) { B.pre -= dt; B.sx = LW + 260; B.y = homeY(B); B.x = G.cam + B.sx; if (Math.floor((B.pre + dt) / 0.7) !== Math.floor(B.pre / 0.7)) { G.shake = 2.5; vib(25); sfx('hit'); } if (B.pre <= 0) { B.pre = 0; B.t = 0; } return; }
+  if (B.in < 1) { const was = B.in; B.in = Math.min(1, B.in + dt * 0.55); const e = 1 - Math.pow(1 - B.in, 3); B.sx = hx + (1 - e) * (LW - hx + 240); const hy = homeY(B); B.y = hy - Math.abs(Math.sin(B.in * Math.PI * 3)) * 28 * (1 - B.in); B.x = G.cam + B.sx;
+    if (B.in >= 1 && was < 1) { B.y = hy; G.shake = 4; vib([30, 30, 60]); sfx('fever'); burst(B.x, GY, 22, 'puff', ['#fff', '#e8e0ff'], 260); G.banner = 2.6; G.bannerTxt = B.nm + ' 등장!'; G.bannerSub = B.nsub; B.cd = Math.max(B.cd, 1.2); B.ent = 1; }
+    return; }
+  if (B.ent > 0) B.ent = Math.max(0, B.ent - dt);
   if (G.nap > 0) { B.x = G.cam + B.sx; return; }
   if (G.state === 'play') { B.hp -= B.max / (80 + prD() * 12 + prD() * 18) * dt; B.tired = (B.tired || 0) + dt; if (B.tired > 9) { B.tired = 0; pop(G.cam + B.sx, bossCY(B) - 80, '헥헥, 지쳐 간다…', '#e8e0ff', 16); } if (B.hp <= 0) { bossWin(); return; } } // ENDURE_V49
+  if (!B.rage && B.hp < B.max * 0.5 && !G.demo) { B.rage = 1; B.lv = Math.min(6, B.lv + 1); G.shake = 4; vib([40, 40, 40]); sfx('fever'); G.banner = 1.8; G.bannerTxt = '부르르! 진심 모드'; G.bannerSub = '공격이 빨라져요'; burst(B.x, bossCY(B), 24, 'spark', ['#ff6b6b', '#ffd27a'], 300); B.cd = Math.min(B.cd, 0.6); }
+  B.tz = (B.tz || 3) - dt; if (B.tz <= 0 && (!B.ph || B.ph === 'idle')) { B.tz = 5 + Math.random() * 3; const T = TAUNT[B.nk || B.kind] || TAUNT.crow; pop(G.cam + B.sx, bossCY(B) - 92, T[Math.floor(Math.random() * T.length)], '#fff', 16); }
   const hard = B.lv >= 2 || B.hp < B.max * 0.4;
   if (B.kind === 'crow') {
     const sq = B.nk === 'squirrel';
@@ -1948,9 +1962,14 @@ function drawPeek() { if (!(G.peek > 0) || G.nap > 0 || G.state !== 'play') retu
   const h = k === 'w_box' ? 62 : 70, w = im.naturalWidth * h / im.naturalHeight, x = SX() + 250, up = k === 'w_box' ? Math.min(1, t * 2.5) : 1;
   ctx.save(); ctx.globalAlpha = Math.min(1, G.peek * 2); ctx.beginPath(); ctx.rect(x - w, 0, w * 2, GY + 2); ctx.clip(); ctx.translate(x, GY + (1 - up) * h); ctx.scale(-1, 1); ctx.drawImage(im, -w / 2, -h, w, h); ctx.restore(); }
 function drawBoss() {
-  const B = G.boss; if (!B) return; const x = B.x - G.cam + (B.hit ? rnd(-3, 3) : 0), y = B.y, fl = Math.floor(G.t * (B.hp > 0 ? 6 : 10)) % 2, cy = bossCY(B);
+  const B = G.boss; if (!B) return;
+  if (B.pre > 0) { const k = 1 - B.pre / 2.2, pu = 0.5 + 0.5 * Math.sin(G.t * 10); ctx.save(); const g = ctx.createLinearGradient(LW, 0, LW * 0.55, 0); g.addColorStop(0, `rgba(255,60,90,${0.35 * pu})`); g.addColorStop(1, 'rgba(255,60,90,0)'); ctx.fillStyle = g; ctx.fillRect(LW * 0.55, 0, LW * 0.45, LH); ctx.fillStyle = `rgba(30,20,50,${0.25 + k * 0.35})`; ctx.beginPath(); ctx.ellipse(LW - 30 + (1 - k) * 60, GY + 2, 40 + k * 50, 8 + k * 4, 0, 0, 7); ctx.fill(); ctx.restore(); if (Math.floor(G.t * 6) % 2) text('!', LW - 70, GY - 150, 64, 'center', '#ff4a5a'); return; }
+  const idle = B.hp > 0 && (!B.ph || B.ph === 'idle') && B.in >= 1, bob = idle ? Math.sin(B.t * 4.2) * 5 : 0;
+  const x = B.x - G.cam + (B.hit ? rnd(-3, 3) : 0) + (B.dizzy ? Math.sin(G.t * 30) * 3 : 0), y = B.y + bob, fl = Math.floor(G.t * (B.hp > 0 ? 6 : 10)) % 2, cy = bossCY(B);
   ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = rg(ctx, x, cy, 10, 110, [B.hp > 0 ? 'rgba(120,80,200,.24)' : 'rgba(255,170,220,.4)', 'rgba(0,0,0,0)']); ctx.fillRect(x - 120, cy - 120, 240, 240); ctx.restore();
   const a = B.hit > 0 ? 0.65 : 1;
+  if (B.dizzy || B.rage) { const n = B.dizzy ? 4 : 0; for (let i = 0; i < n; i++) { const q = G.t * 7 + i * 1.57; put(ART.star(), x + Math.cos(q) * 34, cy - 64 + Math.sin(q) * 8, { s: 0.55, rot: q }); } if (B.rage && B.hp > 0 && Math.floor(G.t * 4) % 2) text('💢', x - 40, cy - 70, 22, 'center', '#ff4a5a'); }
+  if (B.say > 0 && B.hp <= 0) { const D = bossD(B), ln = (D.line || '"고마워, 또 만나!"').replace(/"/g, ''); ctx.save(); ctx.globalAlpha = Math.min(1, B.say * 2); const w = Math.min(LW * 0.5, ln.length * 15 + 30); rr(ctx, x - w / 2, cy - 150, w, 36, 16); ctx.fillStyle = 'rgba(255,255,255,.95)'; ctx.fill(); text(ln, x, cy - 126, 15, 'center', '#5a3a60'); ctx.restore(); }
   let okImg; const NB = { crow: 'b_crow', goose: 'b_goose', robot: 'b_robot', owl: 'b_owl', raccoon: 'b_rac' };
   if (B.nk) { const own = imOk('b_' + B.nk); BREMAP = own ? { [NB[B.kind]]: 'b_' + B.nk, [NB[B.kind] + '2']: imOk('b_' + B.nk + '2') ? 'b_' + B.nk + '2' : 'b_' + B.nk } : null; ctx.save(); if (!own) ctx.filter = NEWF[B.nk].filt; okImg = drawBossImg(x, y, B, a); ctx.restore(); BREMAP = null; }
   else okImg = drawBossImg(x, y, B, a);
@@ -2080,7 +2099,7 @@ function nearMiss(o) {
 function hudX() {
   if ((G.sc | 0) >= 5 && !(G.fever > 0) && !(G.comboT > 0)) { const k = G.sc, big = k >= 30; text('간식 콤보 ' + k + (big ? ' 🔥' : ''), LW - 16, G.boss ? 82 : 106, big ? 20 : 17, 'right', big ? '#ff9ad0' : '#ffd27a', { grad: big }); } /* NOOVER_V78: 가운데 큰 알림과 안 겹치게 오른쪽 위로 */
   if (!G.boss) { const m = BOSS_EVERY - ((G.stage - 1) % BOSS_EVERY) - 1; const P = bIdx() % TOT; text(`레벨 ${Math.floor(P / 10) + 1} · ${SEA_N[seaOf()]} · 보스 ${P % 10}/10${m > 0 ? '' : ' · 곧 보스!'}`, LW - 16, 80, 16, 'right', '#ffe3f0'); }
-  else if (G.boss.hp > 0) {
+  else if (G.boss.hp > 0 && !(G.boss.pre > 0)) {
     const B = G.boss, D = bossD(B), w = 220, x = LW / 2 - w / 2, y = 70; text(D.n + (B.lv > 1 ? ` Lv.${B.lv}` : ''), LW / 2, y - 2, 15, 'center', '#fff');
     rr(ctx, x, y + 8, w, 11, 5.5); ctx.fillStyle = 'rgba(30,20,60,.55)'; ctx.fill(); ctx.strokeStyle = 'rgba(255,255,255,.8)'; ctx.lineWidth = 1.3; ctx.stroke();
     rr(ctx, x + 1.5, y + 9.5, (w - 3) * Math.max(0, B.hp) / B.max, 8, 4); ctx.fillStyle = lg(ctx, y + 9, y + 18, D.col); ctx.fill();
