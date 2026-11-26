@@ -181,12 +181,12 @@ HAPPY_M = grade(fit_h(img("n_cat_happy"), 420), **MK)
 WAVE_END = fit_h(img("c_wave"), 430)
 
 W_BOX = grade(fit_w(img2("w_box"), 360))
-W_JUMP = grade(fit_h(img2("w_jump"), 420))
-W_SIT = grade(fit_h(img2("w_sit"), 400))
-W_SIT_M = grade(fit_h(img2("w_sit"), 330), **MK)
-W_RUN = [grade(fit_h(img2("w_run0"), 230), **MK), grade(fit_h(img2("w_run1"), 300), **MK)]
-W_SCARE = grade(fit_h(img2("w_scare"), 330), **MK)
-W_NUZZLE = grade(fit_h(img2("w_nuzzle"), 280), **MK)
+W_JUMP = grade(fit_h(img2("w_jump"), 588))
+W_SIT = grade(fit_h(img2("w_sit"), 560))
+W_SIT_M = grade(fit_h(img2("w_sit"), 461), **MK)
+W_RUN = [grade(fit_h(img2("w_run0"), 322), **MK), grade(fit_h(img2("w_run1"), 420), **MK)]
+W_SCARE = grade(fit_h(img2("w_scare"), 461), **MK)
+W_NUZZLE = grade(fit_h(img2("w_nuzzle"), 392), **MK)
 GOOSE = grade(fit_h(img2("b_goose"), 520), side=-1, **MK)
 GOOSE_C = grade(fit_h(img2("b_goose2"), 470), side=-1, **MK)
 GOOSE_F = grade(fit_h(img2("o_goose"), 420), side=-1, **MK)
@@ -248,7 +248,7 @@ def s1(t):  # 0~4.2 지난 화의 상자 → 왕년이
     text(c, "풍년이의 모험 2화", 250, F_SM, alpha=fade(lt, 0.1, 9))
     text(c, "상자 속에 숨어 있던 건...", 430, F_CAP, alpha=fade(lt, 0.2, 1.9))
     if lt > 1.9:
-        text(c, "꼬마 고양이 왕년이!", 430, F_HOOK, alpha=fade(lt, 2.0, 9), fill=(255, 236, 150))
+        text(c, "덩치는 큰데 겁 많은\n왕년이!", 430, F_HOOK, alpha=fade(lt, 2.0, 9), fill=(255, 236, 150))
     if lt > 2.7:
         bubble(c, "형... 혼자 있으면 무섭단 말이야", 600, 1120, 720, 1260, alpha=fade(lt, 2.7, 9, 0.2), f=F_SM)
     return c
@@ -257,7 +257,7 @@ def s2(t):  # 4.2~8.6 시장 골목을 둘이 달리기
     lt = t - 4.2
     c = bg_at("market", 0.05 + 0.1 * lt)
     cx = lerp(-260, 560, ease(lt / 1.6))
-    wx = cx - 330
+    wx = cx - 420
     shadow(c, cx, GROUND + 10, 360)
     put(c, RUN[int(lt * 14) % 8], cx, GROUND - 180 - bounce(lt, 7, 14))
     shadow(c, wx, GROUND + 10, 260)

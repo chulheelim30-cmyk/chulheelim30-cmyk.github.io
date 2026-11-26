@@ -326,3 +326,98 @@ def petal_particles(seed=8):
         return im.resize((sz * 2, sz * 2), Image.LANCZOS)
     P.leaf_sp = [[petal(int(s), c) for c in cols] for s in (12, 16, 20)]
     return P
+
+
+# ---------- 3화 이후: 구역만 정해 주면 살아나는 배경 ----------
+class RegionBG:
+    """ph: 미리보기 기준 높이(원본 그림 세로 px). regions: 
+    ('hang', x0,y0,x1,y1, amp)  위가 고정, 아래로 갈수록 펄럭(빨래·천막)
+    ('sway', x0,y0,x1,y1, amp)  아래가 고정, 위 끝이 흔들림(갈대·풀·나무)
+    ('cloud', x0,y0,x1,y1, kind) kind 'white'|'pink' 색으로 구름만 골라 천천히 흐름
+    ('water', x0,y0,x1,y1, amp) 물 일렁임 + 반짝임
+    ('sun', x, y, r)            빛 숨쉬기
+    ('lamp', x, y, r)           등불 깜빡"""
+    def __init__(self, img_rgb, ph, regions, night=False):
+        self.src = np.ascontiguousarray(np.array(img_rgb.convert("RGB")))
+        Hh, Wb = self.src.shape[:2]
+        s = Hh / float(ph)
+        self.s, self.Wb, self.night = s, Wb, night
+        a = self.src.astype(np.int32); R, G, B = a[..., 0], a[..., 1], a[..., 2]
+        self.layers = []
+        self.suns, self.lamps, self.glints = [], [], []
+        rng = np.random.default_rng(9)
+        for r in regions:
+            k = r[0]
+            if k in ("hang", "sway", "cloud", "water"):
+                x0, y0, x1, y1 = [int(v * s) for v in r[1:5]]
+                x1, y1 = min(Wb, x1), min(Hh, y1)
+                m = np.zeros((Hh, Wb), np.float32)
+                if k == "hang":
+                    m[y0:y1, x0:x1] = np.linspace(0, 1, y1 - y0, dtype=np.float32)[:, None] ** 1.1
+                    m = _smooth(m, 21)
+                elif k == "sway":
+                    m[y0:y1, x0:x1] = np.linspace(1, 0, y1 - y0, dtype=np.float32)[:, None] ** 1.3
+                    m = _smooth(m, 31)
+                elif k == "cloud":
+                    sub = np.zeros((Hh, Wb), bool)
+                    if r[5] == "white":
+                        c = (R > 225) & (G > 225) & (B > 225)
+                    else:
+                        c = ((R > 200) & (R > B + 20)) | ((R > 225) & (G > 215) & (B > 205))
+                    sub[y0:y1, x0:x1] = c[y0:y1, x0:x1]
+                    m = _smooth(cv2.dilate(sub.astype(np.uint8), np.ones((21, 21), np.uint8)), 41)
+                else:
+                    m[y0:y1, x0:x1] = 1
+                    m = _smooth(m, 31)
+                    for _ in range(int(80 * (x1 - x0) / max(1, Wb))+30):
+                        self.glints.append((rng.uniform(x0, x1), rng.uniform(y0, y1), int(rng.integers(12, 50)), rng.uniform(0, 6.28), rng.uniform(1.2, 3.2)))
+                self.layers.append((k, m, r[5]))
+            elif k == "sun":
+                self.suns.append((r[1] * s, r[2] * s, r[3] * s))
+            elif k == "lamp":
+                self.lamps.append((r[1] * s, r[2] * s, r[3] * s))
+        self.grid = None
+
+    def frame(self, off, t, wind=1.0):
+        Wc, Hh = 1080, self.src.shape[0]
+        if self.grid is None:
+            self.grid = np.meshgrid(np.arange(Wc, dtype=np.float32), np.arange(Hh, dtype=np.float32))
+        gx, Y = self.grid
+        X = gx + off
+        sl = np.s_[:, off:off + Wc]
+        gust = 1 + 0.7 * max(0.0, math.sin(t * 0.9 + 0.5)) ** 3
+        dx = np.zeros_like(gx); dy = np.zeros_like(gx)
+        for k, m, p in self.layers:
+            w = m[sl]
+            if k == "hang":
+                dx += w * wind * gust * p * np.sin(t * 2.8 + X * 0.006 + Y * 0.008)
+                dy += w * wind * gust * p * 0.6 * np.sin(t * 3.9 + X * 0.011)
+            elif k == "sway":
+                dx += w * wind * gust * p * (np.sin(t * 1.7 + X * 0.008) + 0.35 * np.sin(t * 4.3 + X * 0.03))
+            elif k == "cloud":
+                dx += w * (-6 * t + 7 * np.sin(t * 0.5 + Y * 0.01))
+            elif k == "water":
+                dx += w * p * np.sin(Y * 0.08 - t * 2.3 + X * 0.003)
+                dy += w * p * 0.4 * np.sin(Y * 0.05 + X * 0.01 - t * 1.6)
+        out = cv2.remap(self.src, (X - dx).astype(np.float32), (Y - dy).astype(np.float32), cv2.INTER_LINEAR, borderMode=cv2.BORDER_REFLECT).astype(np.float32)
+        for (sx, sy, r) in self.suns:
+            pulse = 0.5 + 0.5 * math.sin(t * 1.3)
+            rr = np.sqrt((gx - (sx - off)) ** 2 + (Y - sy) ** 2)
+            out += (np.exp(-(rr / (r * (1 + 0.1 * pulse))) ** 2) * (24 + 14 * pulse))[..., None] * np.array([1.0, 0.75, 0.45], np.float32)
+        for (lx, ly, r) in self.lamps:
+            if abs(lx - off - 540) > 900:
+                continue
+            fl = 0.8 + 0.2 * math.sin(t * 8 + lx) * math.sin(t * 2.1 + ly)
+            rr = np.sqrt((gx - (lx - off)) ** 2 + (Y - ly) ** 2)
+            out += (np.exp(-(rr / r) ** 2) * 40 * fl)[..., None] * np.array([1.0, 0.85, 0.5], np.float32)
+        if self.glints:
+            lay = np.zeros((Hh, Wc), np.float32)
+            for (x, y, ln, p, sp) in self.glints:
+                xx = int(x - off)
+                if xx < -ln or xx > Wc:
+                    continue
+                b = max(0.0, math.sin(t * sp + p)) ** 3
+                if b > 0.05:
+                    y = int(y); lay[y:y + 4, max(0, xx):min(Wc, xx + ln)] = np.maximum(lay[y:y + 4, max(0, xx):min(Wc, xx + ln)], b)
+            out += cv2.GaussianBlur(lay, (0, 0), 2.2)[..., None] * np.array([255, 238, 200], np.float32) * 0.8
+        return np.clip(out, 0, 255).astype(np.uint8)
