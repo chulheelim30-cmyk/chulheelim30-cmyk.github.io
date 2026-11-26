@@ -1,7 +1,7 @@
 
 # ---------- 새 왕년이 그림(11-26 12포즈 시트) ----------
 from PIL import ImageOps as _IO
-_WN = "/tmp/w/x4w"
+_WN = "/tmp/w/x4w2"
 def _w(n, flip=False):
     p = f"{_WN}/{n}.png"
     if not os.path.exists(p): p = f"/tmp/w/wnew/{n}.png"
