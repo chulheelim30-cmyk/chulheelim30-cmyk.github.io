@@ -212,7 +212,7 @@ def s1(t):  # 0~3.6 잠드는 풍년이
         lay_y = 900 - p * 220
         text_z(c, "Z" if i == 0 else "z", 760 + p * 90 + i * 30, lay_y - i * 40, 60 - i * 12, (1 - p))
     text(c, "풍년이의 모험 1화", 250, F_SM, alpha=fade(t, 0.1, 9))
-    text(c, "이 고양이,\n자면 꼭 같은 꿈을 꿔요", 430, F_HOOK, alpha=fade(t, 0.15, 9))
+    text(c, "풍년이는\n자면 꼭 같은 꿈을 꿔요", 430, F_HOOK, alpha=fade(t, 0.15, 9))
     return c
 
 def text_z(c, s, x, y, sz, a):
