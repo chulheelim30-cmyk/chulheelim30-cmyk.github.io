@@ -37,13 +37,25 @@ NB_REG = {
     "roof_2": _RF_C + [("hang", 500, 390, 790, 490, 10), ("sun", 135, 470, 40), ("sway", 0, 850, 280, 1010, 6), ("sway", 720, 450, 832, 800, 7)],
     "roof_3": _RF_C + [("hang", 55, 450, 290, 570, 10), ("sun", 172, 420, 35), ("sway", 580, 780, 760, 990, 6)],
     "roof_4": _RF_C + [("hang", 510, 410, 765, 570, 10), ("sun", 453, 498, 35), ("sway", 0, 620, 160, 780, 6), ("sway", 540, 950, 700, 1060, 6)],
+    "ep4": [("hang", 0, 0, 200, 700, 8), ("hang", 650, 0, 832, 500, 7), ("water", 150, 600, 832, 880, 5), ("sun", 640, 215, 40)],
+    "ep5": [("hang", 0, 0, 330, 350, 6), ("water", 0, 450, 832, 760, 5), ("sun", 420, 330, 50), ("lamp", 340, 620, 18), ("lamp", 660, 640, 20),
+            ("cloud", 0, 0, 832, 330, "pink")],
+    "ep6": [("cloud", 0, 0, 832, 450, "white"), ("sway", 0, 250, 250, 800, 8), ("water", 150, 650, 832, 950, 5)],
+    "ep7": [("hang", 0, 0, 832, 480, 5), ("sun", 420, 450, 60)],
+    "ep8": [("sway", 580, 250, 832, 800, 5), ("sway", 0, 300, 250, 700, 5), ("lamp", 690, 420, 18), ("cloud", 0, 0, 832, 250, "white")],
+    "ep9": [("cloud", 0, 0, 832, 400, "pink"), ("sun", 650, 450, 35), ("lamp", 60, 700, 18), ("lamp", 560, 720, 14)],
+    "ep10": [("cloud", 0, 0, 832, 520, "pink"), ("sun", 620, 300, 70), ("water", 300, 620, 700, 1000, 2)],
 }
+NB_NIGHT = {"ep4", "ep10"}
+NB_PK = {"ep4": ("night", False, True, 0.8), "ep5": ("sunset", True, False, 0.8), "ep6": ("sunset", False, False, 0.6),
+         "ep7": ("sunset", True, False, 1.1), "ep8": ("petal", True, False, 0.7), "ep9": ("night", False, False, 0.5),
+         "ep10": ("night", False, True, 0.9)}
 _NB_IM, _NB_L = {}, {}
 def _nb_get(name):
     if name not in _NB_L:
         base, _, mod = name.partition(":")
         im = _cover(Image.open(f"{NB_DIR}/bg_{base}.jpg"))
-        night = False
+        night = base in NB_NIGHT
         if mod == "night":
             a = np.array(im).astype(np.float32)
             a = a * 0.42 + np.array([10, 14, 45], np.float32)
@@ -64,6 +76,13 @@ NB_MAP = {
     2: [(0, 99, "sunset", "park_2"), (0, 99, "end", "market_2:end"), (0, 99, "night", "park_4:night"),
         (0, 8.6, "market", "market_2"), (8.6, 12.4, "market", "market_1"), (12.4, 20.6, "market", "market_3"),
         (20.6, 25.8, "market", "market_4"), (25.8, 99, "market", "market_2")],
+    4: [(0, 99, "night", "ep4"), (0, 99, "end", "ep4:end")],
+    5: [(0, 99, "bridge", "ep5"), (0, 99, "pic", "ep5"), (0, 99, "end", "ep5:end")],
+    6: [(0, 99, "main", "ep6"), (0, 99, "end", "ep6:end")],
+    7: [(0, 99, "main", "ep7"), (0, 99, "end", "ep7:end")],
+    8: [(0, 99, "main", "ep8"), (0, 99, "end", "ep8:end")],
+    9: [(0, 99, "main", "ep9"), (0, 99, "end", "ep9:end")],
+    10: [(0, 99, "main", "ep10"), (0, 99, "end", "ep10:end")],
     3: [(0, 99, "end", "roof_2:end"), (0, 4, "roof", "roof_2"), (4, 12.6, "roof", "roof_1"), (12.6, 17, "roof", "roof_4"),
         (17, 21, "roof", "roof_3"), (21, 26, "roof", "roof_4"), (26, 99, "roof", "roof_2")],
 }
@@ -89,6 +108,12 @@ def bg_at(key, x, dim=0.0, *a, **k):
     base = nm.split(":")[0]
     if nm.endswith(":night") or nm.endswith(":end"):
         _NB_PT.draw(c, t, "night", cam=off, leaves=False, motes=True, flies=True, strength=0.8)
+    elif base in NB_PK:
+        kd, lv, fl, st = NB_PK[base]
+        if kd == "petal":
+            _NB_PETAL.draw(c, t, "sunset", cam=off, leaves=True, motes=True, strength=st)
+        else:
+            _NB_PT.draw(c, t, kd, cam=off, leaves=lv, motes=True, flies=fl, strength=st)
     elif base.startswith("park"):
         _NB_PT.draw(c, t, "sunset", cam=off, leaves=True, motes=True, strength=0.6 if nm.endswith(":sad") else 0.9)
     elif base.startswith("market"):
@@ -97,5 +122,4 @@ def bg_at(key, x, dim=0.0, *a, **k):
         _NB_PETAL.draw(c, t, "sunset", cam=off, leaves=True, motes=True, strength=0.5)
     return c
 
-if NB_EP == 3:
-    GROUND = 1600
+GROUND = {3: 1600, 4: 1740, 5: 1720}.get(NB_EP, GROUND)
